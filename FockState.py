@@ -5,6 +5,15 @@ from typing import List
 
 class FockState():
 
+    '''
+    Defines a Fock state of the form |f, \bar{f}, b⟩
+
+    Parameters:
+    ferm_occupancy, antiferm_occupancy, bos_occupancy: List 
+    
+    
+    '''
+
     def __init__(self, ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff):
         self.ferm_occupancy = ferm_occupancy
         self.antiferm_occupancy = antiferm_occupancy
@@ -52,29 +61,42 @@ class FockState():
         return FockStateSum([self, other])
     
     def dagger(self):
-        return ConjugateFockState(self)
+        return ConjugateFockState.from_state(self)
 
-class ConjugateFockState(FockState):
-    def __init__(self, state: FockState):
-        self.state = state
+
+class ConjugateFockState(FockState): 
+
+    def __init__(self, ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff): 
+        self.ferm_occupancy = ferm_occupancy
+        self.antiferm_occupancy = antiferm_occupancy
+        self.bos_occupancy = bos_occupancy
+        self.coeff = coeff
 
     def __str__(self):
-        fock_str = str(self.state.coeff) + " * " + "⟨" + ",".join([str(i) for i in self.state.ferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.state.antiferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.state.bos_occupancy]) + "|"
+        fock_str = str(self.coeff) + " * " + "⟨" + ",".join([str(i) for i in self.ferm_occupancy]) + "; " +\
+            ",".join([str(i) for i in self.antiferm_occupancy]) + "; " +\
+            ",".join([str(i) for i in self.bos_occupancy]) + "|"
         return fock_str
     
+    @classmethod
+    def from_state(cls, state: FockState):
+        ferm_occupancy = state.ferm_occupancy
+        antiferm_occupancy = state.antiferm_occupancy
+        bos_occupancy = state.bos_occupancy
+        coeff = state.coeff
+        return cls(ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff)
+    
     def inner_product(self, other):
-        # print(self.state.ferm_occupancy, other.ferm_occupancy)
-        if self.state.ferm_occupancy == other.ferm_occupancy and \
-            self.state.antiferm_occupancy == other.antiferm_occupancy and \
-            self.state.bos_occupancy == other.bos_occupancy: 
+        if self.ferm_occupancy == other.ferm_occupancy and \
+            self.antiferm_occupancy == other.antiferm_occupancy and \
+            self.bos_occupancy == other.bos_occupancy: 
             return 1.0
         else: return 0
 
     def __mul__(self, other):
         if isinstance(other, FockState):
             return self.inner_product(other)
+
     
 class FockStateSum(FockState):
     def __init__(self, states_list: List[FockState]):
