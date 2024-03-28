@@ -14,7 +14,7 @@ class FockState():
     
     '''
 
-    def __init__(self, ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff):
+    def __init__(self, ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff: float = 1.0):
         self.ferm_occupancy = ferm_occupancy
         self.antiferm_occupancy = antiferm_occupancy
         self.bos_occupancy = bos_occupancy
@@ -32,7 +32,7 @@ class FockState():
 
     def __rmul__(self, other):
         if isinstance(other,(float, int)):
-            self.coeff = other
+            self.coeff *= other
             return self
         elif isinstance(other, ConjugateFockState):
             raise NotImplemented
@@ -110,6 +110,12 @@ class FockStateSum(FockState):
             else: states_str += state.__str__()
 
         return states_str
+    
+    def __rmul__(self, other):
+        if isinstance(other, (float, int)):
+            for state in self.states_list:
+                state.coeff *= other
+            return self
     
     
    

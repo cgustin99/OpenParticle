@@ -1,6 +1,7 @@
 import numpy as np
 from symmer import PauliwordOp as Pauli
 from ParticleOperator import *
+from FockState import *
 from typing import Union
 from symmer.utils import tensor_list
 
@@ -22,12 +23,12 @@ def jordan_wigner(op: Union[ParticleOperator, FermionOperator,
         
         return op.tensor(Pauli.from_list(['I' * (total_modes - op.n_qubits)]))
     
-    else: raise NotImplemented
+    else: raise Exception("The Jordan Wigner mapping only works for fermions and antifermions")
 
 
 def somma(op: Union[BosonOperator, ParticleOperator], max_bose_mode_occ: int, total_modes: int):
 
-    assert op.modes[0] <= total_modes
+    # assert op.modes[0] <= total_modes
 
     if isinstance(op, BosonOperator):
         p = op.modes[0]
@@ -57,7 +58,7 @@ def somma(op: Union[BosonOperator, ParticleOperator], max_bose_mode_occ: int, to
     else: raise NotImplemented
 
 
-def qubit_mapping(op: Union[ParticleOperator, FermionOperator, AntifermionOperator, BosonOperator], 
+def qubit_op_mapping(op: Union[ParticleOperator, FermionOperator, AntifermionOperator, BosonOperator], 
                   total_modes_list: List,
                   max_bose_mode_occ = None):
     
@@ -70,7 +71,7 @@ def qubit_mapping(op: Union[ParticleOperator, FermionOperator, AntifermionOperat
     elif isinstance(op, ParticleOperator):
 
         ops = []
-        for index, particle in enumerate(op.particle_list):
+        for index, particle in enumerate(op.particle_str):
             if particle == 'f':
                 qubit_op = jordan_wigner(FermionOperator(op.modes[index], 
                                                     op.ca_string[index]), total_modes_list[0])
@@ -85,7 +86,5 @@ def qubit_mapping(op: Union[ParticleOperator, FermionOperator, AntifermionOperat
         
     return tensor_list(ops)
 
-q = qubit_mapping(ParticleOperator('fab', [0, 2, 1], 'cca'), [4, 4, 4], 5)
-print(q)
 
 
