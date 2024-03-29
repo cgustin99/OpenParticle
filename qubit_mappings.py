@@ -4,6 +4,7 @@ from ParticleOperator import *
 from FockState import *
 from typing import Union
 from symmer.utils import tensor_list
+import symmer
 
 
 def jordan_wigner(op: Union[ParticleOperator, FermionOperator, 
@@ -26,7 +27,7 @@ def jordan_wigner(op: Union[ParticleOperator, FermionOperator,
     else: raise Exception("The Jordan Wigner mapping only works for fermions and antifermions")
 
 
-def somma(op: Union[BosonOperator, ParticleOperator], max_bose_mode_occ: int, total_modes: int):
+def unary(op: Union[BosonOperator, ParticleOperator], max_bose_mode_occ: int, total_modes: int):
 
     # assert op.modes[0] <= total_modes
 
@@ -66,7 +67,7 @@ def qubit_op_mapping(op: Union[ParticleOperator, FermionOperator, AntifermionOpe
     elif isinstance(op, AntifermionOperator): return jordan_wigner(op)
     elif isinstance(op, BosonOperator): 
         if max_bose_mode_occ == None: raise Exception("Must provide maximum bosonic mode occupancy")
-        else: return somma(op, max_bose_mode_occ)
+        else: return unary(op, max_bose_mode_occ)
 
     elif isinstance(op, ParticleOperator):
 
@@ -79,7 +80,7 @@ def qubit_op_mapping(op: Union[ParticleOperator, FermionOperator, AntifermionOpe
                 qubit_op = jordan_wigner(AntifermionOperator(op.modes[index], 
                                                     op.ca_string[index]), total_modes_list[1])
             elif particle == 'b':
-                qubit_op = somma(BosonOperator(op.modes[index], 
+                qubit_op = unary(BosonOperator(op.modes[index], 
                                                     op.ca_string[index]), max_bose_mode_occ, total_modes_list[2])
             ops.append(qubit_op)
 
@@ -87,4 +88,20 @@ def qubit_op_mapping(op: Union[ParticleOperator, FermionOperator, AntifermionOpe
     return tensor_list(ops)
 
 
+def map_bose_occ(occupancy_list, N):
+    q_bos = []
+    for occ in occupancy_list:
+        for i in range(N + 1):
+            q_bos.append(0 if i == occ else 1)
 
+    return q_bos
+
+
+def qubit_state_mapping(state, max_bose_mode_occ):
+
+    q_fermi = state.ferm_occupancy[::-1]
+    q_antifermi = state.antiferm_occupancy[::-1]
+
+    q_bos = map_bose_occ(state.bos_occupancy, max_bose_mode_occ)#[::-1]
+    
+    return symmer.QuantumState([q_fermi + q_antifermi + q_bos])
