@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "openparticle"
+version = "0.0.1"
+description = ""
+authors = ["Carter M. Gustin <83713139+cgustin99@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "^1.26.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
