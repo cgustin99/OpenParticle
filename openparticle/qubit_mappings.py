@@ -1,7 +1,6 @@
 import numpy as np
 from symmer import PauliwordOp as Pauli
-from ParticleOperator import *
-from FockState import *
+from openparticle import FockState, ParticleOperator, FermionOperator, AntifermionOperator, BosonOperator
 from typing import Union
 from symmer.utils import tensor_list
 import symmer

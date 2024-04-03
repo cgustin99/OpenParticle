@@ -179,7 +179,11 @@ class FockState():
 
     Parameters:
     ferm_occupancy, antiferm_occupancy, bos_occupancy: List 
-    
+    e.g. a hadron (with occupancy cutoff 3) with a fermion in mode 2, an antifermion in mode 1 and 2 bosons
+    in mode 1 is 
+    ferm_occupancy = [0,1,0]
+    antiferm_occupancy = [1, 0, 0]
+    bos_occupancy = [2, 0, 0]
     
     '''
 
