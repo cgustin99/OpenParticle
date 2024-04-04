@@ -5,29 +5,43 @@ from IPython.display import display, Latex
 
 class ParticleOperator():
 
-    def __init__(self, particle_str, modes, ca_string, coeff: float = 1.0):
-        self.particle_str = particle_str
+    def __init__(self, op_str, coeff = 1.0):
+        self.op_str = op_str
+        self.coeff = coeff
+
+        particle_type = ''
+        modes = []
+        ca_string = ''
+
+        for op in self.op_str.split(" "):
+            type = op[0]
+            orbital = op[1]
+            particle_type += type
+            modes.append(int(orbital))
+            if op[-1] != '^':
+                ca_string += "a"
+            else: ca_string += 'c'
+
+        self.particle_type = particle_type
         self.modes = modes
         self.ca_string = ca_string
-        self.coeff = coeff
-        self.info = np.array([particle_str, modes, ca_string], dtype = object)
 
         op_string = ''
-        for index, particle in enumerate(self.particle_str):
+        for index, particle in enumerate(self.particle_type):
 
-            if particle == 'f':
+            if particle == 'b':
                 if self.ca_string[index] == 'c':
                     op_string += 'b^†_' + str(self.modes[index])
                 else:
                     op_string += 'b_' + str(self.modes[index])
 
-            elif particle == 'a': 
+            elif particle == 'd': 
                 if self.ca_string[index] == 'c':
                     op_string += 'd^†_' + str(self.modes[index])
                 else: 
                     op_string += 'd_' + str(self.modes[index])
 
-            elif particle == 'b': 
+            elif particle == 'a': 
                 if self.ca_string[index] == 'c':
                     op_string += 'a^†_' + str(self.modes[index])
                 else: 
@@ -42,70 +56,41 @@ class ParticleOperator():
     def display(self):
         display(Latex('$' + self.op_string + '$'))
         
-
-
     def __add__(self, other):
         return ParticleOperatorSum([self, other])
 
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
             self.coeff *= other
-            return ParticleOperator(self.particle_str, self.modes, self.ca_string, self.coeff)
+            return ParticleOperator(self.particle_type, self.modes, self.ca_string, self.coeff)
 
     def __mul__(self, other):
         if isinstance(other, ParticleOperator):
-            updated_particle_str = self.particle_str + other.particle_str
-            updated_modes = self.modes + other.modes
-            updated_ca_string = self.ca_string + other.ca_string
             updated_coeff = self.coeff * other.coeff
-            return ParticleOperator(updated_particle_str, updated_modes, updated_ca_string, updated_coeff)
+            return ParticleOperator(self.op_str + " " + other.op_str, updated_coeff)
         
         elif isinstance(other, FockState):
-            
-            updated_ferm_occupancy = other.ferm_occupancy[:]
-            updated_antiferm_occupancy = other.antiferm_occupancy[:]
-            updated_bos_occupancy = other.bos_occupancy[:]
+            print(other.f_occ)
+            for op in self.op_str.split(" "):
+                if op[-1] != '^':
+                    if op[0] == 'b':
+                        if int(op[1]) in other.f_occ:
+                            other.f_occ.append(int(op[1]))
+                        else: self.coeff *= 0
+                else:
+                    if op[0] == 'b':
+                        if int(op[1]) in other.f_occ:
+                            self.coeff *= 0
+                        else: other.f_occ.append(int(op[1]))
+                    elif op[0] == 'd':
+                        if int(op[1]) in other.af_occ:
+                            self.coeff *= 0
+                        else: other.af_occ.append(int(op[1]))
+                    elif op[0] == 'a':
+                        pass
 
-            coeff = other.coeff
+            return
             
-            for mode in range(len(self.modes)):
-                if self.particle_str[mode] == 'f':
-                    if self.ca_string[mode] == 'a':
-                        if other.ferm_occupancy[self.modes[mode]] == 0:
-                            return 0
-                        else: 
-                            updated_ferm_occupancy[self.modes[mode]] = 0
-                            coeff *= (-1)**np.sum(other.ferm_occupancy[0:self.modes[mode]])
-                    elif self.ca_string[mode] == 'c':
-                        if other.ferm_occupancy[self.modes[mode]] == 0:
-                            updated_ferm_occupancy[self.modes[mode]] = 1
-                            coeff *= (-1)**np.sum(other.ferm_occupancy[0:self.modes[mode]])
-                        else: return 0
-                elif self.particle_str[mode] == 'a':
-                    if self.ca_string[mode] == 'a':
-                        if other.antiferm_occupancy[self.modes[mode]] == 0:
-                            return 0
-                        else: 
-                            updated_antiferm_occupancy[self.modes[mode]] = 0
-                            coeff *= (-1)**np.sum(other.antiferm_occupancy[0:self.modes[mode]])
-                    elif self.ca_string[mode] == 'c':
-                        if other.antiferm_occupancy[self.modes[mode]] == 0:
-                            updated_antiferm_occupancy[self.modes[mode]] = 1
-                            coeff *= (-1)**np.sum(other.antiferm_occupancy[0:self.modes[mode]])
-                        else: return 0
-                elif self.particle_str[mode] == 'b':
-                    if self.ca_string[mode] == 'a':
-                        if other.bos_occupancy[self.modes[mode]] == 0:
-                            return 0
-                        else: 
-                            updated_bos_occupancy[self.modes[mode]] = other.bos_occupancy[self.modes[mode]] - 1
-                            coeff *= np.sqrt(other.bos_occupancy[mode])
-                    elif self.ca_string[mode] == 'c':
-                        updated_bos_occupancy[self.modes[mode]] = other.bos_occupancy[self.modes[mode]] + 1
-                        coeff *= np.sqrt(other.bos_occupancy[mode] + 1)
-        
-
-        return FockState(updated_ferm_occupancy, updated_antiferm_occupancy, updated_bos_occupancy, coeff)
 
 class ParticleOperatorSum(ParticleOperator):
 
@@ -128,14 +113,14 @@ class ParticleOperatorSum(ParticleOperator):
             ops_w_new_coeffs = []
             for operator in self.operator_list:
                 operator.coeff *= other
-                ops_w_new_coeffs.append(ParticleOperator(operator.particle_str, 
+                ops_w_new_coeffs.append(ParticleOperator(operator.particle_type, 
                             operator.modes, operator.ca_string, operator.coeff))
             return ParticleOperatorSum(ops_w_new_coeffs)
 
 class FermionOperator(ParticleOperator):
 
-    def __init__(self, mode, ca, coeff: float = 1.0):
-        super().__init__('f', [mode], ca, coeff)
+    def __init__(self, op, coeff: float = 1.0):
+        super().__init__('b' + op)
         
     def __str__(self):
         return super().__str__()
@@ -147,8 +132,8 @@ class FermionOperator(ParticleOperator):
         return super().__add__(other)
   
 class AntifermionOperator(ParticleOperator):
-    def __init__(self, mode, ca, coeff: float = 1.0):
-        super().__init__('a', [mode], ca, coeff)
+    def __init__(self, op, coeff: float = 1.0):
+        super().__init__('d' + op)
         
     def __str__(self):
         return super().__str__()
@@ -160,8 +145,8 @@ class AntifermionOperator(ParticleOperator):
         return super().__add__(other)
 
 class BosonOperator(ParticleOperator):
-    def __init__(self, mode, ca, coeff: float = 1.0):
-        super().__init__('b', [mode], ca, coeff)
+    def __init__(self, op, coeff: float = 1.0):
+        super().__init__('a' + op)
         
     def __str__(self):
         return super().__str__()
@@ -187,20 +172,19 @@ class FockState():
     
     '''
 
-    def __init__(self, ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff: float = 1.0):
-        self.ferm_occupancy = ferm_occupancy
-        self.antiferm_occupancy = antiferm_occupancy
-        self.bos_occupancy = bos_occupancy
+    def __init__(self, f_occ, af_occ, b_occ, coeff: float = 1.0):
+        self.f_occ = f_occ
+        self.af_occ = af_occ
+        self.b_occ = b_occ
         self.coeff = coeff
-    
 
     def __str__(self):
-        fock_str = str(self.coeff) + " * " + "|" + ",".join([str(i) for i in self.ferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.antiferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.bos_occupancy]) + "⟩"
-       
-
-        return fock_str
+        return "|" + ",".join([str(i) for i in self.f_occ]) + "; " +\
+            ",".join([str(i) for i in self.af_occ]) + "; " +\
+            ",".join([str(i) for i in self.b_occ]) + "⟩"
+    
+    def display(self):
+        display(Latex('$' + self.__str__() + '$'))
 
 
     def __rmul__(self, other):
@@ -215,20 +199,6 @@ class FockState():
     def __mul__(self, other):
         raise NotImplemented
 
-    def compact_state(self):
-
-        num_nonzero = 0
-
-        ferm_compact = np.nonzero(self.ferm_occupancy)[0]
-        antiferm_compact = np.nonzero(self.antiferm_occupancy)[0]
-        bos_compact = list(zip(np.nonzero(self.bos_occupancy)[0],
-                       np.array(self.bos_occupancy)[np.nonzero(self.bos_occupancy)[0]]))
-        
-        fock_str = "|" + ",".join([str(i) for i in ferm_compact]) + "; " +\
-            ",".join([str(i) for i in antiferm_compact]) + "; " +\
-            ",".join([str(i) for i in bos_compact]) + "⟩"
-        
-        return fock_str
     
     def __add__(self, other):
         return FockStateSum([self, other])
@@ -239,30 +209,32 @@ class FockState():
 
 class ConjugateFockState(FockState): 
 
-    def __init__(self, ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff): 
-        self.ferm_occupancy = ferm_occupancy
-        self.antiferm_occupancy = antiferm_occupancy
-        self.bos_occupancy = bos_occupancy
+    def __init__(self, f_occ, af_occ, b_occ, coeff: float = 1.0): 
+        self.f_occ = f_occ
+        self.af_occ = af_occ
+        self.b_occ = b_occ
         self.coeff = coeff
 
     def __str__(self):
-        fock_str = str(self.coeff) + " * " + "⟨" + ",".join([str(i) for i in self.ferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.antiferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.bos_occupancy]) + "|"
-        return fock_str
+        return str(self.coeff) + " * " + "⟨" + ",".join([str(i) for i in self.f_occ]) + "; " +\
+            ",".join([str(i) for i in self.af_occ]) + "; " +\
+            ",".join([str(i) for i in self.b_occ]) + "|"
     
     @classmethod
     def from_state(cls, state: FockState):
-        ferm_occupancy = state.ferm_occupancy
-        antiferm_occupancy = state.antiferm_occupancy
-        bos_occupancy = state.bos_occupancy
+        f_occ = state.f_occ
+        af_occ = state.af_occ
+        b_occ = state.b_occ
         coeff = state.coeff
-        return cls(ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff)
+        return cls(f_occ, af_occ, b_occ, coeff)
+    
+    def display(self):
+        display(Latex('$' + self.__str__() + '$'))
     
     def inner_product(self, other):
-        if self.ferm_occupancy == other.ferm_occupancy and \
-            self.antiferm_occupancy == other.antiferm_occupancy and \
-            self.bos_occupancy == other.bos_occupancy: 
+        if self.f_occ == other.f_occ and \
+            self.af_occ == other.af_occ and \
+            self.b_occ == other.b_occ: 
             return 1.0
         else: return 0
 
@@ -274,6 +246,10 @@ class ConjugateFockState(FockState):
 class FockStateSum(FockState):
     def __init__(self, states_list: List[FockState]):
         self.states_list = states_list
+
+    def normalize(self):
+        #TODO
+        return
 
     def __str__(self):
         states_str = ''
