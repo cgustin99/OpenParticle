@@ -1,5 +1,4 @@
 import numpy as np
-from ParticleOperator import *
 from typing import List
 
 
@@ -10,30 +9,36 @@ class FockState():
 
     Parameters:
     ferm_occupancy, antiferm_occupancy, bos_occupancy: List 
-    
+    e.g. a hadron with a fermion in mode 2, an antifermion in mode 1 and 2 bosons
+    in mode 1 is 
+    ferm_occupancy = [2]
+    antiferm_occupancy = [1]
+    bos_occupancy = [(1, 2)]
     
     '''
 
-    def __init__(self, ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff: float = 1.0):
-        self.ferm_occupancy = ferm_occupancy
-        self.antiferm_occupancy = antiferm_occupancy
-        self.bos_occupancy = bos_occupancy
+    def __init__(self, f_occ, af_occ, b_occ, coeff: float = 1.0):
+        self.f_occ = f_occ
+        self.af_occ = af_occ
+        self.b_occ = b_occ
         self.coeff = coeff
-    
 
     def __str__(self):
-        fock_str = str(self.coeff) + " * " + "|" + ",".join([str(i) for i in self.ferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.antiferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.bos_occupancy]) + "⟩"
-       
-
-        return fock_str
+        return str(self.coeff) + " * |" + ",".join([str(i) for i in self.f_occ]) + "; " +\
+            ",".join([str(i) for i in self.af_occ]) + "; " +\
+            ",".join([str(i) for i in self.b_occ]) + "⟩"
+    
+    def display(self):
+        display(Latex('$' + self.__str__() + '$'))
 
 
     def __rmul__(self, other):
         if isinstance(other,(float, int)):
-            self.coeff *= other
-            return self
+            if other == 0:
+                return 0
+            else:
+                coeff = self.coeff * other
+                return FockState(self.f_occ, self.af_occ, self.b_occ, coeff)
         elif isinstance(other, ConjugateFockState):
             raise NotImplemented
         elif isinstance(other, FockState):
@@ -42,20 +47,6 @@ class FockState():
     def __mul__(self, other):
         raise NotImplemented
 
-    def compact_state(self):
-
-        num_nonzero = 0
-
-        ferm_compact = np.nonzero(self.ferm_occupancy)[0]
-        antiferm_compact = np.nonzero(self.antiferm_occupancy)[0]
-        bos_compact = list(zip(np.nonzero(self.bos_occupancy)[0],
-                       np.array(self.bos_occupancy)[np.nonzero(self.bos_occupancy)[0]]))
-        
-        fock_str = "|" + ",".join([str(i) for i in ferm_compact]) + "; " +\
-            ",".join([str(i) for i in antiferm_compact]) + "; " +\
-            ",".join([str(i) for i in bos_compact]) + "⟩"
-        
-        return fock_str
     
     def __add__(self, other):
         return FockStateSum([self, other])
@@ -66,30 +57,32 @@ class FockState():
 
 class ConjugateFockState(FockState): 
 
-    def __init__(self, ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff): 
-        self.ferm_occupancy = ferm_occupancy
-        self.antiferm_occupancy = antiferm_occupancy
-        self.bos_occupancy = bos_occupancy
+    def __init__(self, f_occ, af_occ, b_occ, coeff: float = 1.0): 
+        self.f_occ = f_occ
+        self.af_occ = af_occ
+        self.b_occ = b_occ
         self.coeff = coeff
 
     def __str__(self):
-        fock_str = str(self.coeff) + " * " + "⟨" + ",".join([str(i) for i in self.ferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.antiferm_occupancy]) + "; " +\
-            ",".join([str(i) for i in self.bos_occupancy]) + "|"
-        return fock_str
+        return str(self.coeff) + " * " + "⟨" + ",".join([str(i) for i in self.f_occ]) + "; " +\
+            ",".join([str(i) for i in self.af_occ]) + "; " +\
+            ",".join([str(i) for i in self.b_occ]) + "|"
     
     @classmethod
     def from_state(cls, state: FockState):
-        ferm_occupancy = state.ferm_occupancy
-        antiferm_occupancy = state.antiferm_occupancy
-        bos_occupancy = state.bos_occupancy
+        f_occ = state.f_occ
+        af_occ = state.af_occ
+        b_occ = state.b_occ
         coeff = state.coeff
-        return cls(ferm_occupancy, antiferm_occupancy, bos_occupancy, coeff)
+        return cls(f_occ, af_occ, b_occ, coeff)
+    
+    def display(self):
+        display(Latex('$' + self.__str__() + '$'))
     
     def inner_product(self, other):
-        if self.ferm_occupancy == other.ferm_occupancy and \
-            self.antiferm_occupancy == other.antiferm_occupancy and \
-            self.bos_occupancy == other.bos_occupancy: 
+        if self.f_occ == other.f_occ and \
+            self.af_occ == other.af_occ and \
+            self.b_occ == other.b_occ: 
             return 1.0
         else: return 0
 
@@ -101,6 +94,10 @@ class ConjugateFockState(FockState):
 class FockStateSum(FockState):
     def __init__(self, states_list: List[FockState]):
         self.states_list = states_list
+
+    def normalize(self):
+        #TODO
+        return
 
     def __str__(self):
         states_str = ''

@@ -6,29 +6,43 @@ from IPython.display import display, Latex
 
 class ParticleOperator():
 
-    def __init__(self, particle_str, modes, ca_string, coeff: float = 1.0):
-        self.particle_str = particle_str
+    def __init__(self, op_str, coeff = 1.0):
+        self.op_str = op_str
+        self.coeff = coeff
+
+        particle_type = ''
+        modes = []
+        ca_string = ''
+
+        for op in self.op_str.split(" "):
+            type = op[0]
+            orbital = op[1]
+            particle_type += type
+            modes.append(int(orbital))
+            if op[-1] != '^':
+                ca_string += "a"
+            else: ca_string += 'c'
+
+        self.particle_type = particle_type
         self.modes = modes
         self.ca_string = ca_string
-        self.coeff = coeff
-        self.info = np.array([particle_str, modes, ca_string], dtype = object)
 
         op_string = ''
-        for index, particle in enumerate(self.particle_str):
+        for index, particle in enumerate(self.particle_type):
 
-            if particle == 'f':
+            if particle == 'b':
                 if self.ca_string[index] == 'c':
                     op_string += 'b^†_' + str(self.modes[index])
                 else:
                     op_string += 'b_' + str(self.modes[index])
 
-            elif particle == 'a': 
+            elif particle == 'd': 
                 if self.ca_string[index] == 'c':
                     op_string += 'd^†_' + str(self.modes[index])
                 else: 
                     op_string += 'd_' + str(self.modes[index])
 
-            elif particle == 'b': 
+            elif particle == 'a': 
                 if self.ca_string[index] == 'c':
                     op_string += 'a^†_' + str(self.modes[index])
                 else: 
@@ -43,70 +57,94 @@ class ParticleOperator():
     def display(self):
         display(Latex('$' + self.op_string + '$'))
         
-
-
     def __add__(self, other):
         return ParticleOperatorSum([self, other])
 
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
             self.coeff *= other
-            return ParticleOperator(self.particle_str, self.modes, self.ca_string, self.coeff)
+            return ParticleOperator(self.particle_type, self.modes, self.ca_string, self.coeff)
 
+    def impose_parity_jw(self, state, mode):
+            index = state.index(mode)
+            parity_str = state[:index]
+            coeff = (-1)**len(parity_str)
+            return coeff
+        
     def __mul__(self, other):
         if isinstance(other, ParticleOperator):
-            updated_particle_str = self.particle_str + other.particle_str
-            updated_modes = self.modes + other.modes
-            updated_ca_string = self.ca_string + other.ca_string
             updated_coeff = self.coeff * other.coeff
-            return ParticleOperator(updated_particle_str, updated_modes, updated_ca_string, updated_coeff)
+            return ParticleOperator(self.op_str + " " + other.op_str, updated_coeff)
         
         elif isinstance(other, FockState):
+            coeff = self.coeff * other.coeff
+            updated_ferm_state = other.f_occ[:]
+            updated_antiferm_state = other.af_occ[:]
+            updated_bos_state = other.b_occ[:]
             
-            updated_ferm_occupancy = other.ferm_occupancy[:]
-            updated_antiferm_occupancy = other.antiferm_occupancy[:]
-            updated_bos_occupancy = other.bos_occupancy[:]
-
-            coeff = other.coeff
+            for op in self.op_str.split(" "):
+                if op[-1] == '^':
+                    if op[0] == 'b':
+                        if int(op[1]) not in other.f_occ:
+                            updated_ferm_state.append(int(op[1]))
+                            coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
+                        else: coeff = 0
+                    elif op[0] == 'd':
+                        if int(op[1]) not in other.af_occ:
+                            updated_antiferm_state.append(int(op[1]))
+                            coeff *= self.impose_parity_jw(updated_antiferm_state, int(op[1]))
+                        else: coeff = 0
+                    elif op[0] == 'a':
+                        state_modes, state_occupancies = [i[0] for i in other.b_occ], [i[1] for i in other.b_occ]
+                        
+                        if int(op[1]) in state_modes:
+                            index = state_modes.index(int(op[1]))
+                            if state_occupancies[index] >= 1:
+                                state_occupancies[index] += 1
+                                coeff *= np.sqrt(state_occupancies[index])
+                            
+                        else:
+                            state_modes.append(int(op[1]))
+                            state_occupancies.append(1)
+                        #zip up modes and occupancies into an updated list
+                        updated_bos_state = list(zip(state_modes, state_occupancies))
+                        sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
+                else:
+                    if op[0] == 'b':
+                        if int(op[1]) in other.f_occ:
+                            coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
+                            updated_ferm_state.remove(int(op[1]))
+                            
+                        else: coeff = 0
+                    elif op[0] == 'd':
+                        if int(op[1]) in other.af_occ:
+                            coeff *= self.impose_parity_jw(updated_antiferm_state, int(op[1]))
+                            updated_antiferm_state.remove(int(op[1]))
+                        else: coeff = 0
+                    elif op[0] == 'a':
+                        state_modes, state_occupancies = [i[0] for i in other.b_occ], [i[1] for i in other.b_occ]
+                        
+                        if int(op[1]) in state_modes:
+                            index = state_modes.index(int(op[1]))
+                            if state_occupancies[index] > 1:
+                                state_occupancies[index] -= 1
+                                coeff *= np.sqrt(state_occupancies[index] + 1)
+                            else:
+                                #state_modes.remove(int(op[1]))
+                                #state_occupancies.remove(int(op[1]))
+                                coeff = 0
+                        else: coeff = 0
+                        #zip up modes and occupancies into an updated list
+                        updated_bos_state = list(zip(state_modes, state_occupancies))
+                        sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
             
-            for mode in range(len(self.modes)):
-                if self.particle_str[mode] == 'f':
-                    if self.ca_string[mode] == 'a':
-                        if other.ferm_occupancy[self.modes[mode]] == 0:
-                            return 0
-                        else: 
-                            updated_ferm_occupancy[self.modes[mode]] = 0
-                            coeff *= (-1)**np.sum(other.ferm_occupancy[0:self.modes[mode]])
-                    elif self.ca_string[mode] == 'c':
-                        if other.ferm_occupancy[self.modes[mode]] == 0:
-                            updated_ferm_occupancy[self.modes[mode]] = 1
-                            coeff *= (-1)**np.sum(other.ferm_occupancy[0:self.modes[mode]])
-                        else: return 0
-                elif self.particle_str[mode] == 'a':
-                    if self.ca_string[mode] == 'a':
-                        if other.antiferm_occupancy[self.modes[mode]] == 0:
-                            return 0
-                        else: 
-                            updated_antiferm_occupancy[self.modes[mode]] = 0
-                            coeff *= (-1)**np.sum(other.antiferm_occupancy[0:self.modes[mode]])
-                    elif self.ca_string[mode] == 'c':
-                        if other.antiferm_occupancy[self.modes[mode]] == 0:
-                            updated_antiferm_occupancy[self.modes[mode]] = 1
-                            coeff *= (-1)**np.sum(other.antiferm_occupancy[0:self.modes[mode]])
-                        else: return 0
-                elif self.particle_str[mode] == 'b':
-                    if self.ca_string[mode] == 'a':
-                        if other.bos_occupancy[self.modes[mode]] == 0:
-                            return 0
-                        else: 
-                            updated_bos_occupancy[self.modes[mode]] = other.bos_occupancy[self.modes[mode]] - 1
-                            coeff *= np.sqrt(other.bos_occupancy[mode])
-                    elif self.ca_string[mode] == 'c':
-                        updated_bos_occupancy[self.modes[mode]] = other.bos_occupancy[self.modes[mode]] + 1
-                        coeff *= np.sqrt(other.bos_occupancy[mode] + 1)
+            if 'a' in self.particle_type:
+                return coeff * FockState(sorted(updated_ferm_state),
+                                     sorted(updated_antiferm_state), sorted_updated_bos_state)
+            else: return coeff * FockState(sorted(updated_ferm_state),
+                                     sorted(updated_antiferm_state), updated_bos_state)
         
-
-        return FockState(updated_ferm_occupancy, updated_antiferm_occupancy, updated_bos_occupancy, coeff)
+            
 
 class ParticleOperatorSum(ParticleOperator):
 
@@ -129,14 +167,14 @@ class ParticleOperatorSum(ParticleOperator):
             ops_w_new_coeffs = []
             for operator in self.operator_list:
                 operator.coeff *= other
-                ops_w_new_coeffs.append(ParticleOperator(operator.particle_str, 
+                ops_w_new_coeffs.append(ParticleOperator(operator.particle_type, 
                             operator.modes, operator.ca_string, operator.coeff))
             return ParticleOperatorSum(ops_w_new_coeffs)
 
 class FermionOperator(ParticleOperator):
 
-    def __init__(self, mode, ca, coeff: float = 1.0):
-        super().__init__('f', [mode], ca, coeff)
+    def __init__(self, op, coeff: float = 1.0):
+        super().__init__('b' + op)
         
     def __str__(self):
         return super().__str__()
@@ -148,8 +186,8 @@ class FermionOperator(ParticleOperator):
         return super().__add__(other)
   
 class AntifermionOperator(ParticleOperator):
-    def __init__(self, mode, ca, coeff: float = 1.0):
-        super().__init__('a', [mode], ca, coeff)
+    def __init__(self, op, coeff: float = 1.0):
+        super().__init__('d' + op)
         
     def __str__(self):
         return super().__str__()
@@ -161,8 +199,8 @@ class AntifermionOperator(ParticleOperator):
         return super().__add__(other)
 
 class BosonOperator(ParticleOperator):
-    def __init__(self, mode, ca, coeff: float = 1.0):
-        super().__init__('b', [mode], ca, coeff)
+    def __init__(self, op, coeff: float = 1.0):
+        super().__init__('a' + op)
         
     def __str__(self):
         return super().__str__()
