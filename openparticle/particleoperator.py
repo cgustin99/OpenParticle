@@ -1,7 +1,7 @@
 import numpy as np
 from sympy import *
 from typing import List
-from FockState import *
+from openparticle.fockstate import *
 from IPython.display import display, Latex
 
 class ParticleOperator():
@@ -27,28 +27,38 @@ class ParticleOperator():
         self.modes = modes
         self.ca_string = ca_string
 
+        fermion_modes = []
+        antifermion_modes = []
+        boson_modes = []
+
         op_string = ''
         for index, particle in enumerate(self.particle_type):
 
             if particle == 'b':
+                fermion_modes.append(self.modes[index])
                 if self.ca_string[index] == 'c':
                     op_string += 'b^†_' + str(self.modes[index])
                 else:
                     op_string += 'b_' + str(self.modes[index])
 
             elif particle == 'd': 
+                antifermion_modes.append(self.modes[index])
                 if self.ca_string[index] == 'c':
                     op_string += 'd^†_' + str(self.modes[index])
                 else: 
                     op_string += 'd_' + str(self.modes[index])
 
             elif particle == 'a': 
+                boson_modes.append(self.modes[index])
                 if self.ca_string[index] == 'c':
                     op_string += 'a^†_' + str(self.modes[index])
                 else: 
                     op_string += 'a_' + str(self.modes[index]) 
 
         self.op_string = str(self.coeff) + '*' + op_string
+        self.fermion_modes = fermion_modes
+        self.antifermion_modes = antifermion_modes
+        self.boson_modes = boson_modes
 
     def __str__(self):
         return self.op_string
