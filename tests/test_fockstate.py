@@ -27,4 +27,3 @@ def test_fock_state_mul_by_constant(coeff):
     assert fs_new.coeff == coeff * fs.coeff
 
 
-
