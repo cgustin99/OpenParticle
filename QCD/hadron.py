@@ -30,8 +30,8 @@ class Hadron():
                 elif particle == 'g':
                     state_str += 'g'
             if index == len(self.sectors) - 1:
-                state_str += ">"
-            else: state_str += "> + |"
+                state_str += "⟩"
+            else: state_str += "⟩ + |"
                 
         return state_str
     

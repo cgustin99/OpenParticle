@@ -6,15 +6,15 @@ from IPython.display import display, Latex
 
 class ParticleOperator():
 
-    def __init__(self, op_str, coeff = 1.0):
-        self.op_str = op_str
+    def __init__(self, input_string, coeff = 1.0):
+        self.input_string = input_string
         self.coeff = coeff
 
         particle_type = ''
         modes = []
         ca_string = ''
 
-        for op in self.op_str.split(" "):
+        for op in self.input_string.split(" "):
             type = op[0]
             orbital = op[1]
             particle_type += type
@@ -84,7 +84,7 @@ class ParticleOperator():
     def __mul__(self, other):
         if isinstance(other, ParticleOperator):
             updated_coeff = self.coeff * other.coeff
-            return ParticleOperator(self.op_str + " " + other.op_str, updated_coeff)
+            return ParticleOperator(self.input_string + " " + other.input_string, updated_coeff)
         
         elif isinstance(other, FockState):
             coeff = self.coeff * other.coeff
@@ -92,7 +92,7 @@ class ParticleOperator():
             updated_antiferm_state = other.af_occ[:]
             updated_bos_state = other.b_occ[:]
             
-            for op in self.op_str.split(" "):
+            for op in self.input_string.split(" "):
                 if op[-1] == '^':
                     if op[0] == 'b':
                         if int(op[1]) not in other.f_occ:
@@ -162,12 +162,12 @@ class ParticleOperatorSum(ParticleOperator):
         self.operator_list = operator_list    
 
     def __str__(self):
-        op_str = ''
+        op_string = ''
         for index, op in enumerate(self.operator_list):
             if index != len(self.operator_list) - 1:
-                op_str += op.__str__() + " + "
-            else: op_str += op.__str__()
-        return op_str
+                op_string += op.__str__() + " + "
+            else: op_string += op.__str__()
+        return op_string
     
     def display(self):
         return display(Latex('$' + self.__str__() + '$'))

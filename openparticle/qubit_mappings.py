@@ -1,5 +1,6 @@
 import numpy as np
 from symmer import PauliwordOp as Pauli
+from symmer import QuantumState
 from openparticle import FockState, ParticleOperator, FermionOperator, AntifermionOperator, BosonOperator
 from typing import Union, List
 from symmer.utils import tensor_list
@@ -8,7 +9,9 @@ from IPython.display import display, Latex
 
 
 def jordan_wigner(op: Union[FermionOperator, 
-                            AntifermionOperator, ParticleOperator], display_latex: bool = False):
+                            AntifermionOperator, ParticleOperator], 
+                            total_modes: int = None,
+                            display_latex: bool = False):
 
 
     if isinstance(op, (FermionOperator, AntifermionOperator, ParticleOperator)):
@@ -27,12 +30,17 @@ def jordan_wigner(op: Union[FermionOperator,
 
 
         if display_latex: display(Latex(qubit_op_string))
-        return Pauli.from_list(qubit_op_list, coeffs)
+
+        op = Pauli.from_list(qubit_op_list, coeffs)
+        if total_modes is not None:
+            return Pauli.from_list(['I' * (total_modes - op.n_qubits)]).tensor(op)
+        else: return op
         
     else: raise Exception("The Jordan Wigner mapping only works for fermions and antifermions")
 
 
-def unary(op: Union[BosonOperator, ParticleOperator], max_bose_mode_occ: int, display_latex: bool = False):
+def unary(op: Union[BosonOperator, ParticleOperator], max_bose_mode_occ: int, total_modes: int = None,
+          display_latex: bool = False):
 
     # assert op.modes[0] <= total_modes
 
@@ -72,7 +80,10 @@ def unary(op: Union[BosonOperator, ParticleOperator], max_bose_mode_occ: int, di
             op_str = "$" + op_str[:-1] + "$"
             display(Latex(op_str))
 
-        return op
+        if total_modes is not None:
+            qubit_diff = (total_modes + 1) * (Mb + 1) - op.n_qubits
+            return op.tensor(Pauli.from_list(['I' * qubit_diff], [1]))
+        else: return op
 
     else: raise NotImplemented
 
@@ -87,7 +98,7 @@ def qubit_op_mapping(op: Union[ParticleOperator, FermionOperator, AntifermionOpe
         else: return unary(op, max_bose_mode_occ)
 
     elif isinstance(op, ParticleOperator):
-
+        
         ops = []
         for index, particle in enumerate(op.particle_str):
             if particle == 'f':
@@ -113,12 +124,34 @@ def map_bose_occ(occupancy_list, N):
 
     return q_bos
 
+def map_fermions_to_qubits(state):
+    if state.f_occ != []:       
+        fock_list = state.f_occ
+        qubit_state = [0] * (state.f_occ[-1] + 1)
+
+        for index in fock_list:
+            qubit_state[index] = 1
+        return qubit_state[::-1]
+
+    else: return []
+
+def map_fermions_to_qubits(state):
+    if state.af_occ != []:       
+        fock_list = state.af_occ
+        qubit_state = [0] * (state.af_occ[-1] + 1)
+
+        for index in fock_list:
+            qubit_state[index] = 1
+        return qubit_state[::-1]
+
+    else: return []
+
 
 def qubit_state_mapping(state, max_bose_mode_occ):
 
-    q_fermi = state.ferm_occupancy[::-1]
+    q_fermi = 
     q_antifermi = state.antiferm_occupancy[::-1]
 
-    q_bos = map_bose_occ(state.bos_occupancy, max_bose_mode_occ)#[::-1]
+    q_bos = map_bose_occ(state.bos_occupancy, max_bose_mode_occ)
     
     return symmer.QuantumState([q_fermi + q_antifermi + q_bos])
