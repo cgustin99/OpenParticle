@@ -1,5 +1,6 @@
 import numpy as np
 from typing import List
+from IPython.display import display, Latex
 
 
 class FockState():
@@ -24,9 +25,9 @@ class FockState():
         self.coeff = coeff
 
     def __str__(self):
-        return str(self.coeff) + " * |" + ",".join([str(i) for i in self.f_occ]) + "; " +\
-            ",".join([str(i) for i in self.af_occ]) + "; " +\
-            ",".join([str(i) for i in self.b_occ]) + "⟩"
+        return str(self.coeff) + " * |" + ",".join([str(i) for i in self.f_occ][::-1]) + "; " +\
+            ",".join([str(i) for i in self.af_occ][::-1]) + "; " +\
+            ",".join([str(i) for i in self.b_occ][::-1]) + "⟩"
     
     def display(self):
         display(Latex('$' + self.__str__() + '$'))
@@ -64,9 +65,9 @@ class ConjugateFockState(FockState):
         self.coeff = coeff
 
     def __str__(self):
-        return str(self.coeff) + " * " + "⟨" + ",".join([str(i) for i in self.f_occ]) + "; " +\
-            ",".join([str(i) for i in self.af_occ]) + "; " +\
-            ",".join([str(i) for i in self.b_occ]) + "|"
+        return str(self.coeff) + " * " + "⟨" + ",".join([str(i) for i in self.f_occ][::-1]) + "; " +\
+            ",".join([str(i) for i in self.af_occ][::-1]) + "; " +\
+            ",".join([str(i) for i in self.b_occ][::-1]) + "|"
     
     @classmethod
     def from_state(cls, state: FockState):

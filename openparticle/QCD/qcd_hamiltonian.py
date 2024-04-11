@@ -25,7 +25,7 @@ def T():
 
 
 
-def hamiltonian(sectors: dict, K: Union[float, int], Lambda_perp: Union[float, int]):
+def hamiltonian(K: Union[float, int], Lambda_perp: Union[float, int], P_perp: Union[float, int]):
 
     
 

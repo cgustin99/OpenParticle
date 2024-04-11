@@ -1,20 +1,20 @@
 import numpy as np
 from sympy import *
 from typing import List
-from FockState import *
+from openparticle.fockstate import *
 from IPython.display import display, Latex
 
 class ParticleOperator():
 
-    def __init__(self, op_str, coeff = 1.0):
-        self.op_str = op_str
+    def __init__(self, input_string, coeff = 1.0):
+        self.input_string = input_string
         self.coeff = coeff
 
         particle_type = ''
         modes = []
         ca_string = ''
 
-        for op in self.op_str.split(" "):
+        for op in self.input_string.split(" "):
             type = op[0]
             orbital = op[1]
             particle_type += type
@@ -27,28 +27,38 @@ class ParticleOperator():
         self.modes = modes
         self.ca_string = ca_string
 
+        fermion_modes = []
+        antifermion_modes = []
+        boson_modes = []
+
         op_string = ''
         for index, particle in enumerate(self.particle_type):
 
             if particle == 'b':
+                fermion_modes.append(self.modes[index])
                 if self.ca_string[index] == 'c':
                     op_string += 'b^†_' + str(self.modes[index])
                 else:
                     op_string += 'b_' + str(self.modes[index])
 
             elif particle == 'd': 
+                antifermion_modes.append(self.modes[index])
                 if self.ca_string[index] == 'c':
                     op_string += 'd^†_' + str(self.modes[index])
                 else: 
                     op_string += 'd_' + str(self.modes[index])
 
             elif particle == 'a': 
+                boson_modes.append(self.modes[index])
                 if self.ca_string[index] == 'c':
                     op_string += 'a^†_' + str(self.modes[index])
                 else: 
                     op_string += 'a_' + str(self.modes[index]) 
 
         self.op_string = str(self.coeff) + '*' + op_string
+        self.fermion_modes = fermion_modes
+        self.antifermion_modes = antifermion_modes
+        self.boson_modes = boson_modes
 
     def __str__(self):
         return self.op_string
@@ -74,7 +84,7 @@ class ParticleOperator():
     def __mul__(self, other):
         if isinstance(other, ParticleOperator):
             updated_coeff = self.coeff * other.coeff
-            return ParticleOperator(self.op_str + " " + other.op_str, updated_coeff)
+            return ParticleOperator(self.input_string + " " + other.input_string, updated_coeff)
         
         elif isinstance(other, FockState):
             coeff = self.coeff * other.coeff
@@ -82,7 +92,7 @@ class ParticleOperator():
             updated_antiferm_state = other.af_occ[:]
             updated_bos_state = other.b_occ[:]
             
-            for op in self.op_str.split(" "):
+            for op in self.input_string.split(" "):
                 if op[-1] == '^':
                     if op[0] == 'b':
                         if int(op[1]) not in other.f_occ:
@@ -152,12 +162,12 @@ class ParticleOperatorSum(ParticleOperator):
         self.operator_list = operator_list    
 
     def __str__(self):
-        op_str = ''
+        op_string = ''
         for index, op in enumerate(self.operator_list):
             if index != len(self.operator_list) - 1:
-                op_str += op.__str__() + " + "
-            else: op_str += op.__str__()
-        return op_str
+                op_string += op.__str__() + " + "
+            else: op_string += op.__str__()
+        return op_string
     
     def display(self):
         return display(Latex('$' + self.__str__() + '$'))

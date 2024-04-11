@@ -1,1 +1,2 @@
-from .base import FockState, FockStateSum, ParticleOperator, FermionOperator, AntifermionOperator, BosonOperator, ConjugateFockState
+from .fockstate import FockState, ConjugateFockState, FockStateSum
+from .particleoperator import ParticleOperator, FermionOperator, AntifermionOperator, BosonOperator
