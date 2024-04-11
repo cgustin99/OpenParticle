@@ -12,19 +12,16 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Install dependencies
+    - name: Installation
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+    - name: Install dependencies not in package
         run: pip install symmer
-      - name: Run ATS
-        uses: codecov/codecov-ats@v0
-        env:
-          CODECOV_STATIC_TOKEN: ${{ secrets.CODECOV_STATIC_TOKEN }}
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - name: Run tests and collect coverage
-        run: pytest --cov app ${{ env.CODECOV_ATS_TESTS }}
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          flags: smart-tests
-          verbose: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    - name: Generate codecov report
+      run: |
+        pip install coverage
+        pip install pytest
+        coverage run -m pytest
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v2
