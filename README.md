@@ -1,4 +1,4 @@
-[![Continuous_Integration](https://github.com/cgustin99/OpenParticle/actions/workflows/python-package.yml/badge.svg)](https://github.com/cgustin99/OpenParticle/actions/workflows/python-package.yml)
+[![Continuous Integration (CI)](https://github.com/cgustin99/OpenParticle/actions/workflows/python-package.yml/badge.svg)](https://github.com/cgustin99/OpenParticle/actions/workflows/python-package.yml)
 
 [![codecov](https://codecov.io/gh/cgustin99/OpenParticle/graph/badge.svg?token=ZYS8VULY5V)](https://codecov.io/gh/cgustin99/OpenParticle)
 # OpenParticle
