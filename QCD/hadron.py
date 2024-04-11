@@ -1,23 +1,41 @@
-from QCD.get_quantum_nums import *
-from openparticle import FockState, FockStateSum, ParticleOperator
+from QCD.get_quantum_nums import get_quantum_numbers
+import numpy as np
 from itertools import product
-from IPython.display import display, Latex
+from IPython.display import Latex, display
+import itertools
+from openparticle.fockstate import FockState, FockStateSum
 from collections import Counter
 
 
 class Hadron():
 
-    def __init__(self, sectors):
-        self.sectors = sectors
-        self.particle_type = self.get_particle_type()
+    def __init__(self, particle_type, K):
+        self.particle_type = particle_type
+        self.K = K
+        self.sectors = self.get_sectors(K)
 
+    def get_sectors(self, K):
+        if self.particle_type == 'meson':
+            sectors = []
+            for k in range(1, K + 1):
+                sectors_set = set(product('Qg', repeat = k))
+                sectors_unique = set()
+                for comb in sectors_set:
+                    sectors_unique.add( ''.join(sorted(comb)) )
+                sectors += [[item] for item in sectors_unique]
 
-    def get_particle_type(self):
-        if self.sectors[0].count('q') == self.sectors[0].count('qbar'):
-            return "meson"
-        elif self.sectors[0].count('q') != self.sectors[0].count('qbar'):
-            return "baryon"
-        
+            processed_sectors = []
+            for sec in sectors:
+                string_list = [* sec[0]]
+                new_list = []
+                for item in string_list:
+                    if item == 'Q':
+                        new_list.extend(['q', 'qbar'])
+                    else:
+                        new_list.append(item)
+                processed_sectors.append(new_list)
+            return processed_sectors
+                
     def __str__(self):
         state_str = "|"
 
@@ -35,15 +53,19 @@ class Hadron():
                 
         return state_str
     
+
     def display(self):
         return display(Latex('$' + self.__str__() + '$'))
     
-    def get_states(self, K):
-        qnums = get_quantum_numbers(K)
+    def get_states(self, K, P_perp, Lambda_perp):
+        assert K == self.K
         
-        quarks = qnums[qnums['n'] % 2 == 1]
-        antiquarks = qnums[qnums['n'] % 2 == 1]
-        gluons = qnums[qnums['n'] % 2 == 0]
+        qnums = get_quantum_numbers(K, Lambda_perp)
+        
+        quarks = qnums[qnums['n'] % 1 == 0.5]#can reindex here with .reset_index()
+        antiquarks = qnums[qnums['n'] % 1 == 0.5]
+        gluons = qnums[qnums['n'] % 1 == 0]
+
 
         valid_states = []
 
@@ -57,7 +79,7 @@ class Hadron():
                 fermi_indices.append(pair)
             
             #antiquarks
-            for pair in itertools.combinations(quarks.index.to_numpy(), r = sector.count('qbar')):
+            for pair in itertools.combinations(antiquarks.index.to_numpy(), r = sector.count('qbar')):
                 antifermi_indices.append(pair)
 
             #gluons
@@ -68,34 +90,19 @@ class Hadron():
             for pair in itertools.product(fermi_indices, antifermi_indices, bose_indices):
                 nested_lists = [list(inner_tuple) for inner_tuple in pair]
                 indices = [item for sublist in nested_lists for item in sublist]
-                if qnums.loc[indices, 'n'].sum() == K:
-                    nested_lists_full = self.pad_states(nested_lists, len(qnums))
-                    valid_states.append(FockState(nested_lists_full[0], 
-                                                  nested_lists_full[1], 
-                                                  nested_lists_full[2]))
+                if qnums.loc[indices, 'n'].sum() == K and qnums.loc[indices, 'n⟂'].sum() == P_perp:
+                    valid_states.append(FockState(nested_lists[0], nested_lists[1], self.postprocess_bosons(nested_lists[2])))
+                  
                     
         return FockStateSum(valid_states)
     
+    def postprocess_bosons(self, boson_state):
+        counter = Counter(sorted(boson_state))
+        result = list(counter.items())
+        return result
+    
 
-    def pad_states(self, state, num_modes):
-        #pad quarks
-        padded_quarks = [1 if i in state[0] else 0 for i in range(num_modes)]
-        if padded_quarks == [0] * num_modes:
-            padded_quarks = []
+    
 
-        #pad_antiquarks
-        padded_antiquarks = [1 if i in state[1] else 0 for i in range(num_modes)]
-        if padded_antiquarks == [0] * num_modes:
-            padded_antiquarks = []
-
-        #pad gluons
-        index_counts = Counter(state[2])
-        padded_gluons = [index_counts[i] if i in index_counts else 0 for i in range(num_modes)]
-        if padded_gluons == [0] * num_modes:
-            padded_gluons = []
-
-        
-
-        return [padded_quarks, padded_antiquarks, padded_gluons]
 
             
