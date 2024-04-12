@@ -1,5 +1,5 @@
 import numpy as np
-from openparticle import ParticleOperator, FockState
+from openparticle import ParticleOperator, Fock
 from typing import Union
 
 #Constants

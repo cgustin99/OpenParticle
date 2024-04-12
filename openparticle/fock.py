@@ -3,7 +3,7 @@ from typing import List
 from IPython.display import display, Latex
 
 
-class FockState():
+class Fock():
 
     '''
     Defines a Fock state of the form |f, \bar{f}, b⟩
@@ -39,10 +39,10 @@ class FockState():
                 return 0
             else:
                 coeff = self.coeff * other
-                return FockState(self.f_occ, self.af_occ, self.b_occ, coeff)
-        elif isinstance(other, ConjugateFockState):
+                return Fock(self.f_occ, self.af_occ, self.b_occ, coeff)
+        elif isinstance(other, ConjugateFock):
             raise NotImplemented
-        elif isinstance(other, FockState):
+        elif isinstance(other, Fock):
             raise Exception("Cannot multiply a ket to the left of a ket")
         
     def __mul__(self, other):
@@ -50,13 +50,13 @@ class FockState():
 
     
     def __add__(self, other):
-        return FockStateSum([self, other])
+        return FockSum([self, other])
     
     def dagger(self):
-        return ConjugateFockState.from_state(self)
+        return ConjugateFock.from_state(self)
 
 
-class ConjugateFockState(FockState): 
+class ConjugateFock(Fock): 
 
     def __init__(self, f_occ, af_occ, b_occ, coeff: float = 1.0): 
         self.f_occ = f_occ
@@ -70,7 +70,7 @@ class ConjugateFockState(FockState):
             ",".join([str(i) for i in self.b_occ][::-1]) + "|"
     
     @classmethod
-    def from_state(cls, state: FockState):
+    def from_state(cls, state: Fock):
         f_occ = state.f_occ
         af_occ = state.af_occ
         b_occ = state.b_occ
@@ -88,12 +88,12 @@ class ConjugateFockState(FockState):
         else: return 0
 
     def __mul__(self, other):
-        if isinstance(other, FockState):
+        if isinstance(other, Fock):
             return self.inner_product(other)
 
     
-class FockStateSum(FockState):
-    def __init__(self, states_list: List[FockState]):
+class FockSum(Fock):
+    def __init__(self, states_list: List[Fock]):
         self.states_list = states_list
 
     def normalize(self):
