@@ -1,7 +1,7 @@
 import numpy as np
 from sympy import *
 from typing import List
-from openparticle.fockstate import *
+from openparticle.fock import *
 from IPython.display import display, Latex
 
 class ParticleOperator():
@@ -86,7 +86,7 @@ class ParticleOperator():
             updated_coeff = self.coeff * other.coeff
             return ParticleOperator(self.input_string + " " + other.input_string, updated_coeff)
         
-        elif isinstance(other, FockState):
+        elif isinstance(other, Fock):
             coeff = self.coeff * other.coeff
             updated_ferm_state = other.f_occ[:]
             updated_antiferm_state = other.af_occ[:]
@@ -149,9 +149,9 @@ class ParticleOperator():
                         sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
             
             if 'a' in self.particle_type:
-                return coeff * FockState(sorted(updated_ferm_state),
+                return coeff * Fock(sorted(updated_ferm_state),
                                      sorted(updated_antiferm_state), sorted_updated_bos_state)
-            else: return coeff * FockState(sorted(updated_ferm_state),
+            else: return coeff * Fock(sorted(updated_ferm_state),
                                      sorted(updated_antiferm_state), updated_bos_state)
         
             

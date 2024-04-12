@@ -3,7 +3,7 @@ import numpy as np
 from itertools import product
 from IPython.display import Latex, display
 import itertools
-from openparticle.fockstate import FockState, FockStateSum
+from openparticle.fock import Fock, FockSum
 from collections import Counter
 
 
@@ -91,10 +91,10 @@ class Hadron():
                 nested_lists = [list(inner_tuple) for inner_tuple in pair]
                 indices = [item for sublist in nested_lists for item in sublist]
                 if qnums.loc[indices, 'n'].sum() == K and qnums.loc[indices, 'n⟂'].sum() == P_perp:
-                    valid_states.append(FockState(nested_lists[0], nested_lists[1], self.postprocess_bosons(nested_lists[2])))
+                    valid_states.append(Fock(nested_lists[0], nested_lists[1], self.postprocess_bosons(nested_lists[2])))
                   
                     
-        return FockStateSum(valid_states)
+        return FockSum(valid_states)
     
     def postprocess_bosons(self, boson_state):
         counter = Counter(sorted(boson_state))
