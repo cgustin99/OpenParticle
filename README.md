@@ -12,3 +12,5 @@ pip install symmer
 pip install .
 ```
 Note [`symmer`](https://github.com/UCL-CCS/symmer) is a dependency not included in the toml file currently.
+
+Just a bump for testing the CICD pipeline
