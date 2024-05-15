@@ -127,20 +127,22 @@ def qubit_op_mapping(op: Union[ParticleOperator, FermionOperator, AntifermionOpe
 
 
 
-def map_bose_occ(occupancy_list, M):
-    modes = [i[0] for i in occupancy_list]
-    q_bos = [0] * (max(modes) + 1) * (M + 1)
+def map_bose_occ(occupancy_list, M, n_b_modes):
+    if state.b_occ != []:
+        modes = [i[0] for i in occupancy_list]
+        q_bos = [0] * (max(modes) + 1) * (M + 1)
 
-    for occ in occupancy_list:
-        p = occ[0]
-        q = occ[1]
-        index = (M + 1) * p + q
-        q_bos[index] = 1
+        for occ in occupancy_list:
+            p = occ[0]
+            q = occ[1]
+            index = (M + 1) * p + q
+            q_bos[index] = 1
 
 
-    return q_bos[::-1]
+        return q_bos[::-1]
+    else: return [0] * (M + 1) * n_b_modes
 
-def map_fermions_to_qubits(state):
+def map_fermions_to_qubits(state, n_f_modes):
     if state.f_occ != []:       
         fock_list = state.f_occ
         qubit_state = [0] * (state.f_occ[-1] + 1)
@@ -149,9 +151,9 @@ def map_fermions_to_qubits(state):
             qubit_state[index] = 1
         return qubit_state[::-1]
 
-    else: return []
+    else: return [0] * n_f_modes
 
-def map_antifermions_to_qubits(state):
+def map_antifermions_to_qubits(state, n_af_modes):
     if state.af_occ != []:       
         fock_list = state.af_occ
         qubit_state = [0] * (state.af_occ[-1] + 1)
@@ -160,14 +162,15 @@ def map_antifermions_to_qubits(state):
             qubit_state[index] = 1
         return qubit_state[::-1]
 
-    else: return []
+    else: return [0] * n_af_modes
 
 
 def qubit_state_mapping(state, max_bose_mode_occ):
-
-    q_fermi = map_fermions_to_qubits(state)
-    q_antifermi = map_antifermions_to_qubits(state)
-
-    q_bos = map_bose_occ(state.b_occ, max_bose_mode_occ)
+    if state.f_occ != []:
+        q_fermi = map_fermions_to_qubits(state)
+    if state.af_occ != []:
+        q_antifermi = map_antifermions_to_qubits(state)
+    if state.b_occ != []:
+        q_bos = map_bose_occ(state.b_occ, max_bose_mode_occ)
     
     return symmer.QuantumState([q_fermi + q_antifermi + q_bos])
