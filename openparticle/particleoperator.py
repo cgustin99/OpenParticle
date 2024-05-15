@@ -80,6 +80,14 @@ class ParticleOperator():
             parity_str = state[:index]
             coeff = (-1)**len(parity_str)
             return coeff
+    
+    def dagger(self):
+        modes_rev = self.modes[::-1]
+        particle_type_rev = self.particle_type[::-1]
+        ca_string_rev = ''.join('^' if char == 'a' else ' ' for char in self.ca_string[::-1])
+        dagger = " ".join([str(a) + str(b) + str(c) for a, b, c in zip(particle_type_rev, modes_rev, ca_string_rev)])
+        return ParticleOperator(dagger[:-1])
+
         
     def __mul__(self, other):
         if isinstance(other, ParticleOperator):
@@ -194,6 +202,11 @@ class FermionOperator(ParticleOperator):
     
     def __add__(self, other):
         return super().__add__(other)
+    
+    def dagger(self):
+        if self.input_string[-1] == "^":
+            return FermionOperator(self.input_string[1], self.coeff)
+        else: return FermionOperator(self.input_string[1] + "^", self.coeff)
   
 class AntifermionOperator(ParticleOperator):
     def __init__(self, op, coeff: float = 1.0):
@@ -207,6 +220,11 @@ class AntifermionOperator(ParticleOperator):
     
     def __add__(self, other):
         return super().__add__(other)
+    
+    def dagger(self):
+        if self.input_string[-1] == "^":
+            return AntifermionOperator(self.input_string[1], self.coeff)
+        else: return AntifermionOperator(self.input_string[1] + "^", self.coeff)
 
 class BosonOperator(ParticleOperator):
     def __init__(self, op, coeff: float = 1.0):
@@ -220,5 +238,10 @@ class BosonOperator(ParticleOperator):
     
     def __add__(self, other):
         return super().__add__(other)
+    
+    def dagger(self):
+        if self.input_string[-1] == "^":
+            return BosonOperator(self.input_string[1], self.coeff)
+        else: return BosonOperator(self.input_string[1] + "^", self.coeff)
 
 
