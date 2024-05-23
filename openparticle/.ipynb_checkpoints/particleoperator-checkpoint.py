@@ -148,22 +148,23 @@ class ParticleOperator():
                                  sorted(updated_antiferm_state), sorted_updated_bos_state)
         else: return coeff * Fock(sorted(updated_ferm_state),
                                  sorted(updated_antiferm_state), updated_bos_state)
+
         
     def __mul__(self, other):
         if isinstance(other, ParticleOperator):
             updated_coeff = self.coeff * other.coeff
             return ParticleOperator(self.input_string + " " + other.input_string, updated_coeff)
-        
-        elif isinstance(other, Fock):
-            self.operate_on_state(other)
 
         elif isinstance(other, FockSum):
             updated_states = []
-            for state in other:
-                updated_states.append(self.operate_on_state(state))
+            for state in other.states_list:
+                state_prime = self.operate_on_state(state)
+                if isinstance(state_prime, Fock):
+                    updated_states.append(state_prime)
             return FockSum(updated_states)
-            
         
+        elif isinstance(other, Fock):
+            return self.operate_on_state(other)
             
 
 class ParticleOperatorSum(ParticleOperator):
