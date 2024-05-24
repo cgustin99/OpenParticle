@@ -68,7 +68,10 @@ class ParticleOperator():
         display(Latex('$' + self.op_string + '$'))
         
     def __add__(self, other):
-        return ParticleOperatorSum([self, other])
+        if self.input_string == other.input_string:
+            return ParticleOperator(self.input_string, self.coeff + other.coeff)
+        else:
+            return ParticleOperatorSum([self, other])
 
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
@@ -167,7 +170,7 @@ class ParticleOperator():
             return self.operate_on_state(other)
             
 
-class ParticleOperatorSum(ParticleOperator):
+class ParticleOperatorSum():
 
     def __init__(self, operator_list: List[ParticleOperator]):
         self.operator_list = operator_list    
@@ -182,6 +185,18 @@ class ParticleOperatorSum(ParticleOperator):
     
     def display(self):
         return display(Latex('$' + self.__str__() + '$'))
+
+    def __add__(self, other):
+        if isinstance(other, ParticleOperator):
+            for op in range(len(self.operator_list)):
+                if self.operator_list[op].input_string == other.input_string:
+                    self.operator_list[op] = ParticleOperator(self.operator_list[op].input_string, other.coeff)
+                    break
+                else:
+                    self.operator_list.append(other)
+                    break
+
+        return ParticleOperatorSum(self.operator_list)
     
     def __rmul__(self, other):
         if isinstance(other, (float, int)):

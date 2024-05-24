@@ -1,5 +1,5 @@
 #from openparticle.QCD import get_quantum_numbers
-from get_quantum_nums import get_quantum_numbers
+from openparticle.QCD.get_quantum_nums import get_quantum_numbers
 import numpy as np
 from itertools import product
 from IPython.display import Latex, display
