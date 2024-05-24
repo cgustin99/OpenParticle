@@ -14,7 +14,7 @@ class ParticleOperator():
         modes = []
         ca_string = ''
 
-        for op in self.input_string.split(" "):
+        for op in self.input_string.split(" ")[::-1]:
             type = op[0]
             orbital = op[1]
             particle_type += type
