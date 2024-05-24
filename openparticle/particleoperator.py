@@ -7,6 +7,10 @@ from IPython.display import display, Latex
 class ParticleOperator():
 
     def __init__(self, input_string, coeff = 1.0):
+        #Initializes particle operator in the form of b_n d_n a_n
+        #Parameters:
+        #input_string: e.g. 'b2^ a0'
+        
         self.input_string = input_string
         self.coeff = coeff
 
