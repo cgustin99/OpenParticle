@@ -175,7 +175,7 @@ class ParticleOperator():
             
 
 class ParticleOperatorSum():
-
+    #Sum of ParticleOperator instances
     def __init__(self, operator_list: List[ParticleOperator]):
         self.operator_list = operator_list    
 
