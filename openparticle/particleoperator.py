@@ -18,7 +18,7 @@ class ParticleOperator():
         modes = []
         ca_string = ''
 
-        for op in self.input_string.split(" ")[::-1]:
+        for op in self.input_string.split(" "):
             type = op[0]
             orbital = op[1]
             particle_type += type
@@ -94,62 +94,63 @@ class ParticleOperator():
         updated_antiferm_state = other.af_occ[:]
         updated_bos_state = other.b_occ[:]
         
-        for op in self.input_string.split(" "):
-            if op[-1] == '^':
-                if op[0] == 'b':
-                    if int(op[1]) not in other.f_occ:
-                        updated_ferm_state.append(int(op[1]))
-                        coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
-                    else: coeff = 0
-                elif op[0] == 'd':
-                    if int(op[1]) not in other.af_occ:
-                        updated_antiferm_state.append(int(op[1]))
-                        coeff *= self.impose_parity_jw(updated_antiferm_state, int(op[1]))
-                    else: coeff = 0
-                elif op[0] == 'a':
-                    state_modes, state_occupancies = [i[0] for i in other.b_occ], [i[1] for i in other.b_occ]
+        #for op in self.input_string.split(" ")[::-1]:
+        op = self.input_string
+        if op[-1] == '^':
+            if op[0] == 'b':
+                if int(op[1]) not in other.f_occ:
+                    updated_ferm_state.append(int(op[1]))
+                    coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
+                else: coeff = 0
+            elif op[0] == 'd':
+                if int(op[1]) not in other.af_occ:
+                    updated_antiferm_state.append(int(op[1]))
+                    coeff *= self.impose_parity_jw(updated_antiferm_state, int(op[1]))
+                else: coeff = 0
+            elif op[0] == 'a':
+                state_modes, state_occupancies = [i[0] for i in other.b_occ], [i[1] for i in other.b_occ]
+                
+                if int(op[1]) in state_modes:
+                    index = state_modes.index(int(op[1]))
+                    if state_occupancies[index] >= 1:
+                        state_occupancies[index] += 1
+                        coeff *= np.sqrt(state_occupancies[index])
                     
-                    if int(op[1]) in state_modes:
-                        index = state_modes.index(int(op[1]))
-                        if state_occupancies[index] >= 1:
-                            state_occupancies[index] += 1
-                            coeff *= np.sqrt(state_occupancies[index])
-                        
+                else:
+                    state_modes.append(int(op[1]))
+                    state_occupancies.append(1)
+                #zip up modes and occupancies into an updated list
+                updated_bos_state = list(zip(state_modes, state_occupancies))
+                sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
+        else:
+            if op[0] == 'b':
+                if int(op[1]) in other.f_occ:
+                    coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
+                    updated_ferm_state.remove(int(op[1]))
+                    
+                else: coeff = 0
+            elif op[0] == 'd':
+                if int(op[1]) in other.af_occ:
+                    coeff *= self.impose_parity_jw(updated_antiferm_state, int(op[1]))
+                    updated_antiferm_state.remove(int(op[1]))
+                else: coeff = 0
+            elif op[0] == 'a':
+                state_modes, state_occupancies = [i[0] for i in other.b_occ], [i[1] for i in other.b_occ]
+                
+                if int(op[1]) in state_modes:
+                    index = state_modes.index(int(op[1]))
+                    if state_occupancies[index] > 1:
+                        state_occupancies[index] -= 1
+                        coeff *= np.sqrt(state_occupancies[index] + 1)
                     else:
-                        state_modes.append(int(op[1]))
-                        state_occupancies.append(1)
-                    #zip up modes and occupancies into an updated list
-                    updated_bos_state = list(zip(state_modes, state_occupancies))
-                    sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
-            else:
-                if op[0] == 'b':
-                    if int(op[1]) in other.f_occ:
-                        coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
-                        updated_ferm_state.remove(int(op[1]))
-                        
-                    else: coeff = 0
-                elif op[0] == 'd':
-                    if int(op[1]) in other.af_occ:
-                        coeff *= self.impose_parity_jw(updated_antiferm_state, int(op[1]))
-                        updated_antiferm_state.remove(int(op[1]))
-                    else: coeff = 0
-                elif op[0] == 'a':
-                    state_modes, state_occupancies = [i[0] for i in other.b_occ], [i[1] for i in other.b_occ]
-                    
-                    if int(op[1]) in state_modes:
-                        index = state_modes.index(int(op[1]))
-                        if state_occupancies[index] > 1:
-                            state_occupancies[index] -= 1
-                            coeff *= np.sqrt(state_occupancies[index] + 1)
-                        else:
-                            #state_modes.remove(int(op[1]))
-                            #state_occupancies.remove(int(op[1]))
-                            coeff = 0
-                    else: coeff = 0
-                    #zip up modes and occupancies into an updated list
-                    updated_bos_state = list(zip(state_modes, state_occupancies))
-                    sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
-        
+                        #state_modes.remove(int(op[1]))
+                        #state_occupancies.remove(int(op[1]))
+                        coeff = 0
+                else: coeff = 0
+                #zip up modes and occupancies into an updated list
+                updated_bos_state = list(zip(state_modes, state_occupancies))
+                sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
+
         if 'a' in self.particle_type:
             return coeff * Fock(sorted(updated_ferm_state),
                                  sorted(updated_antiferm_state), sorted_updated_bos_state)
@@ -171,7 +172,10 @@ class ParticleOperator():
             return FockSum(updated_states)
         
         elif isinstance(other, Fock):
-            return self.operate_on_state(other)
+            for op in self.input_string.split(" ")[::-1]:
+                other = ParticleOperator(op).operate_on_state(other)
+            
+            return other
             
 
 class ParticleOperatorSum():
