@@ -67,6 +67,9 @@ class ParticleOperator():
     def __str__(self):
         return self.op_string
 
+    def dagger(self):
+        print(self.particle_type, self.fermion_modes[::-1], self.antifermion_modes[::-1],
+                  self.boson_modes[::-1], "".join('c' if char == 'a' else 'a' for char in self.ca_string))
     
     def display(self):
         display(Latex('$' + self.op_string + '$'))
