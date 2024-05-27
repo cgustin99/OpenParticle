@@ -230,10 +230,11 @@ class ParticleOperator():
             return ParticleOperator(self.input_string, self.coeff)
 
     def impose_parity_jw(self, state, mode):
-            index = state.index(mode)
-            parity_str = state[:index]
-            coeff = (-1)**len(parity_str)
-            return coeff
+        
+        index = state.index(mode)
+        parity_str = state[:index] 
+        coeff = (-1)**len(parity_str)
+        return coeff
 
     def operate_on_state(self, other):
         coeff = self.coeff * other.coeff
@@ -247,12 +248,12 @@ class ParticleOperator():
             if op[0] == 'b':
                 if int(op[1]) not in other.f_occ:
                     updated_ferm_state.append(int(op[1]))
-                    coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
+                    coeff *= self.impose_parity_jw(sorted(updated_ferm_state), int(op[1]))
                 else: coeff = 0
             elif op[0] == 'd':
                 if int(op[1]) not in other.af_occ:
                     updated_antiferm_state.append(int(op[1]))
-                    coeff *= self.impose_parity_jw(updated_antiferm_state, int(op[1]))
+                    coeff *= self.impose_parity_jw(sorted(updated_antiferm_state), int(op[1]))
                 else: coeff = 0
             elif op[0] == 'a':
                 state_modes, state_occupancies = [i[0] for i in other.b_occ], [i[1] for i in other.b_occ]
