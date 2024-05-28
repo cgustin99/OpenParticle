@@ -106,6 +106,9 @@ class FockSum():
         #TODO
         return
 
+    def display(self):
+        return display(Latex('$' + self.__str__() + '$'))
+    
     def __str__(self):
         states_str = ''
         for index, state in enumerate(self.states_list):
