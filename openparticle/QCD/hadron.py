@@ -4,7 +4,7 @@ import numpy as np
 from itertools import product
 from IPython.display import Latex, display
 import itertools
-from openparticle.fock import Fock, FockSum
+from openparticle import Fock, FockSum
 from collections import Counter
 
 
