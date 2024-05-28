@@ -370,7 +370,7 @@ class ParticleOperatorSum():
                 if isinstance(out, Fock):
                     out_states.append(out)
             if len(out_states) == 1:
-                return out_states
+                return out_states[0]
             else: return FockSum(out_states)
         elif isinstance(other, FockSum):
             out_states = []
