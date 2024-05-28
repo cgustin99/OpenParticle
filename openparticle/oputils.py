@@ -319,7 +319,7 @@ class ParticleOperator():
 
         elif isinstance(other, Fock):
             for op in self.input_string.split(" ")[::-1]:
-                other = ParticleOperator(op).operate_on_state(other)
+                other = ParticleOperator(op, self.coeff).operate_on_state(other)
             
             return other
             
