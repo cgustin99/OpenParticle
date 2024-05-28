@@ -366,7 +366,9 @@ class ParticleOperatorSum():
         if isinstance(other, Fock):
             out_states = []
             for op in self.operator_list:
-                out_states.append(op * other)
+                out = op * other
+                if isinstance(out, Fock):
+                    out_states.append(out)
             if len(out_states) == 1:
                 return out_states
             else: return FockSum(out_states)
@@ -374,7 +376,9 @@ class ParticleOperatorSum():
             out_states = []
             for op in self.operator_list:
                 for state in other.states_list:
-                    out_states.append(op * state)
+                    out = op * state
+                    if isinstance(out, Fock):
+                        out_states.append(out)
             return FockSum(out_states)
     
     def __rmul__(self, other):
