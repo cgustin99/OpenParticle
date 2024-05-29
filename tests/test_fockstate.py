@@ -1,4 +1,4 @@
-from openparticle.fock import Fock
+from openparticle import Fock
 import pytest
 import numpy as np
 
