@@ -85,7 +85,7 @@ class ConjugateFock():
         if self.f_occ == other.f_occ and \
             self.af_occ == other.af_occ and \
             self.b_occ == other.b_occ: 
-            return 1.0
+            return 1.0 * self.coeff * other.coeff
         else: return 0
 
     def dagger(self):
