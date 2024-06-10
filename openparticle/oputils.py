@@ -96,7 +96,10 @@ class ConjugateFock():
             return self.inner_product(other)
         elif isinstance(other, ParticleOperator):
             #<f|A = (A^dagger |f>)^dagger
-            return (other.dagger() * self.dagger()).dagger()
+            out_state = other.dagger() * self.dagger()
+            if isinstance(out_state, (int, float)):
+                return out_state
+            else: return (other.dagger() * self.dagger()).dagger()
     
 class FockSum():
     def __init__(self, states_list: List[Fock]):
