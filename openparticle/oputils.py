@@ -266,7 +266,7 @@ class ParticleOperator():
                     
                     if int(op[1]) in state_modes:
                         index = state_modes.index(int(op[1]))
-                        if state_occupancies[index] >= 1:
+                        if state_occupancies[index] >= 0:
                             state_occupancies[index] += 1
                             coeff *= np.sqrt(state_occupancies[index])
                         
@@ -290,10 +290,9 @@ class ParticleOperator():
                     else: coeff = 0
                 elif op[0] == 'a':
                     state_modes, state_occupancies = [i[0] for i in other.b_occ], [i[1] for i in other.b_occ]
-                    
                     if int(op[1]) in state_modes:
                         index = state_modes.index(int(op[1]))
-                        if state_occupancies[index] > 1:
+                        if state_occupancies[index] >= 1:
                             state_occupancies[index] -= 1
                             coeff *= np.sqrt(state_occupancies[index] + 1)
                         else:
