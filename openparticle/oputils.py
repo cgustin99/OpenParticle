@@ -143,6 +143,8 @@ class ParticleOperator():
         modes = []
         ca_string = ''
 
+        self.HashMap = {}
+
         for op in self.input_string.split(" "):
             type = op[0]
             orbital = op[1]
@@ -225,10 +227,30 @@ class ParticleOperator():
         display(Latex('$' + self.op_string + '$'))
         
     def __add__(self, other):
-        if self.input_string == other.input_string:
-            return ParticleOperator(self.input_string, self.coeff + other.coeff)
+        # if self.input_string == other.input_string:
+        #     return ParticleOperator(self.input_string, self.coeff + other.coeff)
+        # else:
+        #     self.HashMap[self.input_string] = self.coeff
+            # return ParticleOperatorSum([self, other])
+
+
+        if self.input_string in self.HashMap:
+            if other.input_string in self.HashMap:
+                self.HashMap[other.input_string] += other.coeff
+            else:
+                self.HashMap[other.input_string] = other.coeff
+
         else:
-            return ParticleOperatorSum([self, other])
+            if self.input_string == other.input_string:
+                self.HashMap[self.input_string] = self.coeff + other.coeff
+            else:
+                self.HashMap[self.input_string] = self.coeff
+                self.HashMap[other.input_string] = other.coeff
+ 
+        # self.coeff = self.HashMap[self.input_string]
+        # print("changing coeff to: ", self.coeff)
+
+        return self
 
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
