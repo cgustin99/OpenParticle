@@ -229,7 +229,8 @@ class ParticleOperator():
         #     return ParticleOperator(self.input_string, self.coeff + other.coeff)
         # else:
             # return ParticleOperatorSum([self, other])
-        return ParticleOperatorSum.__add__(self, other)
+            # return self.input_string + other
+        return ParticleOperatorSum([self]).__add__(other)
 
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
@@ -342,6 +343,8 @@ class ParticleOperatorSum():
     def __init__(self, operator_list: List[ParticleOperator]):
         self.operator_list = operator_list    
         self.HashMap = {}
+        self.input_string = operator_list[0].input_string
+        self.coeff = operator_list[0].coeff
 
     def __str__(self):
         op_string = ''
@@ -351,15 +354,13 @@ class ParticleOperatorSum():
         #     else: op_string += op.__str__()
 
         for op in self.HashMap:
-            op_string += op.__str__() + " + "
-
-
-        return op_string[0:-1]
+            op_string += str(self.HashMap[op]) + ' * ' + op.__str__() + " + "
+        return op_string[0:-2]
     
     def display(self):
         return display(Latex('$' + self.__str__() + '$'))
 
-    def __add__(self, other1, other2):
+    def __add__(self, other):
         # if isinstance(other, ParticleOperator):
         #     for op in range(len(self.operator_list)):
         #         if self.operator_list[op].input_string == other.input_string:
@@ -371,18 +372,18 @@ class ParticleOperatorSum():
 
         # return ParticleOperatorSum(self.operator_list)
     
-        if other1.input_string in self.HashMap:
-            if other2.input_string in self.HashMap:
-                self.HashMap[other2.input_string] += other2.coeff
+        if self.input_string in self.HashMap:
+            if other.input_string in self.HashMap:
+                self.HashMap[other.input_string] += other.coeff
             else:
-                self.HashMap[other2.input_string] = other2.coeff
+                self.HashMap[other.input_string] = other.coeff
 
         else:
-            if other1.input_string == other2.input_string:
-                self.HashMap[other1.input_string] = other1.coeff + other2.coeff
+            if self.input_string == other.input_string:
+                self.HashMap[self.input_string] = self.coeff + other.coeff
             else:
-                self.HashMap[other1.input_string] = other1.coeff
-                self.HashMap[other2.input_string] = other2.coeff
+                self.HashMap[self.input_string] = self.coeff
+                self.HashMap[other.input_string] = other.coeff
                 
         return self
 
