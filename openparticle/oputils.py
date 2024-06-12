@@ -134,6 +134,13 @@ class FockSum():
                 state.coeff *= other
             return self
 
+    def dagger(self):
+        out_state = []
+
+        for op in self.states_list:
+            out_state.append(op.dagger())
+        return FockSum(out_state)
+
 
 
 class ParticleOperator():
