@@ -94,12 +94,24 @@ class ConjugateFock():
     def __mul__(self, other):
         if isinstance(other, Fock):
             return self.inner_product(other)
+        if isinstance(other, FockSum):
+            output_value = 0
+            for state in other.states_list:
+                output_value += self * state
+            return output_value
         elif isinstance(other, ParticleOperator):
             #<f|A = (A^dagger |f>)^dagger
             out_state = other.dagger() * self.dagger()
             if isinstance(out_state, (int, float)):
                 return out_state
             else: return (other.dagger() * self.dagger()).dagger()
+        elif isinstance(other, ParticleOperatorSum):
+            #<f|(A + B) = ((A^dagger + B^dagger)|f>)^dagger
+            out_state = other.dagger() * self.dagger()
+            if isinstance(out_state, (int, float)):
+                return out_state
+            else: return (out_state).dagger()
+
     
 class FockSum():
     def __init__(self, states_list: List[Fock]):
@@ -126,6 +138,13 @@ class FockSum():
             for state in self.states_list:
                 state.coeff *= other
             return self
+
+    def dagger(self):
+        out_state = []
+
+        for op in self.states_list:
+            out_state.append(op.dagger())
+        return FockSum(out_state)
 
 
 
@@ -359,6 +378,12 @@ class ParticleOperatorSum():
     
     def display(self):
         return display(Latex('$' + self.__str__() + '$'))
+    
+    def dagger(self):
+        out_ops = []
+        for op in self.operator_list:
+            out_ops.append(op.dagger())
+        return ParticleOperatorSum(out_ops)
 
     def __add__(self, other):
         # if isinstance(other, ParticleOperator):
@@ -396,6 +421,8 @@ class ParticleOperatorSum():
                     out_states.append(out)
             if len(out_states) == 1:
                 return out_states[0]
+            elif len(out_states) == 0:
+                return 0
             else: return FockSum(out_states)
         elif isinstance(other, FockSum):
             out_states = []
