@@ -94,6 +94,11 @@ class ConjugateFock():
     def __mul__(self, other):
         if isinstance(other, Fock):
             return self.inner_product(other)
+        if isinstance(other, FockSum):
+            output_value = 0
+            for state in other.states_list:
+                output_value += self * state
+            return output_value
         elif isinstance(other, ParticleOperator):
             #<f|A = (A^dagger |f>)^dagger
             out_state = other.dagger() * self.dagger()
