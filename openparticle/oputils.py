@@ -351,6 +351,12 @@ class ParticleOperatorSum():
     
     def display(self):
         return display(Latex('$' + self.__str__() + '$'))
+    
+    def dagger(self):
+        out_ops = []
+        for op in self.operator_list:
+            out_ops.append(op.dagger())
+        return ParticleOperatorSum(out_ops)
 
     def __add__(self, other):
         if isinstance(other, ParticleOperator):
