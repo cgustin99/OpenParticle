@@ -345,10 +345,11 @@ class ParticleOperator():
             return ParticleOperator(self.input_string + " " + other.input_string, updated_coeff)
 
         elif isinstance(other, Fock):
+            po_coeff = self.coeff
             for op in self.input_string.split(" ")[::-1]:
-                other = ParticleOperator(op, self.coeff).operate_on_state(other)
+                other = ParticleOperator(op).operate_on_state(other)
             
-            return other
+            return po_coeff * other
             
         elif isinstance(other, FockSum):
             updated_states = []
