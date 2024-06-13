@@ -138,6 +138,12 @@ class FockSum():
             for state in self.states_list:
                 state.coeff *= other
             return self
+        
+    def __mul__(self, other):
+        output_value = 0
+        for op in self.states_list:
+            output_value += op * other
+        return output_value
 
     def dagger(self):
         out_state = []
@@ -339,10 +345,11 @@ class ParticleOperator():
             return ParticleOperator(self.input_string + " " + other.input_string, updated_coeff)
 
         elif isinstance(other, Fock):
+            po_coeff = self.coeff
             for op in self.input_string.split(" ")[::-1]:
-                other = ParticleOperator(op, self.coeff).operate_on_state(other)
+                other = ParticleOperator(op).operate_on_state(other)
             
-            return other
+            return po_coeff * other
             
         elif isinstance(other, FockSum):
             updated_states = []
@@ -376,6 +383,14 @@ class ParticleOperatorSum():
         for op in self.operator_list:
             out_ops.append(op.dagger())
         return ParticleOperatorSum(out_ops)
+    
+    def get_modes(self):
+        modes_list = []
+
+        for op in self.operator_list:
+            modes_list.append(tuple(op.modes))
+
+        return modes_list
 
     def __add__(self, other):
         if isinstance(other, ParticleOperator):
