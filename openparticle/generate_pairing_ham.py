@@ -20,7 +20,7 @@ def generate_all_combos_of_fermionic_fock_states(N_modes):
     all_states = []
     for i in range(2**N):
         binary_string = [int(j) for j in format(i, f'0{N}b')]
-        f_occ = list(np.nonzero(binary_string)[0])
+        f_occ = list(np.nonzero(binary_string[::-1])[0]) #Flip bitstring because f_0 is on right
         all_states.append(op.Fock(f_occ, [], []))
 
     return all_states
@@ -32,7 +32,8 @@ def generate_matrix_from_basis(operator, basis):
 
     for i, state_i in enumerate(basis):
         for j, state_j in enumerate(basis):
-            matrix[i][j] = state_i.dagger() * operator * state_j
+            mat_el = state_i.dagger() * operator * state_j
+            matrix[i][j] = mat_el
 
     return matrix
 
