@@ -382,6 +382,14 @@ class ParticleOperatorSum():
         for op in self.operator_list:
             out_ops.append(op.dagger())
         return ParticleOperatorSum(out_ops)
+    
+    def get_modes(self):
+        modes_list = []
+
+        for op in self.operator_list:
+            modes_list.append(tuple(op.modes))
+
+        return modes_list
 
     def __add__(self, other):
         if isinstance(other, ParticleOperator):
