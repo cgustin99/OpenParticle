@@ -39,4 +39,8 @@ def generate_matrix_from_basis(operator, basis):
 def generate_pairing_hamiltonian(max_modes):
     states = generate_all_combos_of_fermionic_fock_states(max_modes)
     h_op = generate_fermioinic_pairing_hamiltonian(max_modes)
-    return generate_matrix_from_basis(h_op, states)
+
+    matrix = generate_matrix_from_basis(h_op, states)
+
+    assert np.allclose(matrix.T, matrix)
+    return matrix
