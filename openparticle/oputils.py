@@ -138,6 +138,12 @@ class FockSum():
             for state in self.states_list:
                 state.coeff *= other
             return self
+        
+    def __mul__(self, other):
+        output_value = 0
+        for op in self.states_list:
+            output_value += op * other
+        return output_value
 
     def dagger(self):
         out_state = []
