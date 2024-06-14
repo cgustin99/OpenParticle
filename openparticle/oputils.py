@@ -90,6 +90,10 @@ class ConjugateFock():
 
     def dagger(self):
         return Fock(self.f_occ, self.af_occ, self.b_occ, self.coeff)
+    
+    def __rmul__(self, other):
+        if isinstance(other, (int, float)):
+            return ConjugateFock(self.f_occ, self.af_occ, self.b_occ, coeff=other)
 
     def __mul__(self, other):
         if isinstance(other, Fock):
@@ -104,7 +108,7 @@ class ConjugateFock():
             out_state = other.dagger() * self.dagger()
             if isinstance(out_state, (int, float)):
                 return out_state
-            else: return (other.dagger() * self.dagger()).dagger()
+            else: return other.coeff * self.coeff * (other.dagger() * self.dagger()).dagger()
         elif isinstance(other, ParticleOperatorSum):
             #<f|(A + B) = ((A^dagger + B^dagger)|f>)^dagger
             out_state = other.dagger() * self.dagger()
