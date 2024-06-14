@@ -114,7 +114,7 @@ class ConjugateFock():
             out_state = other.dagger() * self.dagger()
             if isinstance(out_state, (int, float)):
                 return out_state
-            else: return (out_state).dagger()
+            else: return other.coeff * self.coeff * (out_state).dagger()
 
     
 class FockSum():
