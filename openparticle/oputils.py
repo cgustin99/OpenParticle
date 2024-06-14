@@ -114,7 +114,7 @@ class ConjugateFock():
             out_state = other.dagger() * self.dagger()
             if isinstance(out_state, (int, float)):
                 return out_state
-            else: return other.coeff * self.coeff * (out_state).dagger()
+            else: return (out_state).dagger()
 
     
 class FockSum():
@@ -248,7 +248,7 @@ class ParticleOperator():
                                  self.op_list_dagger(list_d) +\
                                  self.op_list_dagger(list_a))
 
-        return ParticleOperator(dag_op_string)
+        return ParticleOperator(dag_op_string, self.coeff)
     
     def display(self):
         display(Latex('$' + self.op_string + '$'))
