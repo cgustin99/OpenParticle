@@ -184,6 +184,30 @@ class ConjugateFockSum():
                 out_states.append(other * state)
             return ConjugateFockSum(out_states)
 
+    def __mul__(self, other):
+        if isinstance(other, Fock):
+            output_value = 0
+            for conj_state in self.states_list:
+                output_value += conj_state * other
+            return output_value
+        elif isinstance(other, FockSum):
+            output_value = 0
+            for conj_state in self.states_list:
+                for state in other.states_list:
+                    output_value += conj_state * state
+            return output_value
+        elif isinstance(other, ParticleOperator):
+            output_conj_states = []
+            for conj_state in self.states_list:
+                output_conj_states.append(conj_state * other)
+            return ConjugateFockSum(output_conj_states)
+        elif isinstance(other, ParticleOperatorSum):
+            output_conj_states = []
+            for conj_state in self.states_list:
+                for op in other.operator_list:
+                    output_conj_states.append(conj_state * op)
+            return ConjugateFockSum(output_conj_states)
+
 
 class ParticleOperator():
 
