@@ -23,6 +23,7 @@ class Fock():
         self.f_occ = f_occ
         self.af_occ = af_occ
         self.b_occ = b_occ
+        self.occs = (tuple(f_occ), tuple(af_occ), tuple(b_occ))
         self.coeff = coeff
 
     def __str__(self):
@@ -51,7 +52,11 @@ class Fock():
 
     
     def __add__(self, other):
-        return FockSum([self, other])
+        # return FockSum([self, other])
+        if isinstance(other, Fock):
+            return FockSum([self]).__add__(other)
+        elif isinstance(other, FockSum):
+            return other.__add__(self)
     
     def dagger(self):
         return ConjugateFock.from_state(self)
@@ -63,6 +68,7 @@ class ConjugateFock():
         self.f_occ = f_occ
         self.af_occ = af_occ
         self.b_occ = b_occ
+        self.occs = (tuple(f_occ), tuple(af_occ), tuple(b_occ))
         self.coeff = coeff
 
     def __str__(self):
@@ -87,6 +93,13 @@ class ConjugateFock():
             self.b_occ == other.b_occ: 
             return 1.0 * self.coeff * other.coeff
         else: return 0
+
+    def __add__(self, other):
+        # return FockSum([self, other])
+        if isinstance(other, ConjugateFock):
+            return ConjugateFockSum([self]).__add__(other)
+        elif isinstance(other, ConjugateFockSum):
+            return other.__add__(self)
 
     def dagger(self):
         return Fock(self.f_occ, self.af_occ, self.b_occ, self.coeff)
@@ -120,6 +133,9 @@ class ConjugateFock():
 class FockSum():
     def __init__(self, states_list: List[Fock]):
         self.states_list = states_list
+        self.FockMap = {}
+        self.coeff = states_list[0].coeff
+        self.occs = states_list[0].occs
 
     def normalize(self):
         #TODO
@@ -130,12 +146,21 @@ class FockSum():
     
     def __str__(self):
         states_str = ''
-        for index, state in enumerate(self.states_list):
-            if index != len(self.states_list) - 1:
-                states_str += state.__str__() + " + "
-            else: states_str += state.__str__()
+        # for index, state in enumerate(self.states_list):
+        #     if index != len(self.states_list) - 1:
+        #         states_str += state.__str__() + " + "
+        #     else: states_str += state.__str__()
 
-        return states_str
+        for fock in self.FockMap:
+            f_occ = fock[0]
+            af_occ = fock[1]
+            b_occ = fock[2]
+            states_str += str(self.FockMap[fock]) + " * |" +\
+                  ",".join([str(i) for i in f_occ][::-1]) +\
+                      "; " + ",".join([str(i) for i in af_occ][::-1]) + "; " +\
+                        ",".join([str(i) for i in b_occ][::-1]) + "⟩" + " + "
+
+        return states_str[0:-2]
     
     def __rmul__(self, other):
         if isinstance(other, (float, int)):
@@ -145,6 +170,26 @@ class FockSum():
                 out_states.append(other * state)
             return FockSum(out_states)
         
+    def __add__(self, other):
+        if isinstance(other, Fock):
+            if self.occs in self.FockMap:
+                if other.occs in self.FockMap:
+                    self.FockMap[other.occs] += other.coeff
+                else:
+                    self.FockMap[other.occs] = other.coeff
+            else:
+                if self.occs == other.occs:
+                    self.FockMap[self.occs] = self.coeff + other.coeff
+                else:
+                    self.FockMap[self.occs] = self.coeff
+                    self.FockMap[other.occs] = other.coeff
+        elif isinstance(other, FockSum):
+            for fock in other.FockMap:
+                if fock in self.FockMap:
+                    self.FockMap[fock] += other.FockMap[fock]
+                else:
+                    self.FockMap[fock] = other.FockMap[fock]
+        return self
 
     def dagger(self):
         out_state = []
@@ -157,16 +202,31 @@ class ConjugateFockSum():
 
     def __init__(self, states_list: List[ConjugateFock]):
         self.states_list = states_list
+        self.ConjFockMap = {}
+        self.coeff = states_list[0].coeff
+        self.occs = states_list[0].occs
 
     def display(self):
         return display(Latex('$' + self.__str__() + '$'))
     
     def __str__(self):
         states_str = ''
-        for index, state in enumerate(self.states_list):
-            if index != len(self.states_list) - 1:
-                states_str += state.__str__() + " + "
-            else: states_str += state.__str__()
+        # for index, state in enumerate(self.states_list):
+        #     if index != len(self.states_list) - 1:
+        #         states_str += state.__str__() + " + "
+        #     else: states_str += state.__str__()
+
+        for cfock in self.ConjFockMap:
+            f_occ = cfock[0]
+            af_occ = cfock[1]
+            b_occ = cfock[2]
+            states_str += str(self.ConjFockMap[cfock]) + " * ⟨" +\
+                  ",".join([str(i) for i in f_occ][::-1]) +\
+                      "; " + ",".join([str(i) for i in af_occ][::-1]) + "; " +\
+                        ",".join([str(i) for i in b_occ][::-1]) + "|" + " + "
+
+        return states_str[0:-2]
+
 
         return states_str
     
@@ -176,6 +236,27 @@ class ConjugateFockSum():
         for op in self.states_list:
             out_state.append(op.dagger())
         return FockSum(out_state)
+    
+    def __add__(self, other):
+        if isinstance(other, ConjugateFock):
+            if self.occs in self.ConjFockMap:
+                if other.occs in self.ConjFockMap:
+                    self.ConjFockMap[other.occs] += other.coeff
+                else:
+                    self.ConjFockMap[other.occs] = other.coeff
+            else:
+                if self.occs == other.occs:
+                    self.ConjFockMap[self.occs] = self.coeff + other.coeff
+                else:
+                    self.ConjFockMap[self.occs] = self.coeff
+                    self.ConjFockMap[other.occs] = other.coeff
+        elif isinstance(other, ConjugateFockSum):
+            for fock in other.ConjFockMap:
+                if fock in self.ConjFockMap:
+                    self.ConjFockMap[fock] += other.ConjFockMap[fock]
+                else:
+                    self.ConjFockMap[fock] = other.ConjFockMap[fock]
+        return self
     
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
