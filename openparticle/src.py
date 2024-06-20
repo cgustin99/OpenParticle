@@ -139,23 +139,74 @@ class FockSum():
     
     def __rmul__(self, other):
         if isinstance(other, (float, int)):
+            #const. * (|a> + |b>)
+            out_states = []
             for state in self.states_list:
-                state.coeff *= other
-            return self
+                out_states.append(other * state)
+            return FockSum(out_states)
         
-    def __mul__(self, other):
-        output_value = 0
-        for op in self.states_list:
-            output_value += op * other
-        return output_value
 
     def dagger(self):
         out_state = []
 
         for op in self.states_list:
             out_state.append(op.dagger())
-        return FockSum(out_state)
+        return ConjugateFockSum(out_state)
 
+class ConjugateFockSum():
+
+    def __init__(self, states_list: List[ConjugateFock]):
+        self.states_list = states_list
+
+    def display(self):
+        return display(Latex('$' + self.__str__() + '$'))
+    
+    def __str__(self):
+        states_str = ''
+        for index, state in enumerate(self.states_list):
+            if index != len(self.states_list) - 1:
+                states_str += state.__str__() + " + "
+            else: states_str += state.__str__()
+
+        return states_str
+    
+    def dagger(self):
+        out_state = []
+
+        for op in self.states_list:
+            out_state.append(op.dagger())
+        return FockSum(out_state)
+    
+    def __rmul__(self, other):
+        if isinstance(other, (int, float)):
+            out_states = []
+            for state in self.states_list:
+                out_states.append(other * state)
+            return ConjugateFockSum(out_states)
+
+    def __mul__(self, other):
+        if isinstance(other, Fock):
+            output_value = 0
+            for conj_state in self.states_list:
+                output_value += conj_state * other
+            return output_value
+        elif isinstance(other, FockSum):
+            output_value = 0
+            for conj_state in self.states_list:
+                for state in other.states_list:
+                    output_value += conj_state * state
+            return output_value
+        elif isinstance(other, ParticleOperator):
+            output_conj_states = []
+            for conj_state in self.states_list:
+                output_conj_states.append(conj_state * other)
+            return ConjugateFockSum(output_conj_states)
+        elif isinstance(other, ParticleOperatorSum):
+            output_conj_states = []
+            for conj_state in self.states_list:
+                for op in other.operator_list:
+                    output_conj_states.append(conj_state * op)
+            return ConjugateFockSum(output_conj_states)
 
 
 class ParticleOperator():
