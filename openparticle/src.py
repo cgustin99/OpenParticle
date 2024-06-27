@@ -40,6 +40,14 @@ class Fock:
     def display(self):
         display(Latex("$" + self.__str__() + "$"))
 
+    def __eq__(self, other):
+        if isinstance(other, Fock):
+            return (
+                self.f_occ == other.f_occ
+                and self.af_occ == other.af_occ
+                and self.b_occ == other.b_occ
+            )
+
     def __rmul__(self, other):
         if isinstance(other, (float, int)):
             if other == 0:
@@ -56,7 +64,8 @@ class Fock:
         raise NotImplemented
 
     def __add__(self, other):
-        return FockSum([self, other])
+        if isinstance(other, Fock):
+            return FockSum([self, other]).cleanup()
 
     def dagger(self):
         return ConjugateFock.from_state(self)
@@ -143,7 +152,41 @@ class FockSum:
 
     def normalize(self):
         # TODO
-        return
+        return NotImplemented
+
+    def __eq__(self, other):
+        if isinstance(other, FockSum):
+            return [i for i in self.states_list] == other.states_list
+
+    def cleanup(self):
+        output_list_of_states = []
+        coeff_counter = 0
+        for i in range(len(self.states_list)):
+            if self.states_list[i] not in output_list_of_states:
+                coeff_counter += self.states_list[
+                    i
+                ].coeff  # add coeff of the first operator
+                for j in range(i + 1, len(self.states_list)):
+                    if (
+                        self.states_list[i].f_occ == self.states_list[j].f_occ
+                        and self.states_list[i].af_occ == self.states_list[j].af_occ
+                        and self.states_list[i].b_occ == self.states_list[j].b_occ
+                    ):
+                        coeff_counter += self.states_list[
+                            j
+                        ].coeff  # add coeffs of other same operators in the list
+
+                output_list_of_states.append(
+                    Fock(
+                        self.states_list[i].f_occ,
+                        self.states_list[i].af_occ,
+                        self.states_list[i].b_occ,
+                        coeff_counter,
+                    )
+                )
+
+                coeff_counter = 0
+        return FockSum(output_list_of_states)
 
     def display(self):
         return display(Latex("$" + self.__str__() + "$"))
@@ -294,6 +337,10 @@ class ParticleOperator:
 
     def __str__(self):
         return self.op_string
+
+    def __eq__(self):
+        if isinstance(other, ParticleOperator):
+            return self.input_string == other.input_string
 
     @staticmethod
     def op_list_dagger(list):
@@ -507,21 +554,22 @@ class ParticleOperatorSum:
         output_list_of_ops = []
         coeff_counter = 0
         for i in range(len(self.operator_list)):
-            coeff_counter += self.operator_list[
-                i
-            ].coeff  # add coeff of the first operator
-            for j in range(i + 1, len(self.operator_list)):
-                if (
-                    self.operator_list[i].input_string
-                    == self.operator_list[j].input_string
-                ):
-                    coeff_counter += self.operator_list[
-                        j
-                    ].coeff  # add coeffs of other same operators in the list
-            output_list_of_ops.append(
-                ParticleOperator(self.operator_list[i].input_string, coeff_counter)
-            )
-            coeff_counter = 0
+            if self.operator_list[i] not in output_list_of_ops:
+                coeff_counter += self.operator_list[
+                    i
+                ].coeff  # add coeff of the first operator
+                for j in range(i + 1, len(self.operator_list)):
+                    if (
+                        self.operator_list[i].input_string
+                        == self.operator_list[j].input_string
+                    ):
+                        coeff_counter += self.operator_list[
+                            j
+                        ].coeff  # add coeffs of other same operators in the list
+                output_list_of_ops.append(
+                    ParticleOperator(self.operator_list[i].input_string, coeff_counter)
+                )
+                coeff_counter = 0
 
         return ParticleOperatorSum(output_list_of_ops)
 
