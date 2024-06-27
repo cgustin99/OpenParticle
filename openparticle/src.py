@@ -66,6 +66,8 @@ class Fock:
     def __add__(self, other):
         if isinstance(other, Fock):
             return FockSum([self, other]).cleanup()
+        elif isinstance(other, FockSum):
+            return FockSum([self] + other.states_list).cleanup()
 
     def dagger(self):
         return ConjugateFock.from_state(self)
@@ -224,6 +226,12 @@ class FockSum:
             for state in self.states_list:
                 out_states.append(other * state)
             return FockSum(out_states)
+
+    def __add__(self, other):
+        if isinstance(other, Fock):
+            return FockSum(self.states_list + [other]).cleanup()
+        elif isinstance(other, FockSum):
+            return FockSum(self.states_list + other.states_list).cleanup()
 
     def dagger(self):
         out_state = []
@@ -387,7 +395,7 @@ class ParticleOperator:
     def __str__(self):
         return self.op_string
 
-    def __eq__(self):
+    def __eq__(self, other):
         if isinstance(other, ParticleOperator):
             return self.input_string == other.input_string
 
