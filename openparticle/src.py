@@ -161,12 +161,14 @@ class FockSum:
         self.states_list = states_list
 
     def normalize(self):
-        # TODO
-        return NotImplemented
+        coeffs = []
+        for state in self.states_list:
+            coeffs.append(state.coeff)
+        normalization = sum([i**2 for i in coeffs])
+        return 1.0 / np.sqrt(normalization) * self
 
     def __eq__(self, other):
         if isinstance(other, FockSum):
-            # return [i for i in self.states_list] == other.states_list
             lists_equal = True
             for i in self.states_list:
                 if i not in other.states_list:
