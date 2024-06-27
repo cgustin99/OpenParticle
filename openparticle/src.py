@@ -164,7 +164,12 @@ class FockSum:
 
     def __eq__(self, other):
         if isinstance(other, FockSum):
-            return [i for i in self.states_list] == other.states_list
+            # return [i for i in self.states_list] == other.states_list
+            lists_equal = True
+            for i in self.states_list:
+                if i not in other.states_list:
+                    lists_equal = False
+            return lists_equal
 
     def cleanup(self):
         output_list_of_states = []
