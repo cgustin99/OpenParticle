@@ -120,6 +120,14 @@ class ConjugateFock:
         if isinstance(other, (int, float)):
             return ConjugateFock(self.f_occ, self.af_occ, self.b_occ, coeff=other)
 
+    def __eq__(self, other):
+        if isinstance(other, Fock):
+            return (
+                self.f_occ == other.f_occ
+                and self.af_occ == other.af_occ
+                and self.b_occ == other.b_occ
+            )
+
     def __mul__(self, other):
         if isinstance(other, Fock):
             return self.inner_product(other)
@@ -244,6 +252,39 @@ class ConjugateFockSum:
         for op in self.states_list:
             out_state.append(op.dagger())
         return FockSum(out_state)
+
+    def cleanup(self):
+        output_list_of_states = []
+        coeff_counter = 0
+        for i in range(len(self.states_list)):
+            if self.states_list[i] not in output_list_of_states:
+                coeff_counter += self.states_list[
+                    i
+                ].coeff  # add coeff of the first operator
+                for j in range(i + 1, len(self.states_list)):
+                    if (
+                        self.states_list[i].f_occ == self.states_list[j].f_occ
+                        and self.states_list[i].af_occ == self.states_list[j].af_occ
+                        and self.states_list[i].b_occ == self.states_list[j].b_occ
+                    ):
+                        coeff_counter += self.states_list[
+                            j
+                        ].coeff  # add coeffs of other same operators in the list
+
+                output_list_of_states.append(
+                    ConjugateFock(
+                        self.states_list[i].f_occ,
+                        self.states_list[i].af_occ,
+                        self.states_list[i].b_occ,
+                        coeff_counter,
+                    )
+                )
+
+                coeff_counter = 0
+        if len(output_list_of_states) == 1:
+            return output_list_of_states[0]
+        else:
+            return ConjugateFockSum(output_list_of_states)
 
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
