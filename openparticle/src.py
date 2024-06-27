@@ -400,6 +400,12 @@ class ParticleOperator:
     def __eq__(self, other):
         if isinstance(other, ParticleOperator):
             return self.input_string == other.input_string
+        if isinstance(other, ParticleOperatorSum):
+            lists_equal = True
+            for i in self:
+                if i not in other.operator_list:
+                    lists_equal = False
+            return lists_equal
 
     @staticmethod
     def op_list_dagger(list):
@@ -678,6 +684,14 @@ class ParticleOperatorSum:
                     )
                 )
             return ParticleOperatorSum(ops_w_new_coeffs)
+
+    def __eq__(self, other):
+        if isinstance(other, ParticleOperatorSum):
+            lists_equal = True
+            for i in self.operator_list:
+                if i not in other.operator_list:
+                    lists_equal = False
+            return lists_equal
 
 
 class FermionOperator(ParticleOperator):
