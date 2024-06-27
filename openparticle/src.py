@@ -186,7 +186,10 @@ class FockSum:
                 )
 
                 coeff_counter = 0
-        return FockSum(output_list_of_states)
+        if len(output_list_of_states) == 1:
+            return output_list_of_states[0]
+        else:
+            return FockSum(output_list_of_states)
 
     def display(self):
         return display(Latex("$" + self.__str__() + "$"))
@@ -570,8 +573,10 @@ class ParticleOperatorSum:
                     ParticleOperator(self.operator_list[i].input_string, coeff_counter)
                 )
                 coeff_counter = 0
-
-        return ParticleOperatorSum(output_list_of_ops)
+        if len(output_list_of_ops) == 1:
+            return output_list_of_ops[0]
+        else:
+            return ParticleOperatorSum(output_list_of_ops)
 
     def __add__(self, other):
         if isinstance(other, ParticleOperator):
