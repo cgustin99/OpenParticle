@@ -160,7 +160,7 @@ class FockSum():
                       "; " + ",".join([str(i) for i in af_occ][::-1]) + "; " +\
                         ",".join([str(i) for i in b_occ][::-1]) + "⟩" + " + "
 
-        return states_str[0:-2]
+        return states_str[0:-3]
     
     def __rmul__(self, other):
         if isinstance(other, (float, int)):
@@ -225,7 +225,7 @@ class ConjugateFockSum():
                       "; " + ",".join([str(i) for i in af_occ][::-1]) + "; " +\
                         ",".join([str(i) for i in b_occ][::-1]) + "|" + " + "
 
-        return states_str[0:-2]
+        return states_str[0:-3]
 
 
         return states_str
@@ -520,7 +520,7 @@ class ParticleOperatorSum():
 
         for op in self.HashMap:
             op_string += str(self.HashMap[op]) + ' * ' + op.__str__() + " + "
-        return op_string[0:-2]
+        return op_string[0:-3]
     
     def display(self):
         return display(Latex('$' + self.__str__() + '$'))
