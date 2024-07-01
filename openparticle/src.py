@@ -409,7 +409,9 @@ class ParticleOperator:
 
         for op in self.input_string.split(" "):
             type = op[0]
-            orbital = op[1]
+            orbital = op[1:]
+            if orbital[-1] == "^":
+                orbital = orbital[:-1]
             particle_type += type
             modes.append(int(orbital))
             if op[-1] != "^":
@@ -431,23 +433,23 @@ class ParticleOperator:
             if particle == "b":
                 fermion_modes.append(self.modes[index])
                 if self.ca_string[index] == "c":
-                    op_string += "b^†_" + str(self.modes[index])
+                    op_string += "b^†_{" + str(self.modes[index]) + "}"
                 else:
-                    op_string += "b_" + str(self.modes[index])
+                    op_string += "b_{" + str(self.modes[index]) + "}"
 
             elif particle == "d":
                 antifermion_modes.append(self.modes[index])
                 if self.ca_string[index] == "c":
-                    op_string += "d^†_" + str(self.modes[index])
+                    op_string += "d^†_{" + str(self.modes[index]) + "}"
                 else:
-                    op_string += "d_" + str(self.modes[index])
+                    op_string += "d_{" + str(self.modes[index]) + "}"
 
             elif particle == "a":
                 boson_modes.append(self.modes[index])
                 if self.ca_string[index] == "c":
-                    op_string += "a^†_" + str(self.modes[index])
+                    op_string += "a^†_{" + str(self.modes[index]) + "}"
                 else:
-                    op_string += "a_" + str(self.modes[index])
+                    op_string += "a_{" + str(self.modes[index]) + "}"
 
         self.op_string = str(self.coeff) + "*" + op_string
         self.fermion_modes = fermion_modes
@@ -691,9 +693,12 @@ class ParticleOperatorSum:
                         coeff_counter += self.operator_list[
                             j
                         ].coeff  # add coeffs of other same operators in the list
-                output_list_of_ops.append(
-                    ParticleOperator(self.operator_list[i].input_string, coeff_counter)
-                )
+                if coeff_counter != 0:
+                    output_list_of_ops.append(
+                        ParticleOperator(
+                            self.operator_list[i].input_string, coeff_counter
+                        )
+                    )
                 coeff_counter = 0
         if len(output_list_of_ops) == 1:
             return output_list_of_ops[0]
