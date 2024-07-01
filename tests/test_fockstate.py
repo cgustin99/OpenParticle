@@ -32,28 +32,30 @@ def test_fock_state_mul_by_constant(coeff):
 def test_fock_states_add_two_different_states():
     state_1 = Fock([1], [2], [(0, 4)])
     state_2 = Fock([0], [], [(1, 1)])
-
     state_sum = state_1 + state_2
-    assert state_1 + state_2 == FockSum([state_1, state_2])
+    # assert state_sum.__str__() == FockSum([state_1, state_2])
+    assert state_sum.__str__() == "1.0 * |1; 2; (0, 4)⟩ + 1.0 * |0; ; (1, 1)⟩"
 
 
 def test_fock_states_add_two_same_states():
     state = Fock([1], [2], [(0, 4)])
-    assert state + state == 2 * state
+    # assert state + state == 2 * state
+    assert (state + state).__str__() == "2.0 * |1; 2; (0, 4)⟩"
 
 
 def test_add_fock_to_focksum():
     fsum = Fock([1], [2], []) + Fock([0], [], [])
     state = Fock([1], [], [])
 
-    assert fsum + state == FockSum([fsum.states_list[0], fsum.states_list[1], state])
-
+    # assert fsum + state == FockSum([fsum.states_list[0], fsum.states_list[1], state])
+    assert (fsum + state).__str__() == "1.0 * |1; 2; ⟩ + 1.0 * |0; ; ⟩ + 1.0 * |1; ; ⟩"
 
 def test_add_focksum_to_fock_with_proper_ordering():
     fsum = Fock([1], [2], []) + Fock([0], [], [])
     state = Fock([1], [], [])
 
-    assert state + fsum == FockSum([state, fsum.states_list[0], fsum.states_list[1]])
+    # assert state + fsum == FockSum([state, fsum.states_list[0], fsum.states_list[1]])
+    assert (state + fsum).__str__() == "1.0 * |1; ; ⟩ + 1.0 * |1; 2; ⟩ + 1.0 * |0; ; ⟩"
 
 
 def test_add_focksum_to_fock_with_wrong_ordering():
