@@ -61,7 +61,8 @@ class Fock:
             raise Exception("Cannot multiply a ket to the left of a ket")
 
     def __mul__(self, other):
-        raise NotImplemented
+        # raise NotImplemented
+        return None
 
     def __add__(self, other):
         if isinstance(other, Fock):
