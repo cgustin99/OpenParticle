@@ -22,7 +22,7 @@ class Fock:
     def __init__(self, f_occ, af_occ, b_occ, coeff: float = 1.0):
         self.f_occ = f_occ
         self.af_occ = af_occ
-        self.b_occ = b_occ
+        self.b_occ = [(n, m) for (n, m) in b_occ if m != 0]
         self.coeff = coeff
 
     def __str__(self):
