@@ -504,11 +504,6 @@ class ParticleOperator:
         display(Latex("$" + self.op_string + "$"))
 
     def __add__(self, other):
-        # if self.input_string == other.input_string:
-        #     return ParticleOperator(self.input_string, self.coeff + other.coeff)
-        # else:
-            # return ParticleOperatorSum([self, other])
-            # return self.input_string + other
         if isinstance(other, ParticleOperatorSum):
             return other.__add__(self)
         elif isinstance(other, ParticleOperator):
@@ -653,14 +648,9 @@ class ParticleOperatorSum:
 
     def __str__(self):
         op_string = ''
-        # for index, op in enumerate(self.operator_list):
-        #     if index != len(self.operator_list) - 1:
-        #         op_string += op.__str__() + " + "
-        #     else: op_string += op.__str__()
-
         for op in self.HashMap:
             op_string += str(self.HashMap[op]) + ' * ' + op.__str__() + " + "
-        return op_string[0:-2]
+        return op_string[0:-3]
     
     def display(self):
         return display(Latex("$" + self.__str__() + "$"))
@@ -705,17 +695,6 @@ class ParticleOperatorSum:
             return ParticleOperatorSum(output_list_of_ops)
 
     def __add__(self, other):
-        # if isinstance(other, ParticleOperator):
-        #     for op in range(len(self.operator_list)):
-        #         if self.operator_list[op].input_string == other.input_string:
-        #             self.operator_list[op] = ParticleOperator(self.operator_list[op].input_string, other.coeff)
-        #             break
-        #         else:
-        #             self.operator_list.append(other)
-        #             break
-
-        # return ParticleOperatorSum(self.operator_list)
-
         if isinstance(other, ParticleOperator):
             if self.input_string in self.HashMap:
                 if other.input_string in self.HashMap:
@@ -735,7 +714,6 @@ class ParticleOperatorSum:
                     self.HashMap[op] += other.HashMap[op]
                 else:
                     self.HashMap[op] = other.HashMap[op]
-            # self.HashMap.update(other.HashMap)
         return self
 
     def __mul__(self, other):

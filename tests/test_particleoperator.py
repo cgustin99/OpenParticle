@@ -24,52 +24,38 @@ def test_add_two_different_particleoperators():
 
     opsum = op1 + op2
 
-    assert opsum == ParticleOperatorSum([op1, op2])
+    assert opsum.__str__() == "1.0 * b0 + 1.0 * b2"
 
 
 def test_add_two_same_particleoperators():
     op1 = ParticleOperator("b0")
     op2 = ParticleOperator("b0")
 
-    assert op1 + op2 == 2 * ParticleOperator("b0")
+    assert (op1 + op2).__str__() == "2.0 * b0"
 
 
 def test_add_particleoperatorsum_to_particleoperator():
     po = ParticleOperator("b0")
-    pos = ParticleOperatorSum([ParticleOperator("b1"), ParticleOperator("d1")])
+    pos = ParticleOperator("b1") + ParticleOperator("d1")
 
-    assert po + pos == ParticleOperatorSum(
-        [po, pos.operator_list[0], pos.operator_list[1]]
-    )
+    assert (po + pos).__str__() == "1.0 * b1 + 1.0 * d1 + 1.0 * b0"
 
 
 def test_add_particleoperator_to_particleoperatorsum():
     po = ParticleOperator("b0")
-    pos = ParticleOperatorSum([ParticleOperator("b1"), ParticleOperator("d1")])
+    pos = ParticleOperator("b1") + ParticleOperator("d1")
 
-    assert pos + po == ParticleOperatorSum(
-        [po, pos.operator_list[0], pos.operator_list[1]]
-    )
+    assert (po + pos).__str__() == "1.0 * b1 + 1.0 * d1 + 1.0 * b0"
 
 
 def test_add_particleoperatorsums():
-    pos1 = ParticleOperatorSum([ParticleOperator("b1"), ParticleOperator("d1")])
-    pos2 = ParticleOperatorSum([ParticleOperator("a1"), ParticleOperator("a2")])
+    pos1 = ParticleOperator("b1") + ParticleOperator("d1")
+    pos2 = ParticleOperator("a1") + ParticleOperator("a2")
 
-    assert pos1 + pos2 == ParticleOperatorSum(
-        [
-            pos1.operator_list[0],
-            pos1.operator_list[1],
-            pos2.operator_list[0],
-            pos2.operator_list[1],
-        ]
-    )
-
+    assert (pos1 + pos2).__str__() == "1.0 * b1 + 1.0 * d1 + 1.0 * a1 + 1.0 * a2"
 
 def test_add_overlapping_particleoperatorsums():
-    pos1 = ParticleOperatorSum([ParticleOperator("b1"), ParticleOperator("d1")])
-    pos2 = ParticleOperatorSum([ParticleOperator("b1"), ParticleOperator("a2")])
+    pos1 = ParticleOperator("b1") + ParticleOperator("d1")
+    pos2 = ParticleOperator("b1") + ParticleOperator("a2")
 
-    assert pos1 + pos2 == 2 * ParticleOperator("b1") + ParticleOperator(
-        "d1"
-    ) + ParticleOperator("a2")
+    assert (pos1 + pos2).__str__() == "2.0 * b1 + 1.0 * d1 + 1.0 * a2"
