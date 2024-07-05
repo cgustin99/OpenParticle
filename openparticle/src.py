@@ -624,6 +624,7 @@ class ParticleOperator:
 
         elif isinstance(other, Fock):
             po_coeff = self.coeff
+            print(po_coeff)
             for op in self.input_string.split(" ")[::-1]:
                 other = ParticleOperator(op).operate_on_state(other)
 
@@ -641,25 +642,35 @@ class ParticleOperator:
 class ParticleOperatorSum:
     # Sum of ParticleOperator instances
     def __init__(self, operator_list: List[ParticleOperator]):
-        self.operator_list = operator_list    
+        self.operator_list = operator_list
         self.HashMap = {}
         self.input_string = operator_list[0].input_string
         self.coeff = operator_list[0].coeff
+        self.HashMap[self.input_string] = (self.coeff, self.operator_list[0])
 
     def __str__(self):
-        op_string = ''
+        op_string = ""
         for op in self.HashMap:
-            op_string += str(self.HashMap[op]) + ' * ' + op.__str__() + " + "
+            op_string += str(self.HashMap[op][0]) + " * " + op.__str__() + " + "
         return op_string[0:-3]
-    
+
     def display(self):
         return display(Latex("$" + self.__str__() + "$"))
 
     def dagger(self):
         out_ops = []
-        for op in self.operator_list:
-            out_ops.append(op.dagger())
-        return ParticleOperatorSum(out_ops)
+        for op in self.HashMap:
+            out_ops.append(self.HashMap[op][1].dagger())
+
+        if len(out_ops) == 1:
+            return ParticleOperatorSum(out_ops)
+        else:
+            result_op_sum = ParticleOperatorSum([out_ops[0]])
+            for i, oop in enumerate(out_ops):
+                if i == 0:
+                    continue
+                else:
+                    result_op_sum += result_op_sum.__add__(oop)
 
     def get_modes(self):
         modes_list = []
@@ -696,18 +707,12 @@ class ParticleOperatorSum:
 
     def __add__(self, other):
         if isinstance(other, ParticleOperator):
-            if self.input_string in self.HashMap:
-                if other.input_string in self.HashMap:
-                    self.HashMap[other.input_string] += other.coeff
-                else:
-                    self.HashMap[other.input_string] = other.coeff
-
+            if other.input_string in self.HashMap:
+                new_coeff = self.HashMap[other.input_string][0] + other.coeff
+                other.coeff = new_coeff
+                self.HashMap[other.input_string] = (new_coeff, other)
             else:
-                if self.input_string == other.input_string:
-                    self.HashMap[self.input_string] = self.coeff + other.coeff
-                else:
-                    self.HashMap[self.input_string] = self.coeff
-                    self.HashMap[other.input_string] = other.coeff
+                self.HashMap[other.input_string] = (other.coeff, other)
         elif isinstance(other, ParticleOperatorSum):
             for op in other.HashMap:
                 if op in self.HashMap:
@@ -719,8 +724,8 @@ class ParticleOperatorSum:
     def __mul__(self, other):
         if isinstance(other, Fock):
             out_states = []
-            for op in self.operator_list:
-                out = op * other
+            for op in self.HashMap:
+                out = self.HashMap[op][1] * other
                 if isinstance(out, Fock):
                     out_states.append(out)
             if len(out_states) == 1:
