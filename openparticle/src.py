@@ -342,8 +342,8 @@ class ConjugateFockSum:
         elif isinstance(other, ParticleOperatorSum):
             output_conj_states = []
             for conj_state in self.states_list:
-                for op in other.operator_list:
-                    output_conj_states.append(conj_state * op)
+                for op in other.HashMap:
+                    output_conj_states.append(conj_state * other.HashMap[op][1])
             return ConjugateFockSum(output_conj_states)
 
     def __add__(self, other):
@@ -624,7 +624,6 @@ class ParticleOperator:
 
         elif isinstance(other, Fock):
             po_coeff = self.coeff
-            print(po_coeff)
             for op in self.input_string.split(" ")[::-1]:
                 other = ParticleOperator(op).operate_on_state(other)
 
@@ -671,6 +670,7 @@ class ParticleOperatorSum:
                     continue
                 else:
                     result_op_sum += result_op_sum.__add__(oop)
+            return result_op_sum
 
     def get_modes(self):
         modes_list = []
@@ -716,7 +716,8 @@ class ParticleOperatorSum:
         elif isinstance(other, ParticleOperatorSum):
             for op in other.HashMap:
                 if op in self.HashMap:
-                    self.HashMap[op] += other.HashMap[op]
+                    (coeff, operator) = self.HashMap[op]
+                    self.HashMap[op] = (coeff + other.HashMap[op][0], operator)
                 else:
                     self.HashMap[op] = other.HashMap[op]
         return self
@@ -736,9 +737,10 @@ class ParticleOperatorSum:
                 return FockSum(out_states)
         elif isinstance(other, FockSum):
             out_states = []
-            for op in self.operator_list:
+            # for op in self.operator_list:
+            for op in self.HashMap:
                 for state in other.states_list:
-                    out = op * state
+                    out = self.HashMap[op][1] * state
                     if isinstance(out, Fock):
                         out_states.append(out)
             return FockSum(out_states)
