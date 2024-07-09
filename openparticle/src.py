@@ -457,6 +457,9 @@ class ParticleOperator:
         self.antifermion_modes = antifermion_modes
         self.boson_modes = boson_modes
 
+    def to_list(self):
+        return [self]
+
     def __str__(self):
         return self.op_string
 
@@ -648,6 +651,12 @@ class ParticleOperatorSum:
         self.input_string = operator_list[0].input_string
         self.coeff = operator_list[0].coeff
         self.HashMap[self.input_string] = (self.coeff, self.operator_list[0])
+
+    def to_list(self):
+        operator_list = []
+        for op in self.HashMap:
+            operator_list.append(self.HashMap[op][1])
+        return operator_list
 
     def __str__(self):
         op_string = ""
