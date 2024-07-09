@@ -682,34 +682,6 @@ class ParticleOperatorSum:
 
         return modes_list
 
-    def cleanup(self):
-        output_list_of_ops = []
-        coeff_counter = 0
-        for i in range(len(self.operator_list)):
-            if self.operator_list[i] not in output_list_of_ops:
-                coeff_counter += self.operator_list[
-                    i
-                ].coeff  # add coeff of the first operator
-                for j in range(i + 1, len(self.operator_list)):
-                    if (
-                        self.operator_list[i].input_string
-                        == self.operator_list[j].input_string
-                    ):
-                        coeff_counter += self.operator_list[
-                            j
-                        ].coeff  # add coeffs of other same operators in the list
-                if coeff_counter != 0:
-                    output_list_of_ops.append(
-                        ParticleOperator(
-                            self.operator_list[i].input_string, coeff_counter
-                        )
-                    )
-                coeff_counter = 0
-        if len(output_list_of_ops) == 1:
-            return output_list_of_ops[0]
-        else:
-            return ParticleOperatorSum(output_list_of_ops)
-
     def __add__(self, other):
         if isinstance(other, ParticleOperator):
             if other.input_string in self.HashMap:
