@@ -123,7 +123,7 @@ class ConjugateFock:
 
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
-            return ConjugateFock(self.f_occ, self.af_occ, self.b_occ, coeff=other)
+            return ConjugateFock(self.f_occ, self.af_occ, self.b_occ, coeff = other*self.coeff)
 
     def __add__(self, other):
         if isinstance(other, ConjugateFock):
@@ -153,9 +153,11 @@ class ConjugateFock:
             if isinstance(out_state, (int, float)):
                 return out_state
             else:
-                return (
-                    other.coeff * self.coeff * (other.dagger() * self.dagger()).dagger()
-                )
+                new_state = (other.dagger() * self.dagger()).dagger()
+                new_state.coeff = other.coeff * self.coeff
+                return new_state
+                    # other.coeff * self.coeff * (other.dagger() * self.dagger()).dagger()
+            
         elif isinstance(other, ParticleOperatorSum):
             # <f|(A + B) = ((A^dagger + B^dagger)|f>)^dagger
             out_state = other.dagger() * self.dagger()
@@ -193,11 +195,12 @@ class FockSum:
     def __str__(self):
         states_str = ""
         for fock in self.FockMap:
-            f_occ = fock[0]
-            af_occ = fock[1]
-            b_occ = fock[2]
+            (coeff, state) = self.FockMap[fock]
+            f_occ = state.f_occ
+            af_occ = state.af_occ
+            b_occ = state.b_occ
             states_str += (
-                str(self.FockMap[fock][0])
+                str(coeff)
                 + " * |"
                 + ",".join([str(i) for i in f_occ][::-1])
                 + "; "
@@ -213,8 +216,8 @@ class FockSum:
         if isinstance(other, (float, int)):
             # const. * (|a> + |b>)
             for state in self.FockMap:
-                (coeff, fock) = self.FockMap[state][0]
-                self.FockMap[state][0] = (other * coeff, fock)
+                (coeff, fock) = self.FockMap[state]
+                self.FockMap[state] = (other * coeff, fock)
             return self
 
     def __add__(self, other):
@@ -229,7 +232,7 @@ class FockSum:
             for fock in other.FockMap:
                 if fock in self.FockMap:
                     (coeff, state) = self.FockMap[fock]
-                    self.FockMap[fock] = (coeff + other.FockMap[fock], state)
+                    self.FockMap[fock] = (coeff + other.FockMap[fock][0], state)
                 else:
                     self.FockMap[fock] = other.FockMap[fock]
         return self
@@ -268,11 +271,12 @@ class ConjugateFockSum:
     def __str__(self):
         states_str = ""
         for cfock in self.ConjFockMap:
-            f_occ = cfock[0]
-            af_occ = cfock[1]
-            b_occ = cfock[2]
+            (coeff, state) = self.ConjFockMap[cfock]
+            f_occ = state.f_occ
+            af_occ = state.af_occ
+            b_occ = state.b_occ
             states_str += (
-                str(self.ConjFockMap[cfock][0])
+                str(coeff)
                 + " * ⟨"
                 + ",".join([str(i) for i in f_occ][::-1])
                 + "; "
@@ -291,8 +295,8 @@ class ConjugateFockSum:
         if isinstance(other, (int, float)):
             # const. * (|a> + |b>)
             for state in self.ConjFockMap:
-                (coeff, cfock) = self.ConjFockMap[state][0]
-                self.ConjFockMap[state][0] = (other * coeff, cfock)
+                (coeff, cfock) = self.ConjFockMap[state]
+                self.ConjFockMap[state] = (other * coeff, cfock)
             return self
 
     def __mul__(self, other):
@@ -305,16 +309,34 @@ class ConjugateFockSum:
             output_value = 0
             for conj_state in self.ConjFockMap:
                 for state in other.FockMap:
-                    output_value += conj_state * state
+                    output_value += self.ConjFockMap[conj_state][1] * other.FockMap[state][1]
             return output_value
         elif isinstance(other, ParticleOperator):
+            list_to_remove = []
             for conj_state in self.ConjFockMap:
-                self.ConjFockMap[conj_state] = conj_state * other
+                # calculate the new state
+                new_state = self.ConjFockMap[conj_state][1] * other
+                if isinstance(new_state, (int, float)):
+                    list_to_remove.append(conj_state)
+                elif isinstance(new_state, ConjugateFock):
+                    self.ConjFockMap[conj_state] = (new_state.coeff, new_state)
+
+            # remove the states that have been killed
+            for conj_state in list_to_remove:
+                del self.ConjFockMap[conj_state]
             return self
         elif isinstance(other, ParticleOperatorSum):
-            for conj_state in self.states_list:
+            list_to_remove = []
+            for conj_state in self.ConjFockMap:
                 for op in other.HashMap:
-                    self.ConjFockMap[conj_state] = conj_state * other.HashMap[op][1]
+                    new_state = self.ConjFockMap[conj_state][1] * other.HashMap[op][1]
+                    if isinstance(new_state, (int, float)):
+                        list_to_remove.append(conj_state)
+                    elif isinstance(new_state, ConjugateFock):
+                        self.ConjFockMap[conj_state] = (new_state.coeff, new_state)
+            for conj_state in list_to_remove:
+                if conj_state in self.ConjFockMap:
+                    del self.ConjFockMap[conj_state]
             return self
 
     def __add__(self, other):
@@ -329,7 +351,7 @@ class ConjugateFockSum:
             for fock in other.ConjFockMap:
                 if fock in self.ConjFockMap:
                     (coeff, state) = self.ConjFockMap[fock]
-                    self.ConjFockMap[fock] = (coeff + other.ConjFockMap[fock], state)
+                    self.ConjFockMap[fock] = (coeff + other.ConjFockMap[fock][0], state)
                 else:
                     self.ConjFockMap[fock] = other.ConjFockMap[fock]
         return self
@@ -393,7 +415,7 @@ class ParticleOperator:
                 else:
                     op_string += "a_{" + str(self.modes[index]) + "}"
 
-        self.op_string = str(self.coeff) + "*" + op_string
+        self.op_string = str(self.coeff) + " * " + op_string
         self.fermion_modes = fermion_modes
         self.antifermion_modes = antifermion_modes
         self.boson_modes = boson_modes
@@ -569,7 +591,6 @@ class ParticleOperator:
             po_coeff = self.coeff
             for op in self.input_string.split(" ")[::-1]:
                 other = ParticleOperator(op).operate_on_state(other)
-
             return po_coeff * other
 
         elif isinstance(other, FockSum):
@@ -577,9 +598,24 @@ class ParticleOperator:
             for state in other.FockMap:
                 state_prime = self.operate_on_state(other.FockMap[state][1])
                 if isinstance(state_prime, Fock):
-                    updated_states.append(state_prime)
-            return FockSum(updated_states)
+                    other.FockMap[state] = (state_prime.coeff, state_prime)
+            return other
 
+    def get_latex(self, op):
+        # input_string = op.input_string
+        coeff = op.coeff
+        len_to_replace = len(str(coeff))
+        op.op_string = str(coeff) + op.op_string[len_to_replace:]
+
+        # if 1 <= coeff < 10:
+        #     op.op_string = coeff + op_string[3:]
+        # elif 10 <= coeff < 100:
+        #     op.op_string = coeff + op_string[4:]
+        # elif 101 <= coeff < 1000:
+        #     op.op_string = coeff + op_string[5:]
+
+        return op.op_string
+        
 
 class ParticleOperatorSum:
     # Sum of ParticleOperator instances
@@ -590,14 +626,23 @@ class ParticleOperatorSum:
         self.coeff = operator_list[0].coeff
         self.HashMap[self.input_string] = (self.coeff, self.operator_list[0])
 
+                                                            # need to fix __str__!!!!!!the coeff is not right
     def __str__(self):
         op_string = ""
+        i = 0
         for op in self.HashMap:
-            op_string += str(self.HashMap[op][0]) + " * " + op.__str__() + " + "
+            print("coeff: ", self.HashMap[op][0])
+            op_string += self.HashMap[op][1].__str__() + " + "
         return op_string[0:-3]
 
     def display(self):
-        return display(Latex("$" + self.__str__() + "$"))
+        result = ""
+        for op in self.HashMap:
+            operator = self.HashMap[op][1]
+            # need to update the op???????????????????????????????????????????????????
+            result += operator.get_latex(operator)
+        # display(Latex("$" + self.__str__() + "$"))
+        return Latex("$"  + result  + "$")
 
     def dagger(self):
         out_ops = []
@@ -626,8 +671,10 @@ class ParticleOperatorSum:
     def __add__(self, other):
         if isinstance(other, ParticleOperator):
             if other.input_string in self.HashMap:
+                # calc and put in the new coeff
                 new_coeff = self.HashMap[other.input_string][0] + other.coeff
                 other.coeff = new_coeff
+                # insert the new value back
                 self.HashMap[other.input_string] = (new_coeff, other)
             else:
                 self.HashMap[other.input_string] = (other.coeff, other)
@@ -635,7 +682,9 @@ class ParticleOperatorSum:
             for op in other.HashMap:
                 if op in self.HashMap:
                     (coeff, operator) = self.HashMap[op]
-                    self.HashMap[op] = (coeff + other.HashMap[op][0], operator)
+                    new_coeff = coeff + other.HashMap[op][0]
+                    operator.coeff = new_coeff
+                    self.HashMap[op] = (new_coeff, operator)
                 else:
                     self.HashMap[op] = other.HashMap[op]
         return self

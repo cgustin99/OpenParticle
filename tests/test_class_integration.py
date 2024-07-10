@@ -285,6 +285,11 @@ def test_ket_times_ket():
 
 #     assert ket_sum * ket_sum is None
 
+def test_conj_times_operator():
+    i = Fock([], [], [(0, 10)]).dagger()
+    operator = ParticleOperator('a0^ a0^ a0^ a0^ a0^ a0^ a0 a0 a0 a0 a0 a0')
+    assert (i * operator).coeff == 151200.0
+    assert (i * operator).__str__ == "151200.0 * |; ; (0,10)⟩"
 
 def test_random_particleoperator_acts_on_fock_state():
     pass
