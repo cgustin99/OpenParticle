@@ -470,6 +470,12 @@ class ParticleOperator:
                     lists_equal = False
             return lists_equal
 
+    def split(self):
+        op_list = []
+        for op in self.input_string.split(" ")[::-1]:
+            op_list.append(ParticleOperator(op))
+        return op_list
+
     @staticmethod
     def op_list_dagger(list):
         dag_list = []
@@ -660,6 +666,9 @@ class ParticleOperatorSum:
             else:
                 op_string += op.__str__()
         return op_string
+
+    def to_list(self):
+        return self.cleanup().operator_list
 
     def display(self):
         return display(Latex("$" + self.__str__() + "$"))
