@@ -746,19 +746,11 @@ class ParticleOperatorSum:
             return FockSum(out_states)
 
     def __rmul__(self, other):
-        if isinstance(other, (float, int)):
-            ops_w_new_coeffs = []
+        if isinstance(other, (complex, float, int)):
+            output = ParticleOperatorSum([])
             for operator in self.operator_list:
-                operator.coeff *= other
-                ops_w_new_coeffs.append(
-                    ParticleOperator(
-                        operator.particle_type,
-                        operator.modes,
-                        operator.ca_string,
-                        operator.coeff,
-                    )
-                )
-            return ParticleOperatorSum(ops_w_new_coeffs)
+                output += other * operator
+            return output
 
     def __eq__(self, other):
         if isinstance(other, ParticleOperatorSum):
