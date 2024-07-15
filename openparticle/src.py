@@ -19,7 +19,7 @@ class Fock:
 
     """
 
-    def __init__(self, f_occ, af_occ, b_occ, coeff: float = 1.0):
+    def __init__(self, f_occ, af_occ, b_occ, coeff: complex = 1.0):
         self.f_occ = f_occ
         self.af_occ = af_occ
         self.b_occ = [(n, m) for (n, m) in b_occ if m != 0]
@@ -49,7 +49,7 @@ class Fock:
             )
 
     def __rmul__(self, other):
-        if isinstance(other, (float, int)):
+        if isinstance(other, (float, int, complex)):
             if other == 0:
                 return 0
             else:
@@ -76,7 +76,7 @@ class Fock:
 
 class ConjugateFock:
 
-    def __init__(self, f_occ, af_occ, b_occ, coeff: float = 1.0):
+    def __init__(self, f_occ, af_occ, b_occ, coeff: complex = 1.0):
         self.f_occ = f_occ
         self.af_occ = af_occ
         self.b_occ = b_occ
@@ -100,7 +100,7 @@ class ConjugateFock:
         f_occ = state.f_occ
         af_occ = state.af_occ
         b_occ = state.b_occ
-        coeff = state.coeff
+        coeff = state.coeff.conjugate()
         return cls(f_occ, af_occ, b_occ, coeff)
 
     def display(self):
@@ -117,7 +117,7 @@ class ConjugateFock:
             return 0
 
     def dagger(self):
-        return Fock(self.f_occ, self.af_occ, self.b_occ, self.coeff)
+        return Fock(self.f_occ, self.af_occ, self.b_occ, self.coeff.conjugate())
 
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
