@@ -151,9 +151,7 @@ class ConjugateFock:
             if isinstance(out_state, (int, float)):
                 return out_state
             else:
-                return (
-                    other.coeff * self.coeff * (other.dagger() * self.dagger()).dagger()
-                )
+                return other.coeff * self.coeff * out_state.coeff * out_state.dagger()
         elif isinstance(other, ParticleOperatorSum):
             # <f|(A + B) = ((A^dagger + B^dagger)|f>)^dagger
             out_state = other.dagger() * self.dagger()
