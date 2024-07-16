@@ -470,8 +470,13 @@ class ParticleOperator:
 
     def split(self):
         op_list = []
-        for op in self.input_string.split(" ")[::-1]:
-            op_list.append(ParticleOperator(op))
+        for op in self.input_string.split(" "):
+            if op[0] == "b":
+                op_list.append(FermionOperator(op[1:]))
+            if op[0] == "d":
+                op_list.append(AntifermionOperator(op[1:]))
+            if op[0] == "a":
+                op_list.append(BosonOperator(op[1:]))
         return op_list
 
     @staticmethod
@@ -761,8 +766,9 @@ class ParticleOperatorSum:
 
 class FermionOperator(ParticleOperator):
 
-    def __init__(self, op, coeff: float = 1.0):
-        super().__init__("b" + op)
+    def __init__(self, mode, coeff: float = 1.0):
+        self.mode = mode
+        super().__init__("b" + mode, coeff)
 
     def __str__(self):
         return super().__str__()
@@ -775,8 +781,9 @@ class FermionOperator(ParticleOperator):
 
 
 class AntifermionOperator(ParticleOperator):
-    def __init__(self, op, coeff: float = 1.0):
-        super().__init__("d" + op)
+    def __init__(self, mode, coeff: float = 1.0):
+        self.mode = mode
+        super().__init__("d" + mode, coeff)
 
     def __str__(self):
         return super().__str__()
@@ -789,8 +796,9 @@ class AntifermionOperator(ParticleOperator):
 
 
 class BosonOperator(ParticleOperator):
-    def __init__(self, op, coeff: float = 1.0):
-        super().__init__("a" + op)
+    def __init__(self, mode, coeff: float = 1.0):
+        self.mode = mode
+        super().__init__("a" + mode, coeff)
 
     def __str__(self):
         return super().__str__()
