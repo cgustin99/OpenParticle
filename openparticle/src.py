@@ -3,7 +3,7 @@ from sympy import *
 from typing import List
 from IPython.display import display, Latex
 from collections import defaultdict
-
+from copy import deepcopy
 
 class Fock:
     """
@@ -153,14 +153,22 @@ class ConjugateFock:
             if isinstance(out_state, (int, float)):
                 return out_state
             else:
-                new_state = (other.dagger() * self.dagger()).dagger()
-                new_state.coeff = other.coeff * self.coeff
+                new_state = out_state.dagger()
+                new_state.coeff = new_state.coeff
                 return new_state
-                    # other.coeff * self.coeff * (other.dagger() * self.dagger()).dagger()
             
         elif isinstance(other, ParticleOperatorSum):
+            print("---------------in Conjugate Fock class----------------")
+            print("other which is a pos is: ", other)
+            print("self which should be a conjugate fock is: ", self)
+            print("---------------in Conjugate Fock class----------------")
             # <f|(A + B) = ((A^dagger + B^dagger)|f>)^dagger
-            out_state = other.dagger() * self.dagger()
+            other_dagger = other.dagger()
+            print("other.dagger is: ", other_dagger)
+            out_state = other_dagger * self.dagger()
+            print("out state is: ", out_state)
+            print(type(out_state))
+            # print(out_state.FockMap)
             if isinstance(out_state, (int, float)):
                 return out_state
             else:
@@ -223,7 +231,6 @@ class FockSum:
     def __add__(self, other):
         if isinstance(other, Fock):
             if other.occs in self.FockMap:
-                # self.FockMap[other.occs] += other.coeff
                 other.coeff += self.FockMap[other.occs][0]
                 self.FockMap[other.occs] = (other.coeff, other)
             else:
@@ -342,7 +349,6 @@ class ConjugateFockSum:
     def __add__(self, other):
         if isinstance(other, ConjugateFock):
             if other.occs in self.ConjFockMap:
-                # self.FockMap[other.occs] += other.coeff
                 other.coeff += self.ConjFockMap[other.occs][0]
                 self.ConjFockMap[other.occs] = (other.coeff, other)
             else:
@@ -602,17 +608,9 @@ class ParticleOperator:
             return other
 
     def get_latex(self, op):
-        # input_string = op.input_string
         coeff = op.coeff
         len_to_replace = len(str(coeff))
         op.op_string = str(coeff) + op.op_string[len_to_replace:]
-
-        # if 1 <= coeff < 10:
-        #     op.op_string = coeff + op_string[3:]
-        # elif 10 <= coeff < 100:
-        #     op.op_string = coeff + op_string[4:]
-        # elif 101 <= coeff < 1000:
-        #     op.op_string = coeff + op_string[5:]
 
         return op.op_string
         
@@ -625,14 +623,14 @@ class ParticleOperatorSum:
         self.input_string = operator_list[0].input_string
         self.coeff = operator_list[0].coeff
         self.HashMap[self.input_string] = (self.coeff, self.operator_list[0])
+        self.fst_add = True
 
                                                             # need to fix __str__!!!!!!the coeff is not right
     def __str__(self):
         op_string = ""
         i = 0
         for op in self.HashMap:
-            print("coeff: ", self.HashMap[op][0])
-            op_string += self.HashMap[op][1].__str__() + " + "
+            op_string += str(self.HashMap[op][0]) + " * " + op + " + "
         return op_string[0:-3]
 
     def display(self):
@@ -640,11 +638,13 @@ class ParticleOperatorSum:
         for op in self.HashMap:
             operator = self.HashMap[op][1]
             # need to update the op???????????????????????????????????????????????????
-            result += operator.get_latex(operator)
+            result += operator.get_latex(operator) + " + "
         # display(Latex("$" + self.__str__() + "$"))
-        return Latex("$"  + result  + "$")
+        return Latex("$"  + result[:-3]  + "$")
 
     def dagger(self):
+        print("WHY ARE WE NOT GETTING HERE WHYYYYYYYYY")
+        print("in the dagger func, and we get: ", self)
         out_ops = []
         for op in self.HashMap:
             out_ops.append(self.HashMap[op][1].dagger())
@@ -669,34 +669,47 @@ class ParticleOperatorSum:
         return modes_list
 
     def __add__(self, other):
+        new_hash_map = deepcopy(self.HashMap)
+        other = deepcopy(other)
         if isinstance(other, ParticleOperator):
-            if other.input_string in self.HashMap:
+            if other.input_string in new_hash_map:
                 # calc and put in the new coeff
-                new_coeff = self.HashMap[other.input_string][0] + other.coeff
+                new_coeff = new_hash_map[other.input_string][0] + other.coeff
+                # issue is here but how can I fix this ????????????????????????????
                 other.coeff = new_coeff
                 # insert the new value back
-                self.HashMap[other.input_string] = (new_coeff, other)
+                new_hash_map[other.input_string] = (new_coeff, other)
             else:
-                self.HashMap[other.input_string] = (other.coeff, other)
+                new_hash_map[other.input_string] = (other.coeff, other)
         elif isinstance(other, ParticleOperatorSum):
             for op in other.HashMap:
-                if op in self.HashMap:
-                    (coeff, operator) = self.HashMap[op]
+                if op in new_hash_map:
+                    (coeff, operator) = new_hash_map[op]
                     new_coeff = coeff + other.HashMap[op][0]
                     operator.coeff = new_coeff
-                    self.HashMap[op] = (new_coeff, operator)
+                    new_hash_map[op] = (new_coeff, operator)
                 else:
-                    self.HashMap[op] = other.HashMap[op]
-        return self
+                    new_hash_map[op] = other.HashMap[op]
+        # return self
+        result = ParticleOperatorSum(self.operator_list)
+        result.coeff = self.coeff
+        result.input_string = self.input_string
+        result.HashMap = new_hash_map
+        return result
 
     def __mul__(self, other):
         if isinstance(other, Fock):
+            print("---------------in Particle Operator Sum class----------------")
+            print("self: ", self)
+            print("other: ", other)
             out_states = []
             for op in self.HashMap:
                 out = self.HashMap[op][1] * other
                 if isinstance(out, Fock):
                     out_states.append(out)
             if len(out_states) == 1:
+                print("getting here????")
+                print("---------------in Particle Operator Sum class----------------")
                 return out_states[0]
             elif len(out_states) == 0:
                 return 0
@@ -704,7 +717,6 @@ class ParticleOperatorSum:
                 return FockSum(out_states)
         elif isinstance(other, FockSum):
             out_states = []
-            # for op in self.operator_list:
             for op in self.HashMap:
                 for state in other.states_list:
                     out = self.HashMap[op][1] * state
