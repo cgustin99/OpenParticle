@@ -1,8 +1,10 @@
 import numpy as np
 from sympy import *
-from typing import List
+from typing import List, Union, Optional, Dict
 from IPython.display import display, Latex
 from collections import defaultdict
+import re
+from copy import deepcopy
 
 
 class Fock:
@@ -394,138 +396,51 @@ class ConjugateFockSum:
 
 class ParticleOperator:
 
-    def __init__(self, input_string, coeff=1.0):
+    def __init__(self, op_dict: Union[Dict[str, complex], str] = dict()):
         # Initializes particle operator in the form of b_n d_n a_n
         # Parameters:
         # input_string: e.g. 'b2^ a0'
 
-        self.input_string = input_string
-        self.coeff = coeff
+        if isinstance(op_dict, str):
+            self.op_dict = {op_dict: 1}
+        elif isinstance(op_dict, dict):
+            self.op_dict = op_dict
+        else:
+            raise ValueError("input must be dictionary or op string")
 
-        particle_type = ""
-        modes = []
-        ca_string = ""
+    def __add__(self, other: "ParticleOperator") -> "ParticleOperator":
 
-        for op in self.input_string.split(" "):
-            type = op[0]
-            orbital = op[1:]
-            if orbital[-1] == "^":
-                orbital = orbital[:-1]
-            particle_type += type
-            modes.append(int(orbital))
-            if op[-1] != "^":
-                ca_string += "a"
-            else:
-                ca_string += "c"
+        # (TODO: could uses sets to find common and different keys and loop only over unique terms)
+        # loop over smaller dict
+        if len(self.op_dict) < len(other.op_dict):
+            new_dict = deepcopy(other.op_dict)
+            for op_str, coeff in self.op_dict.items():
+                new_dict[op_str] = coeff + new_dict.get(op_str, 0)
+        else:
+            new_dict = deepcopy(self.op_dict)
+            for op_str, coeff in other.op_dict.items():
+                new_dict[op_str] = coeff + new_dict.get(op_str, 0)
 
-        self.particle_type = particle_type
-        self.modes = modes
-        self.ca_string = ca_string
+        return ParticleOperator(new_dict)
 
-        fermion_modes = []
-        antifermion_modes = []
-        boson_modes = []
+    def __str__(self) -> str:
+        output_str = ""
+        for op, coeff in self.op_dict.items():
+            output_str += f"{coeff} * {op}"
+            output_str += "\n"
+        return output_str
 
-        op_string = ""
-        for index, particle in enumerate(self.particle_type):
-
-            if particle == "b":
-                fermion_modes.append(self.modes[index])
-                if self.ca_string[index] == "c":
-                    op_string += "b^†_{" + str(self.modes[index]) + "}"
-                else:
-                    op_string += "b_{" + str(self.modes[index]) + "}"
-
-            elif particle == "d":
-                antifermion_modes.append(self.modes[index])
-                if self.ca_string[index] == "c":
-                    op_string += "d^†_{" + str(self.modes[index]) + "}"
-                else:
-                    op_string += "d_{" + str(self.modes[index]) + "}"
-
-            elif particle == "a":
-                boson_modes.append(self.modes[index])
-                if self.ca_string[index] == "c":
-                    op_string += "a^†_{" + str(self.modes[index]) + "}"
-                else:
-                    op_string += "a_{" + str(self.modes[index]) + "}"
-
-        self.op_string = str(self.coeff) + "*" + op_string
-        self.fermion_modes = fermion_modes
-        self.antifermion_modes = antifermion_modes
-        self.boson_modes = boson_modes
-
-    def __str__(self):
-        return self.op_string
-
-    def __eq__(self, other):
-        if isinstance(other, ParticleOperator):
-            return self.input_string == other.input_string
-        if isinstance(other, ParticleOperatorSum):
-            lists_equal = True
-            for i in self:
-                if i not in other.operator_list:
-                    lists_equal = False
-            return lists_equal
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def split(self):
-        op_list = []
-        for op in self.input_string.split(" "):
-            if op[0] == "b":
-                op_list.append(FermionOperator(op[1:]))
-            if op[0] == "d":
-                op_list.append(AntifermionOperator(op[1:]))
-            if op[0] == "a":
-                op_list.append(BosonOperator(op[1:]))
-        return op_list
-
-    @staticmethod
-    def op_list_dagger(list):
-        dag_list = []
-        for op in list[::-1]:
-            if op[-1] == "^":
-                dag_list.append(op[:-1])
-            else:
-                dag_list.append(op + "^")
-        return dag_list
+        pass
 
     def dagger(self):
-        elements = self.input_string.split(" ")
-
-        grouped_elements = defaultdict(list)
-        for element in elements:
-            first_letter = element[0]
-            grouped_elements[first_letter].append(element)
-
-        grouped_lists = list(grouped_elements.values())
-
-        list_b = grouped_elements["b"]
-        list_d = grouped_elements["d"]
-        list_a = grouped_elements["a"]
-
-        dag_op_string = " ".join(
-            self.op_list_dagger(list_b)
-            + self.op_list_dagger(list_d)
-            + self.op_list_dagger(list_a)
-        )
-
-        return ParticleOperator(dag_op_string, self.coeff)
+        pass
 
     def display(self):
         display(Latex("$" + self.op_string + "$"))
-
-    def __add__(self, other):
-        if isinstance(other, ParticleOperator):
-            if self.input_string == other.input_string:
-                # A + A = 2A
-                return ParticleOperator(self.input_string, self.coeff + other.coeff)
-            else:
-                # A + B = A + B (ParticleOperatorSum Object)
-                return ParticleOperatorSum([self, other])
-        elif isinstance(other, ParticleOperatorSum):
-            # A + (B + C)
-            output = [self] + other.operator_list
-            return ParticleOperatorSum(output).cleanup()
 
     def __rmul__(self, other):
         if isinstance(other, (int, float)):
@@ -677,123 +592,7 @@ class ParticleOperator:
 
 
 class ParticleOperatorSum:
-    # Sum of ParticleOperator instances
-    def __init__(self, operator_list: List[ParticleOperator]):
-        self.operator_list = operator_list
-
-    def __str__(self):
-        op_string = ""
-        for index, op in enumerate(self.operator_list):
-            if index != len(self.operator_list) - 1:
-                op_string += op.__str__() + " + "
-            else:
-                op_string += op.__str__()
-        return op_string
-
-    def to_list(self):
-        return self.cleanup().operator_list
-
-    def display(self):
-        return display(Latex("$" + self.__str__() + "$"))
-
-    def dagger(self):
-        out_ops = []
-        for op in self.operator_list:
-            out_ops.append(op.dagger())
-        return ParticleOperatorSum(out_ops)
-
-    def get_modes(self):
-        modes_list = []
-
-        for op in self.operator_list:
-            modes_list.append(tuple(op.modes))
-
-        return modes_list
-
-    def cleanup(self):
-        output_list_of_ops = []
-        coeff_counter = 0
-        for i in range(len(self.operator_list)):
-            if self.operator_list[i] not in output_list_of_ops:
-                coeff_counter += self.operator_list[
-                    i
-                ].coeff  # add coeff of the first operator
-                for j in range(i + 1, len(self.operator_list)):
-                    if (
-                        self.operator_list[i].input_string
-                        == self.operator_list[j].input_string
-                    ):
-                        coeff_counter += self.operator_list[
-                            j
-                        ].coeff  # add coeffs of other same operators in the list
-                if coeff_counter != 0:
-                    output_list_of_ops.append(
-                        ParticleOperator(
-                            self.operator_list[i].input_string, coeff_counter
-                        )
-                    )
-                coeff_counter = 0
-        if len(output_list_of_ops) == 1:
-            return output_list_of_ops[0]
-        else:
-            return ParticleOperatorSum(output_list_of_ops)
-
-    def __add__(self, other):
-        if isinstance(other, ParticleOperator):
-            output = self.operator_list + [other]
-            return ParticleOperatorSum(output).cleanup()
-        elif isinstance(other, ParticleOperatorSum):
-            output = self.operator_list + other.operator_list
-            return ParticleOperatorSum(output).cleanup()
-
-    def __sub__(self, other):
-        if isinstance(other, ParticleOperator):
-            output = self.operator_list + [
-                (-other.coeff) * ParticleOperator(other.input_string)
-            ]
-            return ParticleOperatorSum(output).cleanup()
-        elif isinstance(other, ParticleOperatorSum):
-            output = self.operator_list + [
-                (-1) * ParticleOperator(j.input_string) for j in other.operator_list
-            ]
-            return ParticleOperatorSum(output).cleanup()
-
-    def __mul__(self, other):
-        if isinstance(other, Fock):
-            out_states = []
-            for op in self.operator_list:
-                out = op * other
-                if isinstance(out, Fock):
-                    out_states.append(out)
-            if len(out_states) == 1:
-                return out_states[0]
-            elif len(out_states) == 0:
-                return 0
-            else:
-                return FockSum(out_states)
-        elif isinstance(other, FockSum):
-            out_states = []
-            for op in self.operator_list:
-                for state in other.states_list:
-                    out = op * state
-                    if isinstance(out, Fock):
-                        out_states.append(out)
-            return FockSum(out_states)
-
-    def __rmul__(self, other):
-        if isinstance(other, (complex, float, int)):
-            output = ParticleOperatorSum([])
-            for operator in self.operator_list:
-                output += other * operator
-            return output
-
-    def __eq__(self, other):
-        if isinstance(other, ParticleOperatorSum):
-            lists_equal = True
-            for i in self.operator_list:
-                if i not in other.operator_list:
-                    lists_equal = False
-            return lists_equal
+    pass
 
 
 class FermionOperator(ParticleOperator):
