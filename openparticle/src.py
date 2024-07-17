@@ -659,6 +659,22 @@ class ParticleOperator:
         assert isinstance(other, (int, np.int64))
         return ParticleOperator(((self.input_string + " ") * other)[:-1])
 
+    def __sub__(self, other):
+        if isinstance(other, ParticleOperator):
+            if self.input_string == other.input_string:
+                updated_coeff = self.coeff - other.coeff
+                if updated_coeff == 0:
+                    return 0
+                else:
+                    return ParticleOperator(self.input_string, updated_coeff)
+            else:
+                return ParticleOperatorSum([self, (-1) * other])
+        if isinstance(other, ParticleOperatorSum):
+            output = [self] + [
+                (-1) * ParticleOperator(j.input_string) for j in other.operator_list
+            ]
+            return ParticleOperatorSum(output).cleanup()
+
 
 class ParticleOperatorSum:
     # Sum of ParticleOperator instances
@@ -728,6 +744,16 @@ class ParticleOperatorSum:
             return ParticleOperatorSum(output).cleanup()
         elif isinstance(other, ParticleOperatorSum):
             output = self.operator_list + other.operator_list
+            return ParticleOperatorSum(output).cleanup()
+
+    def __sub__(self, other):
+        if isinstance(other, ParticleOperator):
+            output = self.operator_list + [(-1) * ParticleOperator(other.input_string)]
+            return ParticleOperatorSum(output).cleanup()
+        elif isinstance(other, ParticleOperatorSum):
+            output = self.operator_list + [
+                (-1) * ParticleOperator(j.input_string) for j in other.operator_list
+            ]
             return ParticleOperatorSum(output).cleanup()
 
     def __mul__(self, other):
