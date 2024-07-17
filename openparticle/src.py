@@ -397,9 +397,6 @@ class ConjugateFockSum:
 class ParticleOperator:
 
     def __init__(self, op_dict: Union[Dict[str, complex], str] = dict()):
-        # Initializes particle operator in the form of b_n d_n a_n
-        # Parameters:
-        # input_string: e.g. 'b2^ a0'
 
         if isinstance(op_dict, str):
             self.op_dict = {op_dict: 1}
@@ -433,19 +430,27 @@ class ParticleOperator:
     def __repr__(self) -> str:
         return self.__str__()
 
+    def latex_string(self) -> Latex:
+        pattern = r"(\d+)"
+        replacement = r"_{\1}"
+        latex_str = ""
+        for s, coeff in self.op_dict.items():
+            new_s = s.replace("^", "^{\dagger}")
+            latex_str += f"{coeff} {re.sub(pattern, replacement, new_s)} +"
+
+        return Latex("$" + latex_str[:-1] + "$")
+
+    def display(self):
+        display(self.latex_string())
+
     def split(self):
         pass
 
     def dagger(self):
         pass
 
-    def display(self):
-        display(Latex("$" + self.op_string + "$"))
-
     def __rmul__(self, other):
-        if isinstance(other, (int, float)):
-            self.coeff *= other
-            return ParticleOperator(self.input_string, self.coeff)
+        pass
 
     def impose_parity_jw(self, state, mode):
 
@@ -549,46 +554,13 @@ class ParticleOperator:
                 )
 
     def __mul__(self, other):
-        if isinstance(other, ParticleOperator):
-            updated_coeff = self.coeff * other.coeff
-            return ParticleOperator(
-                self.input_string + " " + other.input_string, updated_coeff
-            )
-
-        elif isinstance(other, Fock):
-            po_coeff = self.coeff
-            for op in self.input_string.split(" ")[::-1]:
-                other = ParticleOperator(op).operate_on_state(other)
-
-            return po_coeff * other
-
-        elif isinstance(other, FockSum):
-            updated_states = []
-            for state in other.states_list:
-                state_prime = self.operate_on_state(state)
-                if isinstance(state_prime, Fock):
-                    updated_states.append(state_prime)
-            return FockSum(updated_states)
+        pass
 
     def __pow__(self, other):
-        assert isinstance(other, (int, np.int64))
-        return ParticleOperator(((self.input_string + " ") * other)[:-1])
+        pass
 
     def __sub__(self, other):
-        if isinstance(other, ParticleOperator):
-            if self.input_string == other.input_string:
-                updated_coeff = self.coeff - other.coeff
-                if updated_coeff == 0:
-                    return 0
-                else:
-                    return ParticleOperator(self.input_string, updated_coeff)
-            else:
-                return ParticleOperatorSum([self, (-1) * other])
-        if isinstance(other, ParticleOperatorSum):
-            output = [self] + [
-                (-1) * ParticleOperator(j.input_string) for j in other.operator_list
-            ]
-            return ParticleOperatorSum(output).cleanup()
+        pass
 
 
 class ParticleOperatorSum:
