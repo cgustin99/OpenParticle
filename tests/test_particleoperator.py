@@ -73,3 +73,9 @@ def test_add_overlapping_particleoperatorsums():
     assert pos1 + pos2 == 2 * ParticleOperator("b1") + ParticleOperator(
         "d1"
     ) + ParticleOperator("a2")
+
+
+@pytest.mark.parametrize("power", np.arange(1, 10, 1))
+def test_particle_operator_to_some_power(power):
+    operator = ParticleOperator("a0")
+    assert operator**power == ParticleOperator((("a0" + " ") * power)[:-1])

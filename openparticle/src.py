@@ -655,6 +655,10 @@ class ParticleOperator:
                     updated_states.append(state_prime)
             return FockSum(updated_states)
 
+    def __pow__(self, other):
+        assert isinstance(other, (int, np.int64))
+        return ParticleOperator(((self.input_string + " ") * other)[:-1])
+
 
 class ParticleOperatorSum:
     # Sum of ParticleOperator instances
