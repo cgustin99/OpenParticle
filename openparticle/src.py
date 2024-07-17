@@ -396,7 +396,9 @@ class ConjugateFockSum:
 
 class ParticleOperator:
 
-    def __init__(self, op_dict: Union[Dict[str, complex], str] = dict()):
+    def __init__(
+        self, op_dict: Union[Dict[str, complex], str] = dict(), perform_cleanup=True
+    ):
 
         if isinstance(op_dict, str):
             self.op_dict = {op_dict: 1}
@@ -404,6 +406,9 @@ class ParticleOperator:
             self.op_dict = op_dict
         else:
             raise ValueError("input must be dictionary or op string")
+
+        if perform_cleanup:
+            self.cleanup()
 
     def __add__(self, other: "ParticleOperator") -> "ParticleOperator":
 
@@ -418,7 +423,7 @@ class ParticleOperator:
             for op_str, coeff in other.op_dict.items():
                 new_dict[op_str] = coeff + new_dict.get(op_str, 0)
 
-        return ParticleOperator(new_dict)
+        return ParticleOperator(new_dict, perform_cleanup=True)
 
     def __str__(self) -> str:
         output_str = ""
@@ -449,8 +454,33 @@ class ParticleOperator:
     def dagger(self):
         pass
 
+    def cleanup(self, zero_threshold=1e-15) -> None:
+        """
+        remove terms below threshold
+        """
+        keys, coeffs = zip(*self.op_dict.items())
+        mask = np.where(abs(np.array(coeffs)) > 1e-15)[0]
+        self.op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
+        # self.op_dict = dict()
+        # for idx in mask:
+        #     self.op_dict[keys[idx]] = coeffs[idx]
+        return None
+
     def __rmul__(self, other):
         pass
+
+    def __mul__(self, other):
+        pass
+
+    def __pow__(self, other):
+        pass
+
+    def __sub__(self, other):
+        coeffs = list(other.op_dict.values())
+        neg_other = ParticleOperator(
+            dict(zip(other.op_dict.keys(), -1 * np.array(coeffs)))
+        )
+        return self + neg_other
 
     def impose_parity_jw(self, state, mode):
 
@@ -552,15 +582,6 @@ class ParticleOperator:
                     sorted(updated_antiferm_state),
                     updated_bos_state,
                 )
-
-    def __mul__(self, other):
-        pass
-
-    def __pow__(self, other):
-        pass
-
-    def __sub__(self, other):
-        pass
 
 
 class ParticleOperatorSum:
