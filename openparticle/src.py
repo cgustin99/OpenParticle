@@ -748,7 +748,9 @@ class ParticleOperatorSum:
 
     def __sub__(self, other):
         if isinstance(other, ParticleOperator):
-            output = self.operator_list + [(-1) * ParticleOperator(other.input_string)]
+            output = self.operator_list + [
+                (-other.coeff) * ParticleOperator(other.input_string)
+            ]
             return ParticleOperatorSum(output).cleanup()
         elif isinstance(other, ParticleOperatorSum):
             output = self.operator_list + [
