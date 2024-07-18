@@ -163,237 +163,6 @@ class ConjugateFock:
                 return (out_state).dagger()
 
 
-class FockSum:
-    def __init__(self, states_list: List[Fock]):
-        self.states_list = states_list
-
-    def normalize(self):
-        coeffs = []
-        for state in self.states_list:
-            coeffs.append(state.coeff)
-        normalization = sum([i**2 for i in coeffs])
-        return 1.0 / np.sqrt(normalization) * self
-
-    def __eq__(self, other):
-        if isinstance(other, FockSum):
-            lists_equal = True
-            for i in self.states_list:
-                if i not in other.states_list:
-                    lists_equal = False
-            return lists_equal
-
-    def cleanup(self):
-        output_list_of_states = []
-        coeff_counter = 0
-        for i in range(len(self.states_list)):
-            if self.states_list[i] not in output_list_of_states:
-                coeff_counter += self.states_list[
-                    i
-                ].coeff  # add coeff of the first operator
-                for j in range(i + 1, len(self.states_list)):
-                    if (
-                        self.states_list[i].f_occ == self.states_list[j].f_occ
-                        and self.states_list[i].af_occ == self.states_list[j].af_occ
-                        and self.states_list[i].b_occ == self.states_list[j].b_occ
-                    ):
-                        coeff_counter += self.states_list[
-                            j
-                        ].coeff  # add coeffs of other same operators in the list
-
-                output_list_of_states.append(
-                    Fock(
-                        self.states_list[i].f_occ,
-                        self.states_list[i].af_occ,
-                        self.states_list[i].b_occ,
-                        coeff_counter,
-                    )
-                )
-
-                coeff_counter = 0
-        if len(output_list_of_states) == 1:
-            return output_list_of_states[0]
-        else:
-            return FockSum(output_list_of_states)
-
-    def display(self):
-        return display(Latex("$" + self.__str__() + "$"))
-
-    def __str__(self):
-        states_str = ""
-        for index, state in enumerate(self.states_list):
-            if index != len(self.states_list) - 1:
-                states_str += state.__str__() + " + "
-            else:
-                states_str += state.__str__()
-
-        return states_str
-
-    def __rmul__(self, other):
-        if isinstance(other, (float, int)):
-            # const. * (|a> + |b>)
-            out_states = []
-            for state in self.states_list:
-                out_states.append(other * state)
-            return FockSum(out_states)
-
-    def __add__(self, other):
-        if isinstance(other, Fock):
-            return FockSum(self.states_list + [other]).cleanup()
-        elif isinstance(other, FockSum):
-            return FockSum(self.states_list + other.states_list).cleanup()
-
-    def dagger(self):
-        out_state = []
-
-        for op in self.states_list:
-            out_state.append(op.dagger())
-        return ConjugateFockSum(out_state)
-
-
-class ConjugateFockSum:
-
-    def __init__(self, states_list: List[ConjugateFock]):
-        self.states_list = states_list
-
-    def display(self):
-        return display(Latex("$" + self.__str__() + "$"))
-
-    def normalize(self):
-        coeffs = []
-        for state in self.states_list:
-            coeffs.append(state.coeff)
-        normalization = sum([i**2 for i in coeffs])
-        return 1.0 / np.sqrt(normalization) * self
-
-    def __str__(self):
-        states_str = ""
-        for index, state in enumerate(self.states_list):
-            if index != len(self.states_list) - 1:
-                states_str += state.__str__() + " + "
-            else:
-                states_str += state.__str__()
-
-        return states_str
-
-    def dagger(self):
-        out_state = []
-
-        for op in self.states_list:
-            out_state.append(op.dagger())
-        return FockSum(out_state)
-
-    def cleanup(self):
-        output_list_of_states = []
-        coeff_counter = 0
-        for i in range(len(self.states_list)):
-            if self.states_list[i] not in output_list_of_states:
-                coeff_counter += self.states_list[
-                    i
-                ].coeff  # add coeff of the first operator
-                for j in range(i + 1, len(self.states_list)):
-                    if (
-                        self.states_list[i].f_occ == self.states_list[j].f_occ
-                        and self.states_list[i].af_occ == self.states_list[j].af_occ
-                        and self.states_list[i].b_occ == self.states_list[j].b_occ
-                    ):
-                        coeff_counter += self.states_list[
-                            j
-                        ].coeff  # add coeffs of other same operators in the list
-
-                output_list_of_states.append(
-                    ConjugateFock(
-                        self.states_list[i].f_occ,
-                        self.states_list[i].af_occ,
-                        self.states_list[i].b_occ,
-                        coeff_counter,
-                    )
-                )
-
-                coeff_counter = 0
-        if len(output_list_of_states) == 1:
-            return output_list_of_states[0]
-        else:
-            return ConjugateFockSum(output_list_of_states)
-
-    def __rmul__(self, other):
-        if isinstance(other, (int, float)):
-            out_states = []
-            for state in self.states_list:
-                out_states.append(other * state)
-            return ConjugateFockSum(out_states)
-
-    def __mul__(self, other):
-        if isinstance(other, Fock):
-            output_value = 0
-            for conj_state in self.states_list:
-                output_value += conj_state * other
-            return output_value
-        elif isinstance(other, FockSum):
-            output_value = 0
-            for conj_state in self.states_list:
-                for state in other.states_list:
-                    output_value += conj_state * state
-            return output_value
-        elif isinstance(other, ParticleOperator):
-            output_conj_states = []
-            for conj_state in self.states_list:
-                output_conj_states.append(conj_state * other)
-            return ConjugateFockSum(output_conj_states)
-        elif isinstance(other, ParticleOperatorSum):
-            output_conj_states = []
-            for conj_state in self.states_list:
-                for op in other.operator_list:
-                    output_conj_states.append(conj_state * op)
-            return ConjugateFockSum(output_conj_states)
-
-    def __add__(self, other):
-        if isinstance(other, ConjugateFock):
-            return ConjugateFockSum(self.states_list + [other]).cleanup()
-        elif isinstance(other, ConjugateFockSum):
-            return ConjugateFockSum(self.states_list + other.states_list).cleanup()
-
-    def cleanup(self):
-        output_list_of_states = []
-        coeff_counter = 0
-        for i in range(len(self.states_list)):
-            if self.states_list[i] not in output_list_of_states:
-                coeff_counter += self.states_list[
-                    i
-                ].coeff  # add coeff of the first operator
-                for j in range(i + 1, len(self.states_list)):
-                    if (
-                        self.states_list[i].f_occ == self.states_list[j].f_occ
-                        and self.states_list[i].af_occ == self.states_list[j].af_occ
-                        and self.states_list[i].b_occ == self.states_list[j].b_occ
-                    ):
-                        coeff_counter += self.states_list[
-                            j
-                        ].coeff  # add coeffs of other same operators in the list
-
-                output_list_of_states.append(
-                    ConjugateFock(
-                        self.states_list[i].f_occ,
-                        self.states_list[i].af_occ,
-                        self.states_list[i].b_occ,
-                        coeff_counter,
-                    )
-                )
-
-                coeff_counter = 0
-        if len(output_list_of_states) == 1:
-            return output_list_of_states[0]
-        else:
-            return ConjugateFockSum(output_list_of_states)
-
-    def __eq__(self, other):
-        if isinstance(other, ConjugateFockSum):
-            lists_equal = True
-            for i in self.states_list:
-                if i not in other.states_list:
-                    lists_equal = False
-            return lists_equal
-
-
 class ParticleOperator:
 
     def __init__(
@@ -467,7 +236,8 @@ class ParticleOperator:
         return None
 
     def __rmul__(self, other):
-        pass
+        coeffs = np.array(list(self.op_dict.values()))
+        return ParticleOperator(dict(zip(self.op_dict.keys(), other * coeffs)))
 
     def __mul__(self, other):
         pass
@@ -584,14 +354,11 @@ class ParticleOperator:
                 )
 
 
-class ParticleOperatorSum:
-    pass
-
-
 class FermionOperator(ParticleOperator):
 
-    def __init__(self, mode, coeff: float = 1.0):
+    def __init__(self, mode, coeff: complex = 1.0):
         self.mode = mode
+        self.particle_type = "fermion"
         super().__init__("b" + mode, coeff)
 
     def __str__(self):
@@ -605,8 +372,9 @@ class FermionOperator(ParticleOperator):
 
 
 class AntifermionOperator(ParticleOperator):
-    def __init__(self, mode, coeff: float = 1.0):
+    def __init__(self, mode, coeff: complex = 1.0):
         self.mode = mode
+        self.particle_type = "antifermion"
         super().__init__("d" + mode, coeff)
 
     def __str__(self):
@@ -620,8 +388,9 @@ class AntifermionOperator(ParticleOperator):
 
 
 class BosonOperator(ParticleOperator):
-    def __init__(self, mode, coeff: float = 1.0):
+    def __init__(self, mode, coeff: complex = 1.0):
         self.mode = mode
+        self.particle_type = "boson"
         super().__init__("a" + mode, coeff)
 
     def __str__(self):
