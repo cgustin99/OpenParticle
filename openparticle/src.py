@@ -217,11 +217,40 @@ class ParticleOperator:
     def display(self):
         display(self.latex_string())
 
-    def split(self):
-        pass
+    def split(self) -> List:
+        split_list = []
+        if len(self.op_dict) == 1:
+            for oper in list(self.op_dict.keys())[0].split(" "):
+                if oper[0] == "a":  # boson
+                    split_list.append(BosonOperator(oper[1:]))
+                elif oper[0] == "b":  # fermion
+                    split_list.append(FermionOperator(oper[1:]))
+                elif oper[0] == "d":  # antifermion
+                    split_list.append(AntifermionOperator(oper[1:]))
+            return split_list
+        else:
+            return NotImplemented
 
-    def dagger(self):
-        pass
+    def to_list(self) -> List:
+        particle_op_list = []
+        for oper, coeff in self.op_dict.items():
+            particle_op_list.append(ParticleOperator({oper: coeff}))
+        return particle_op_list
+
+    def dagger(self) -> "ParticleOperator":
+        dagger_dict = {}
+
+        for i, coeff_i in self.op_dict.items():
+            dagger_str = ""
+            for oper in i.split(" ")[::-1]:
+                if oper[-1] == "^":
+                    dagger_str += oper[:-1]
+                else:
+                    dagger_str += oper + "^"
+                dagger_str += " "
+            dagger_dict[dagger_str[:-1]] = coeff_i
+
+        return ParticleOperator(dagger_dict)
 
     def cleanup(self, zero_threshold=1e-15) -> None:
         """
@@ -240,10 +269,23 @@ class ParticleOperator:
         return ParticleOperator(dict(zip(self.op_dict.keys(), other * coeffs)))
 
     def __mul__(self, other):
-        pass
+        if isinstance(other, ParticleOperator):
+            product_dict = {}
+            for op1, coeffs1 in list(self.op_dict.items()):
+                for op2, coeffs2 in list(other.op_dict.items()):
+                    product_dict[op1 + " " + op2] = coeffs1 * coeffs2
+            return ParticleOperator(product_dict)
+        if isinstance(other, Fock):
+            # TODO: Implement
+            pass
 
-    def __pow__(self, other):
-        pass
+    def __pow__(self, other) -> "ParticleOperator":
+        if len(self.op_dict) == 1:
+            return ParticleOperator(
+                ((str(list(self.op_dict.keys())[0]) + " ") * other)[:-1]
+            )
+        else:
+            return NotImplemented
 
     def __sub__(self, other):
         coeffs = list(other.op_dict.values())
