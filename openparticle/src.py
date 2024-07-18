@@ -179,7 +179,7 @@ class ParticleOperator:
             raise ValueError("input must be dictionary or op string")
 
         if perform_cleanup:
-            self.cleanup()
+            self._cleanup()
 
     def __add__(self, other: "ParticleOperator") -> "ParticleOperator":
 
@@ -203,7 +203,7 @@ class ParticleOperator:
             output_str += "\n"
         return output_str
 
-    def cleanup(self, zero_threshold=1e-15) -> None:
+    def _cleanup(self, zero_threshold=1e-15) -> None:
         """
         remove terms below threshold
         """
@@ -266,7 +266,7 @@ class ParticleOperator:
 
         return ParticleOperator(dagger_dict)
 
-    def cleanup(self, zero_threshold=1e-15) -> None:
+    def _cleanup(self, zero_threshold=1e-15) -> None:
         """
         remove terms below threshold
         """
