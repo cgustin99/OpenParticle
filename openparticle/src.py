@@ -80,18 +80,11 @@ class Fock:
                     for split_op in op.split()[
                         ::-1
                     ]:  # AB|f> = A(B|f>) i.e. B comes first
-                        if isinstance(state, Fock):
-                            print(state)
-                            state, new_coeff = split_op._operate_on_state(state)
-                            split_coeff *= (
-                                new_coeff  # Update coeff for every op in product
-                            )
-                        else:
-                            return 0
+                        state, new_coeff = split_op._operate_on_state(state)
+                        split_coeff *= new_coeff  # Update coeff for every op in product
                     output_state_dict[next(iter(state.state_dict))] = (
                         split_coeff * op_coeff * state_coeff
                     )
-
             return Fock(state_dict=output_state_dict)
 
     def __add__(self, other: "Fock") -> "Fock":
@@ -105,8 +98,20 @@ class Fock:
             new_dict = deepcopy(self.state_dict)
             for state, coeff in other.state_dict.items():
                 new_dict[state] = coeff + new_dict.get(state, 0)
+        out_state = Fock(state_dict=new_dict, perform_cleanup=True)
+        if len(out_state.state_dict) == 0:
+            return 0
+        else:
+            return out_state
 
-        return Fock(state_dict=new_dict, perform_cleanup=True)
+    def _cleanup(self, zero_threshold=1e-15) -> None:
+        """
+        remove terms below threshold
+        """
+        keys, coeffs = zip(*self.state_dict.items())
+        mask = np.where(abs(np.array(coeffs)) > 1e-15)[0]
+        self.state_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
+        return None
 
     def dagger(self):
         return ConjugateFock(state_dict=self.state_dict)
@@ -204,9 +209,11 @@ class ConjugateFock:
         if isinstance(other, Fock):
             return self.inner_product(other)
         elif isinstance(other, ParticleOperator):
-            return (
-                other.dagger() * self.dagger()
-            ).dagger()  # (<f|A)^\dagger = (A^\dagger * |f>)^\dagger
+            out = other.dagger() * self.dagger()
+            if isinstance(out, (int, float, complex)):
+                return 0
+            else:
+                return out.dagger()  # (<f|A)^\dagger = (A^\dagger * |f>)^\dagger
 
     def __sub__(self, other: "ConjugateFock") -> "ConjugateFock":
         coeffs = list(other.state_dict.values())
@@ -244,8 +251,10 @@ class ParticleOperator:
             new_dict = deepcopy(self.op_dict)
             for op_str, coeff in other.op_dict.items():
                 new_dict[op_str] = coeff + new_dict.get(op_str, 0)
-
-        return ParticleOperator(new_dict, perform_cleanup=True)
+        out_op = ParticleOperator(new_dict, perform_cleanup=True)
+        if len(out_op.op_dict) == 0:
+            return 0
+        return out_op
 
     def __str__(self) -> str:
         output_str = ""
@@ -258,9 +267,9 @@ class ParticleOperator:
         """
         remove terms below threshold
         """
-        keys, coeffs = zip(*self.state_dict.items())
-        mask = np.where(abs(np.array(coeffs)) > 1e-15)[0]
-        self.state_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
+        keys, coeffs = zip(*self.op_dict.items())
+        mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
+        self.op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
         # self.state_dict = dict()
         # for idx in mask:
         #     self.state_dict[keys[idx]] = coeffs[idx]
@@ -317,16 +326,14 @@ class ParticleOperator:
 
         return ParticleOperator(dagger_dict)
 
-    def _cleanup(self, zero_threshold=1e-15) -> None:
+    def _cleanup(self, zero_threshold=1e-15):
         """
         remove terms below threshold
         """
+
         keys, coeffs = zip(*self.op_dict.items())
-        mask = np.where(abs(np.array(coeffs)) > 1e-15)[0]
+        mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
         self.op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
-        # self.op_dict = dict()
-        # for idx in mask:
-        #     self.op_dict[keys[idx]] = coeffs[idx]
         return None
 
     def __rmul__(self, other):
@@ -387,15 +394,20 @@ class FermionOperator(ParticleOperator):
         elif not self.creation and self.mode in f_occ:
             f_occ.remove(self.mode)
         else:
-            return 0
-
+            return Fock([], [], []), 0
+        if len(f_occ) == 0:
+            coeff = 1
+        else:
+            coeff = (
+                (-1) ** len(sorted(f_occ)[: sorted(f_occ).index(self.mode)]),
+            )  # get parity
         return (
             Fock(
                 f_occ=sorted(f_occ),
                 af_occ=list(list(other.state_dict.keys())[0][1]),
                 b_occ=list(list(other.state_dict.keys())[0][2]),
             ),
-            (-1) ** len(sorted(f_occ)[: sorted(f_occ).index(self.mode)]),  # get parity
+            coeff,
         )
 
 
@@ -428,15 +440,19 @@ class AntifermionOperator(ParticleOperator):
             af_occ.remove(self.mode)
         else:
             return 0
-
+        if len(f_occ) == 0:
+            coeff = 1
+        else:
+            coeff = (
+                (-1) ** len(sorted(f_occ)[: sorted(f_occ).index(self.mode)]),
+            )  # get parity
         return (
             Fock(
                 f_occ=list(list(other.state_dict.keys())[0][0]),
                 af_occ=sorted(af_occ),
                 b_occ=list(list(other.state_dict.keys())[0][2]),
             ),
-            (-1)
-            ** len(sorted(af_occ)[: sorted(af_occ).index(self.mode)]),  # get parity
+            coeff,
         )
 
 
@@ -483,6 +499,8 @@ class BosonOperator(ParticleOperator):
         updated_bos_state = list(zip(state_modes, state_occupancies))
         sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
 
+        if len(b_occ) == 0:
+            coeff = 1
         return (
             Fock(
                 f_occ=list(list(other.state_dict.keys())[0][0]),
