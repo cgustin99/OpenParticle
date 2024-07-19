@@ -111,6 +111,13 @@ class Fock:
     def dagger(self):
         return ConjugateFock(state_dict=self.state_dict)
 
+    def __sub__(self, other: "Fock") -> "Fock":
+        coeffs = list(other.state_dict.values())
+        neg_other = Fock(
+            state_dict=dict(zip(other.state_dict.keys(), -1 * np.array(coeffs)))
+        )
+        return self + neg_other
+
 
 class ConjugateFock:
     """
@@ -333,9 +340,7 @@ class ParticleOperator:
                 for op2, coeffs2 in list(other.op_dict.items()):
                     product_dict[op1 + " " + op2] = coeffs1 * coeffs2
             return ParticleOperator(product_dict)
-        if isinstance(other, Fock):
-            # TODO: Implement
-            pass
+        return NotImplemented
 
     def __pow__(self, other) -> "ParticleOperator":
         if len(self.op_dict) == 1:
