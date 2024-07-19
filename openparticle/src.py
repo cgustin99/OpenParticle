@@ -55,12 +55,44 @@ class Fock:
     def display(self):
         display(Latex("$" + self.__str__() + "$"))
 
+    def to_list(self) -> List:
+        state_list = []
+        for state, coeff in self.state_dict.items():
+            state_list.append(Fock(state_dict={state: coeff}))
+        return state_list
+
     def __rmul__(self, other):
+
         if isinstance(other, (float, int, complex)):
             coeffs = np.array(list(self.state_dict.values()))
             return Fock(state_dict=dict(zip(self.state_dict.keys(), other * coeffs)))
+
         elif isinstance(other, Fock):
             raise Exception("Cannot multiply a ket to the left of a ket")
+
+        elif isinstance(other, ParticleOperator):
+            output_state_dict = {}
+            for op in other.to_list():
+                op_coeff = next(iter(op.op_dict.values()))
+                for state in self.to_list():
+                    state_coeff = next(iter(state.state_dict.values()))
+                    split_coeff = 1
+                    for split_op in op.split()[
+                        ::-1
+                    ]:  # AB|f> = A(B|f>) i.e. B comes first
+                        if isinstance(state, Fock):
+                            print(state)
+                            state, new_coeff = split_op._operate_on_state(state)
+                            split_coeff *= (
+                                new_coeff  # Update coeff for every op in product
+                            )
+                        else:
+                            return 0
+                    output_state_dict[next(iter(state.state_dict))] = (
+                        split_coeff * op_coeff * state_coeff
+                    )
+
+            return Fock(state_dict=output_state_dict)
 
     def __add__(self, other: "Fock") -> "Fock":
         # (TODO: could uses sets to find common and different keys and loop only over unique terms)
@@ -150,7 +182,7 @@ class ConjugateFock:
         return ConjugateFock(state_dict=new_dict, perform_cleanup=True)
 
     def dagger(self):
-        Fock(state_dict=self.state_dict)
+        return Fock(state_dict=self.state_dict)
 
     def inner_product(self, other: "Fock") -> complex:
         if isinstance(other, Fock):
@@ -161,8 +193,20 @@ class ConjugateFock:
                         inner_product += 1.0 * coeff1 * coeff2
             return inner_product
 
-    def __mul__(self, other: "Fock") -> "Fock":
-        return self.inner_product(other)
+    def __mul__(self, other):
+        if isinstance(other, Fock):
+            return self.inner_product(other)
+        elif isinstance(other, ParticleOperator):
+            return (
+                other.dagger() * self.dagger()
+            ).dagger()  # (<f|A)^\dagger = (A^\dagger * |f>)^\dagger
+
+    def __sub__(self, other: "ConjugateFock") -> "ConjugateFock":
+        coeffs = list(other.state_dict.values())
+        neg_other = ConjugateFock(
+            state_dict=dict(zip(other.state_dict.keys(), -1 * np.array(coeffs)))
+        )
+        return self + neg_other
 
 
 class ParticleOperator:
@@ -308,114 +352,19 @@ class ParticleOperator:
         )
         return self + neg_other
 
-    def impose_parity_jw(self, state, mode):
-
-        index = state.index(mode)
-        parity_str = state[:index]
-        coeff = (-1) ** len(parity_str)
-        return coeff
-
-    def operate_on_state(self, other):
-        if isinstance(other, (int, float)):
-            return other
-        else:
-            coeff = self.coeff * other.coeff
-            updated_ferm_state = other.f_occ[:]
-            updated_antiferm_state = other.af_occ[:]
-            updated_bos_state = other.b_occ[:]
-
-            op = self.input_string
-            if op[-1] == "^":
-                if op[0] == "b":
-                    if int(op[1]) not in other.f_occ:
-                        updated_ferm_state.append(int(op[1]))
-                        coeff *= self.impose_parity_jw(
-                            sorted(updated_ferm_state), int(op[1])
-                        )
-                    else:
-                        coeff = 0
-                elif op[0] == "d":
-                    if int(op[1]) not in other.af_occ:
-                        updated_antiferm_state.append(int(op[1]))
-                        coeff *= self.impose_parity_jw(
-                            sorted(updated_antiferm_state), int(op[1])
-                        )
-                    else:
-                        coeff = 0
-                elif op[0] == "a":
-                    state_modes, state_occupancies = [i[0] for i in other.b_occ], [
-                        i[1] for i in other.b_occ
-                    ]
-
-                    if int(op[1]) in state_modes:
-                        index = state_modes.index(int(op[1]))
-                        if state_occupancies[index] >= 0:
-                            state_occupancies[index] += 1
-                            coeff *= np.sqrt(state_occupancies[index])
-
-                    else:
-                        state_modes.append(int(op[1]))
-                        state_occupancies.append(1)
-                    # zip up modes and occupancies into an updated list
-                    updated_bos_state = list(zip(state_modes, state_occupancies))
-                    sorted_updated_bos_state = sorted(
-                        updated_bos_state, key=lambda x: x[0]
-                    )
-            else:
-                if op[0] == "b":
-                    if int(op[1]) in other.f_occ:
-                        coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
-                        updated_ferm_state.remove(int(op[1]))
-
-                    else:
-                        coeff = 0
-                elif op[0] == "d":
-                    if int(op[1]) in other.af_occ:
-                        coeff *= self.impose_parity_jw(
-                            updated_antiferm_state, int(op[1])
-                        )
-                        updated_antiferm_state.remove(int(op[1]))
-                    else:
-                        coeff = 0
-                elif op[0] == "a":
-                    state_modes, state_occupancies = [i[0] for i in other.b_occ], [
-                        i[1] for i in other.b_occ
-                    ]
-                    if int(op[1]) in state_modes:
-                        index = state_modes.index(int(op[1]))
-                        if state_occupancies[index] >= 1:
-                            state_occupancies[index] -= 1
-                            coeff *= np.sqrt(state_occupancies[index] + 1)
-                        else:
-                            coeff = 0
-                    else:
-                        coeff = 0
-                    # zip up modes and occupancies into an updated list
-                    updated_bos_state = list(zip(state_modes, state_occupancies))
-                    sorted_updated_bos_state = sorted(
-                        updated_bos_state, key=lambda x: x[0]
-                    )
-
-            if "a" in self.particle_type:
-                return coeff * Fock(
-                    sorted(updated_ferm_state),
-                    sorted(updated_antiferm_state),
-                    sorted_updated_bos_state,
-                )
-            else:
-                return coeff * Fock(
-                    sorted(updated_ferm_state),
-                    sorted(updated_antiferm_state),
-                    updated_bos_state,
-                )
-
 
 class FermionOperator(ParticleOperator):
 
-    def __init__(self, mode, coeff: complex = 1.0):
-        self.mode = mode
+    def __init__(self, input_string, coeff: complex = 1.0):
+        if input_string[-1] == "^":
+            self.mode = int(input_string[:-1])
+            self.creation = True
+        else:
+            self.mode = int(input_string)
+            self.creation = False
+
         self.particle_type = "fermion"
-        super().__init__("b" + mode, coeff)
+        super().__init__("b" + input_string, coeff)
 
     def __str__(self):
         return super().__str__()
@@ -425,13 +374,37 @@ class FermionOperator(ParticleOperator):
 
     def __add__(self, other):
         return super().__add__(other)
+
+    def _operate_on_state(self, other) -> "Fock":
+        f_occ = list(list(other.state_dict.keys())[0][0])
+        if self.creation and self.mode not in f_occ:
+            f_occ.append(self.mode)
+        elif not self.creation and self.mode in f_occ:
+            f_occ.remove(self.mode)
+        else:
+            return 0
+
+        return (
+            Fock(
+                f_occ=sorted(f_occ),
+                af_occ=list(list(other.state_dict.keys())[0][1]),
+                b_occ=list(list(other.state_dict.keys())[0][2]),
+            ),
+            (-1) ** len(sorted(f_occ)[: sorted(f_occ).index(self.mode)]),  # get parity
+        )
 
 
 class AntifermionOperator(ParticleOperator):
-    def __init__(self, mode, coeff: complex = 1.0):
-        self.mode = mode
+    def __init__(self, input_string, coeff: complex = 1.0):
+        if input_string[-1] == "^":
+            self.mode = int(input_string[:-1])
+            self.creation = True
+        else:
+            self.mode = int(input_string)
+            self.creation = False
+
         self.particle_type = "antifermion"
-        super().__init__("d" + mode, coeff)
+        super().__init__("d" + input_string, coeff)
 
     def __str__(self):
         return super().__str__()
@@ -441,13 +414,38 @@ class AntifermionOperator(ParticleOperator):
 
     def __add__(self, other):
         return super().__add__(other)
+
+    def _operate_on_state(self, other) -> "Fock":
+        af_occ = list(list(other.state_dict.keys())[0][1])
+        if self.creation and self.mode not in af_occ:
+            af_occ.append(self.mode)
+        elif not self.creation and self.mode in af_occ:
+            af_occ.remove(self.mode)
+        else:
+            return 0
+
+        return (
+            Fock(
+                f_occ=list(list(other.state_dict.keys())[0][0]),
+                af_occ=sorted(af_occ),
+                b_occ=list(list(other.state_dict.keys())[0][2]),
+            ),
+            (-1)
+            ** len(sorted(af_occ)[: sorted(af_occ).index(self.mode)]),  # get parity
+        )
 
 
 class BosonOperator(ParticleOperator):
-    def __init__(self, mode, coeff: complex = 1.0):
-        self.mode = mode
+    def __init__(self, input_string, coeff: complex = 1.0):
+        if input_string[-1] == "^":
+            self.mode = int(input_string[:-1])
+            self.creation = True
+        else:
+            self.mode = int(input_string)
+            self.creation = False
+
         self.particle_type = "boson"
-        super().__init__("a" + mode, coeff)
+        super().__init__("a" + input_string, coeff)
 
     def __str__(self):
         return super().__str__()
@@ -457,3 +455,34 @@ class BosonOperator(ParticleOperator):
 
     def __add__(self, other):
         return super().__add__(other)
+
+    def _operate_on_state(self, other) -> "Fock":
+        b_occ = list(list(other.state_dict.keys())[0][2])
+        state_modes, state_occupancies = [i[0] for i in b_occ], [i[1] for i in b_occ]
+
+        if self.creation and self.mode in state_modes:
+            index = state_modes.index(self.mode)
+            state_occupancies[index] += 1
+            coeff = np.sqrt(state_occupancies[index])  # sqrt(n + 1)
+        elif self.creation and self.mode not in state_modes:
+            state_modes.append(self.mode)
+            state_occupancies.append(1)
+            coeff = 1
+        elif not self.creation and self.mode in state_modes:
+            index = state_modes.index(self.mode)
+            state_occupancies[index] -= 1
+            coeff = np.sqrt(state_occupancies[index] + 1)  # sqrt(n)
+        else:
+            return 0
+
+        updated_bos_state = list(zip(state_modes, state_occupancies))
+        sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
+
+        return (
+            Fock(
+                f_occ=list(list(other.state_dict.keys())[0][0]),
+                af_occ=list(list(other.state_dict.keys())[0][1]),
+                b_occ=sorted_updated_bos_state,
+            ),
+            coeff,
+        )
