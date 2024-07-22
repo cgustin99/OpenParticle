@@ -28,9 +28,11 @@ class Fock:
         b_occ: List = None,
         state_dict: Dict[Tuple[Tuple, Tuple, Tuple], complex] = None,
         coeff: complex = 1.0,
-        perform_cleanup=True,
     ):
-        if f_occ is not None and af_occ is not None and b_occ is not None:
+        if state_dict is not None:
+            self.state_dict = state_dict
+
+        else:
             self.state_dict = {
                 (
                     tuple(f_occ),
@@ -39,15 +41,15 @@ class Fock:
                 ): coeff
             }
 
-        elif state_dict is not None:
-            self.state_dict = state_dict
-
     def __str__(self):
-        output_str = ""
-        for state, coeff in self.state_dict.items():
-            output_str += f"{coeff} * |{state}⟩ +"
-            output_str += "\n"
-        return output_str[:-3]
+        if len(self.state_dict) == 0:
+            return "0"
+        else:
+            output_str = ""
+            for state, coeff in self.state_dict.items():
+                output_str += f"{coeff} * |{state}⟩ +"
+                output_str += "\n"
+            return output_str[:-3]
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -80,13 +82,12 @@ class Fock:
                     for split_op in op.split()[
                         ::-1
                     ]:  # AB|f> = A(B|f>) i.e. B comes first
-                        print(split_op, state)
                         state, new_coeff = split_op._operate_on_state(state)
                         split_coeff *= new_coeff  # Update coeff for every op in product
                     output_state_dict[next(iter(state.state_dict))] = (
                         split_coeff * op_coeff * state_coeff
                     )
-            return Fock(state_dict=output_state_dict)  # ._cleanup()
+            return Fock(state_dict=output_state_dict)._cleanup()
 
     def __add__(self, other: "Fock") -> "Fock":
         # (TODO: could uses sets to find common and different keys and loop only over unique terms)
@@ -105,14 +106,26 @@ class Fock:
         else:
             return out_state
 
-    def _cleanup(self, zero_threshold=1e-15) -> None:
+    def _cleanup(self, zero_threshold=1e-15) -> "Fock":
         """
         remove terms below threshold
         """
-        keys, coeffs = zip(*self.state_dict.items())
-        mask = np.where(abs(np.array(coeffs)) > 1e-15)[0]
-        self.state_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
-        return None
+        if len(self.state_dict) == 0:
+            return self
+        else:
+            # keys, coeffs = zip(*self.state_dict.items())
+            # mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
+            # new_state_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
+            # return Fock(state_dict=new_state_dict)
+
+            ## SLOWER than above, but nested tuples causes problems in numpy
+            ## TODO: speed this up in numba // use numpy mask but do NOT use to mask keys... instead loop over mask as below
+            new_state_dict = dict()
+            for op, coeff in self.state_dict.items():
+                if abs(coeff) > zero_threshold:
+                    new_state_dict[op] = coeff
+
+            return Fock(state_dict=new_state_dict)
 
     def dagger(self):
         return ConjugateFock(state_dict=self.state_dict)
@@ -161,11 +174,14 @@ class ConjugateFock:
             self.state_dict = state_dict
 
     def __str__(self):
-        output_str = ""
-        for state, coeff in self.state_dict.items():
-            output_str += f"{coeff} * ⟨{state}| +"
-            output_str += "\n"
-        return output_str[:-3]
+        if len(self.state_dict) == 0:
+            return "0"
+        else:
+            output_str = ""
+            for state, coeff in self.state_dict.items():
+                output_str += f"{coeff} * ⟨{state}| +"
+                output_str += "\n"
+            return output_str[:-3]
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -226,9 +242,7 @@ class ConjugateFock:
 
 class ParticleOperator:
 
-    def __init__(
-        self, op_dict: Union[Dict[str, complex], str] = dict(), perform_cleanup=True
-    ):
+    def __init__(self, op_dict: Union[Dict[str, complex], str] = dict()):
 
         if isinstance(op_dict, str):
             self.op_dict = {op_dict: 1}
@@ -236,9 +250,6 @@ class ParticleOperator:
             self.op_dict = op_dict
         else:
             raise ValueError("input must be dictionary or op string")
-
-        if perform_cleanup:
-            self._cleanup()
 
     def __add__(self, other: "ParticleOperator") -> "ParticleOperator":
 
@@ -252,29 +263,33 @@ class ParticleOperator:
             new_dict = deepcopy(self.op_dict)
             for op_str, coeff in other.op_dict.items():
                 new_dict[op_str] = coeff + new_dict.get(op_str, 0)
-        out_op = ParticleOperator(new_dict, perform_cleanup=True)
-        if len(out_op.op_dict) == 0:
-            return 0
-        return out_op
+
+        return ParticleOperator(new_dict)._cleanup()
 
     def __str__(self) -> str:
-        output_str = ""
-        for op, coeff in self.op_dict.items():
-            output_str += f"{coeff} * {op}"
-            output_str += "\n"
-        return output_str
+        if len(self.op_dict) == 0:
+            return "0"
+        else:
+            output_str = ""
+            for op, coeff in self.op_dict.items():
+                output_str += f"{coeff} * {op}"
+                output_str += "\n"
+            return output_str
 
-    def _cleanup(self, zero_threshold=1e-15) -> None:
+    def _cleanup(self, zero_threshold=1e-15) -> "ParticleOperator":
         """
         remove terms below threshold
         """
-        keys, coeffs = zip(*self.op_dict.items())
-        mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
-        self.op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
-        # self.state_dict = dict()
-        # for idx in mask:
-        #     self.state_dict[keys[idx]] = coeffs[idx]
-        return None
+        if len(self.op_dict) == 0:
+            return self
+        else:
+            keys, coeffs = zip(*self.op_dict.items())
+            mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
+            new_op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
+            # new_op_dict = dict()
+            # for idx in mask:
+            #     new_op_dict[keys[idx]] = coeffs[idx]
+            return ParticleOperator(new_op_dict)
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -327,16 +342,6 @@ class ParticleOperator:
 
         return ParticleOperator(dagger_dict)
 
-    def _cleanup(self, zero_threshold=1e-15):
-        """
-        remove terms below threshold
-        """
-
-        keys, coeffs = zip(*self.op_dict.items())
-        mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
-        self.op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
-        return None
-
     def __rmul__(self, other):
         coeffs = np.array(list(self.op_dict.values()))
         return ParticleOperator(dict(zip(self.op_dict.keys(), other * coeffs)))
@@ -368,7 +373,7 @@ class ParticleOperator:
 
 class FermionOperator(ParticleOperator):
 
-    def __init__(self, input_string, coeff: complex = 1.0):
+    def __init__(self, input_string):
         if input_string[-1] == "^":
             self.mode = int(input_string[:-1])
             self.creation = True
@@ -377,7 +382,7 @@ class FermionOperator(ParticleOperator):
             self.creation = False
 
         self.particle_type = "fermion"
-        super().__init__("b" + input_string, coeff)
+        super().__init__("b" + input_string)
 
     def __str__(self):
         return super().__str__()
@@ -412,7 +417,7 @@ class FermionOperator(ParticleOperator):
 
 
 class AntifermionOperator(ParticleOperator):
-    def __init__(self, input_string, coeff: complex = 1.0):
+    def __init__(self, input_string):
         if input_string[-1] == "^":
             self.mode = int(input_string[:-1])
             self.creation = True
@@ -421,7 +426,7 @@ class AntifermionOperator(ParticleOperator):
             self.creation = False
 
         self.particle_type = "antifermion"
-        super().__init__("d" + input_string, coeff)
+        super().__init__("d" + input_string)
 
     def __str__(self):
         return super().__str__()
@@ -455,7 +460,7 @@ class AntifermionOperator(ParticleOperator):
 
 
 class BosonOperator(ParticleOperator):
-    def __init__(self, input_string, coeff: complex = 1.0):
+    def __init__(self, input_string):
         if input_string[-1] == "^":
             self.mode = int(input_string[:-1])
             self.creation = True
@@ -464,7 +469,7 @@ class BosonOperator(ParticleOperator):
             self.creation = False
 
         self.particle_type = "boson"
-        super().__init__("a" + input_string, coeff)
+        super().__init__("a" + input_string)
 
     def __str__(self):
         return super().__str__()
