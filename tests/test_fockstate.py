@@ -1,4 +1,4 @@
-from openparticle import Fock, FockSum, ConjugateFock, ConjugateFockSum
+from openparticle import Fock, ConjugateFock
 import pytest
 import numpy as np
 
@@ -50,12 +50,14 @@ def test_add_fock_to_focksum():
     # assert fsum + state == FockSum([fsum.states_list[0], fsum.states_list[1], state])
     assert (fsum + state).__str__() == "1.0 * |1; 2; ⟩ + 1.0 * |0; ; ⟩ + 1.0 * |1; ; ⟩"
 
+
 def test_add_focksum_to_fock_with_proper_ordering():
     fsum = Fock([1], [2], []) + Fock([0], [], [])
     state = Fock([1], [], [])
 
     # assert state + fsum == FockSum([state, fsum.states_list[0], fsum.states_list[1]])
     assert (state + fsum).__str__() == "1.0 * |1; ; ⟩ + 1.0 * |1; 2; ⟩ + 1.0 * |0; ; ⟩"
+
 
 # ?????????
 def test_add_focksum_to_fock_with_wrong_ordering():
@@ -79,7 +81,9 @@ def test_add_focksum_to_different_focksum():
     #     ]
     # )
 
-    assert (fsum1 + fsum2).__str__() == "1.0 * |1; 2; ⟩ + 1.0 * |0; ; ⟩ + 1.0 * |3; 2; ⟩ + 1.0 * |1; ; ⟩"
+    assert (
+        fsum1 + fsum2
+    ).__str__() == "1.0 * |1; 2; ⟩ + 1.0 * |0; ; ⟩ + 1.0 * |3; 2; ⟩ + 1.0 * |1; ; ⟩"
 
 
 def test_add_focksum_to_overlapping_focksum():
@@ -89,7 +93,9 @@ def test_add_focksum_to_overlapping_focksum():
     # assert fsum1 + fsum2 == Fock([1], [2], []) + 2 * Fock([0], [], []) + Fock(
     #     [3], [2], []
     # )
-    assert (fsum1 + fsum2).__str__() == "1.0 * |1; 2; ⟩ + 2.0 * |0; ; ⟩ + 1.0 * |3; 2; ⟩"
+    assert (
+        fsum1 + fsum2
+    ).__str__() == "1.0 * |1; 2; ⟩ + 2.0 * |0; ; ⟩ + 1.0 * |3; 2; ⟩"
 
 
 def test_focksum_normlization():
@@ -179,7 +185,9 @@ def test_add_conjugatefocksum_to_different_conjugatefocksum():
     #     ]
     # )
 
-    assert (fsum1 + fsum2).__str__() == "1.0 * ⟨1; 2; | + 1.0 * ⟨0; ; | + 1.0 * ⟨3; 2; | + 1.0 * ⟨1; ; |"
+    assert (
+        fsum1 + fsum2
+    ).__str__() == "1.0 * ⟨1; 2; | + 1.0 * ⟨0; ; | + 1.0 * ⟨3; 2; | + 1.0 * ⟨1; ; |"
 
 
 def test_add_conjugatefocksum_to_overlapping_conjugatefocksum():
@@ -190,7 +198,9 @@ def test_add_conjugatefocksum_to_overlapping_conjugatefocksum():
     #     [0], [], []
     # ) + ConjugateFock([3], [2], [])
 
-    assert (fsum1 + fsum2).__str__() == "1.0 * ⟨1; 2; | + 2.0 * ⟨0; ; | + 1.0 * ⟨3; 2; |"
+    assert (
+        fsum1 + fsum2
+    ).__str__() == "1.0 * ⟨1; 2; | + 2.0 * ⟨0; ; | + 1.0 * ⟨3; 2; |"
 
 
 def test_conjugatefocksum_normlization():

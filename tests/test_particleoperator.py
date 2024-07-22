@@ -1,4 +1,4 @@
-from openparticle import ParticleOperator, ParticleOperatorSum
+from openparticle import ParticleOperator
 import pytest
 import numpy as np
 
