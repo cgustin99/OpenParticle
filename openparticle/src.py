@@ -80,12 +80,13 @@ class Fock:
                     for split_op in op.split()[
                         ::-1
                     ]:  # AB|f> = A(B|f>) i.e. B comes first
+                        print(split_op, state)
                         state, new_coeff = split_op._operate_on_state(state)
                         split_coeff *= new_coeff  # Update coeff for every op in product
                     output_state_dict[next(iter(state.state_dict))] = (
                         split_coeff * op_coeff * state_coeff
                     )
-            return Fock(state_dict=output_state_dict)
+            return Fock(state_dict=output_state_dict)  # ._cleanup()
 
     def __add__(self, other: "Fock") -> "Fock":
         # (TODO: could uses sets to find common and different keys and loop only over unique terms)
@@ -395,12 +396,11 @@ class FermionOperator(ParticleOperator):
             f_occ.remove(self.mode)
         else:
             return Fock([], [], []), 0
-        if len(f_occ) == 0:
-            coeff = 1
-        else:
-            coeff = (
-                (-1) ** len(sorted(f_occ)[: sorted(f_occ).index(self.mode)]),
-            )  # get parity
+
+        f_occ = sorted(f_occ)
+        # Get parity
+        coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
+
         return (
             Fock(
                 f_occ=sorted(f_occ),
@@ -439,13 +439,11 @@ class AntifermionOperator(ParticleOperator):
         elif not self.creation and self.mode in af_occ:
             af_occ.remove(self.mode)
         else:
-            return 0
-        if len(f_occ) == 0:
-            coeff = 1
-        else:
-            coeff = (
-                (-1) ** len(sorted(f_occ)[: sorted(f_occ).index(self.mode)]),
-            )  # get parity
+            return Fock([], [], []), 0
+
+        af_occ = sorted(af_occ)
+        # Get parity
+        coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
         return (
             Fock(
                 f_occ=list(list(other.state_dict.keys())[0][0]),
@@ -494,7 +492,7 @@ class BosonOperator(ParticleOperator):
             state_occupancies[index] -= 1
             coeff = np.sqrt(state_occupancies[index] + 1)  # sqrt(n)
         else:
-            return 0
+            return Fock([], [], []), 0
 
         updated_bos_state = list(zip(state_modes, state_occupancies))
         sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
