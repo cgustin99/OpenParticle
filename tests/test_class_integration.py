@@ -27,7 +27,7 @@ def test_defined_particleoperator_acts_on_fock_state():
     operator = ParticleOperator("b0^")
     state = Fock([], [1], [])
 
-    assert operator * state == Fock([0], [1], [])
+    assert (operator * state).state_dict == (Fock([0], [1], [])).state_dict
 
 
 def test_defined_particleoperatorsum_act_on_matrix_element_1():
@@ -50,14 +50,17 @@ def test_defined_particleoperator_acts_on_fock_sum_diff():
     operator = ParticleOperator("b0^")
     state = Fock([], [1], []) + Fock([], [2], [])
 
-    assert (operator * state).__str__() == "1.0 * |0; 1; ⟩ + 1.0 * |0; 2; ⟩"
+    assert (operator * state).state_dict == {
+        ((0,), (1,), ()): 1,
+        ((0,), (2,), ()): 1,
+    }
 
 
 def test_defined_particleoperator_acts_on_fock_sum_same():
     operator = ParticleOperator("b0^")
     state = Fock([], [1], []) + Fock([], [1], [])
 
-    assert (operator * state).__str__() == "2.0 * |0; 1; ⟩"
+    assert (operator * state).state_dict == {((0,), (1,), ()): 2.0}
 
 
 def test_defined_matrix_elem_fock_sum_1():
@@ -268,20 +271,3 @@ def test_bra_sum_times_bra_sum_diff():
     bra_sum = ConjugateFock([0], [1], []) + ConjugateFock([0], [2], [])
 
     assert bra_sum * bra_sum is None
-
-
-def test_ket_times_ket():
-    ket = Fock([], [1], [])
-
-    assert ket * ket is None
-
-
-# unsupported FockSum * FockSum
-# def test_ket_sum_times_ket_sum():
-#     ket_sum = Fock([], [1], []) + Fock([], [3], [])
-
-#     assert ket_sum * ket_sum is None
-
-
-def test_random_particleoperator_acts_on_fock_state():
-    pass

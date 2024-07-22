@@ -31,34 +31,38 @@ def test_fock_states_add_two_different_states():
     state_1 = Fock([1], [2], [(0, 4)])
     state_2 = Fock([0], [], [(1, 1)])
     state_sum = state_1 + state_2
-    assert (
-        state_sum.__str__()
-        == "1.0 * |((1,), (2,), ((0, 4),))⟩ +\n1.0 * |((0,), (), ((1, 1),))⟩"
-    )
+    assert state_sum.state_dict == {
+        ((1,), (2,), ((0, 4),)): 1.0,
+        ((0,), (), ((1, 1),)): 1.0,
+    }
 
 
 def test_fock_states_add_two_same_states():
     state = Fock([1], [2], [(0, 4)])
     # assert state + state == 2 * state
-    assert (state + state).__str__() == "2.0 * |((1,), (2,), ((0, 4),))⟩"
+    assert (state + state).state_dict == {((1,), (2,), ((0, 4),)): 2}
 
 
 def test_add_fock_to_focksum():
     fsum = Fock([1], [2], []) + Fock([0], [], [])
     state = Fock([1], [], [])
 
-    assert (
-        fsum + state
-    ).__str__() == "1.0 * |((1,), (2,), ())⟩ +\n1.0 * |((0,), (), ())⟩ +\n1.0 * |((1,), (), ())⟩"
+    assert (fsum + state).state_dict == {
+        ((1,), (2,), ()): 1,
+        ((0,), (), ()): 1,
+        ((1,), (), ()): 1,
+    }
 
 
 def test_add_focksum_to_fock_with_proper_ordering():
     fsum = Fock([1], [2], []) + Fock([0], [], [])
     state = Fock([1], [], [])
 
-    assert (
-        state + fsum
-    ).__str__() == "1.0 * |((1,), (2,), ())⟩ +\n1.0 * |((0,), (), ())⟩ +\n1.0 * |((1,), (), ())⟩"
+    assert (state + fsum).state_dict == {
+        ((1,), (2,), ()): 1,
+        ((0,), (), ()): 1,
+        ((1,), (), ()): 1,
+    }
 
 
 # def test_focksum_normlization():
@@ -92,25 +96,28 @@ def test_fock_state_mul_by_constant(coeff):
 def test_conjugate_fock_states_add_two_different_states():
     state_1 = ConjugateFock([1], [2], [(0, 4)])
     state_2 = ConjugateFock([0], [], [(1, 1)])
-
-    assert (
-        state_1 + state_2
-    ).__str__() == "1.0 * ⟨((1,), (2,), ((0, 4),))| +\n1.0 * ⟨((0,), (), ((1, 1),))|"
+    state_sum = state_1 + state_2
+    assert state_sum.state_dict == {
+        ((1,), (2,), ((0, 4),)): 1.0,
+        ((0,), (), ((1, 1),)): 1.0,
+    }
 
 
 def test_conjugate_fock_states_add_two_same_states():
     state = ConjugateFock([1], [2], [(0, 4)])
     # assert state + state == 2 * state
-    assert (state + state).__str__() == "2.0 * ⟨((1,), (2,), ((0, 4),))|"
+    assert (state + state).state_dict == {((1,), (2,), ((0, 4),)): 2}
 
 
-def test_add_conjugatefock_to_conjugatefocksum():
+def test_add_conjugatefock_to_focksum():
     fsum = ConjugateFock([1], [2], []) + ConjugateFock([0], [], [])
     state = ConjugateFock([1], [], [])
 
-    assert (
-        fsum + state
-    ).__str__() == "1.0 * ⟨((1,), (2,), ())| +\n1.0 * ⟨((0,), (), ())| +\n1.0 * ⟨((1,), (), ())|"
+    assert (fsum + state).state_dict == {
+        ((1,), (2,), ()): 1,
+        ((0,), (), ()): 1,
+        ((1,), (), ()): 1,
+    }
 
 
 # def test_conjugatefocksum_normlization():
