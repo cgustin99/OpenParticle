@@ -86,7 +86,7 @@ class Fock:
                         split_coeff *= new_coeff  # Update coeff for every op in product
                     output_state_dict[next(iter(state.state_dict))] = (
                         split_coeff * op_coeff * state_coeff
-                    )
+                    ) + output_state_dict.get(next(iter(state.state_dict)), 0)
             return Fock(state_dict=output_state_dict)._cleanup()
 
     def __add__(self, other: "Fock") -> "Fock":
