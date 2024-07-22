@@ -370,6 +370,13 @@ class ParticleOperator:
         )
         return self + neg_other
 
+    def normal_order(self) -> "ParticleOperator":
+        # Returns a new ParticleOperator object with a normal ordered hash table
+        # normal ordering: b^dagger before b; d^dagger before d; a^dagger before a
+        # b2 b1^ a0 b3 -> b1^ b2 b3 a0
+        # return ParticleOperator(normal_ordered_dict)
+        pass
+
 
 class FermionOperator(ParticleOperator):
 
