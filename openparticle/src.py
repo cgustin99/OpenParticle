@@ -551,7 +551,7 @@ class ParticleOperator:
             op = self.input_string
             if op[-1] == "^":
                 if op[0] == "b":
-                    if int(op[1]) not in other.f_occ:
+                    if int(op[1:-1]) not in other.f_occ:
                         updated_ferm_state.append(int(op[1]))
                         coeff *= self.impose_parity_jw(
                             sorted(updated_ferm_state), int(op[1])
@@ -559,7 +559,7 @@ class ParticleOperator:
                     else:
                         coeff = 0
                 elif op[0] == "d":
-                    if int(op[1]) not in other.af_occ:
+                    if int(op[1:-1]) not in other.af_occ:
                         updated_antiferm_state.append(int(op[1]))
                         coeff *= self.impose_parity_jw(
                             sorted(updated_antiferm_state), int(op[1])
@@ -571,7 +571,7 @@ class ParticleOperator:
                         i[1] for i in other.b_occ
                     ]
 
-                    if int(op[1]) in state_modes:
+                    if int(op[1:-1]) in state_modes:
                         index = state_modes.index(int(op[1]))
                         if state_occupancies[index] >= 0:
                             state_occupancies[index] += 1
@@ -587,14 +587,14 @@ class ParticleOperator:
                     )
             else:
                 if op[0] == "b":
-                    if int(op[1]) in other.f_occ:
+                    if int(op[1:]) in other.f_occ:
                         coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
                         updated_ferm_state.remove(int(op[1]))
 
                     else:
                         coeff = 0
                 elif op[0] == "d":
-                    if int(op[1]) in other.af_occ:
+                    if int(op[1:]) in other.af_occ:
                         coeff *= self.impose_parity_jw(
                             updated_antiferm_state, int(op[1])
                         )
@@ -605,7 +605,7 @@ class ParticleOperator:
                     state_modes, state_occupancies = [i[0] for i in other.b_occ], [
                         i[1] for i in other.b_occ
                     ]
-                    if int(op[1]) in state_modes:
+                    if int(op[1:]) in state_modes:
                         index = state_modes.index(int(op[1]))
                         if state_occupancies[index] >= 1:
                             state_occupancies[index] -= 1
