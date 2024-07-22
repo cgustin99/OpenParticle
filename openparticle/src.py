@@ -375,7 +375,11 @@ class ParticleOperator:
         # normal ordering: b^dagger before b; d^dagger before d; a^dagger before a
         # b2 b1^ a0 b3 -> b1^ b2 b3 a0
         # return ParticleOperator(normal_ordered_dict)
-        pass
+        raise NotImplementedError()
+
+    def max_mode(self):
+        all_ops_as_str = ' '.join(list(self.op_dict.keys()))
+        return max(list(map(lambda x: int(x), re.findall(r'\d+', all_ops_as_str))))
 
 
 class FermionOperator(ParticleOperator):
