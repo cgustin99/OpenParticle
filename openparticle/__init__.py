@@ -8,4 +8,5 @@ from openparticle.src import (
     FermionOperator,
     AntifermionOperator,
     BosonOperator,
+    NumberOperator,
 )
