@@ -100,7 +100,7 @@ class Fock:
             new_dict = deepcopy(self.state_dict)
             for state, coeff in other.state_dict.items():
                 new_dict[state] = coeff + new_dict.get(state, 0)
-        out_state = Fock(state_dict=new_dict, perform_cleanup=True)
+        out_state = Fock(state_dict=new_dict)._cleanup()
         if len(out_state.state_dict) == 0:
             return 0
         else:
@@ -402,16 +402,19 @@ class FermionOperator(ParticleOperator):
 
     def _operate_on_state(self, other) -> "Fock":
         f_occ = list(list(other.state_dict.keys())[0][0])
+
         if self.creation and self.mode not in f_occ:
             f_occ.append(self.mode)
+            # Get parity
+            coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
         elif not self.creation and self.mode in f_occ:
+            # Get parity
+            coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
             f_occ.remove(self.mode)
         else:
             return Fock([], [], []), 0
 
         f_occ = sorted(f_occ)
-        # Get parity
-        coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
 
         return (
             Fock(
