@@ -840,3 +840,17 @@ class BosonOperator(ParticleOperator):
 
     def __add__(self, other):
         return super().__add__(other)
+
+
+class NumberOperator(ParticleOperator):
+    def __init__(self, particle_type, mode, coeff: complex = 1.0):
+        self.particle_type = particle_type
+        self.mode = mode
+        super().__init__(
+            self.particle_type
+            + str(self.mode)
+            + "^ "
+            + self.particle_type
+            + str(self.mode),
+            coeff,
+        )
