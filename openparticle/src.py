@@ -1,13 +1,15 @@
 import numpy as np
 from sympy import *
-from typing import List
+from typing import List, Union, Optional, Dict, Tuple
 from IPython.display import display, Latex
 from collections import defaultdict
+import re
+from copy import deepcopy
 
 
 class Fock:
     """
-    Defines a Fock state of the form |f, \bar{f}, b⟩
+    Defines a Fock state (ket) of the form |f, \bar{f}, b⟩
 
     Parameters:
     ferm_occupancy, antiferm_occupancy, bos_occupancy: List
@@ -19,788 +21,375 @@ class Fock:
 
     """
 
-    def __init__(self, f_occ, af_occ, b_occ, coeff: complex = 1.0):
-        self.f_occ = f_occ
-        self.af_occ = af_occ
-        self.b_occ = [(n, m) for (n, m) in b_occ if m != 0]
-        self.coeff = coeff
+    def __init__(
+        self,
+        f_occ: List = None,
+        af_occ: List = None,
+        b_occ: List = None,
+        state_dict: Dict[Tuple[Tuple, Tuple, Tuple], complex] = None,
+        coeff: complex = 1.0,
+    ):
+        if state_dict is not None:
+            self.state_dict = state_dict
+
+        else:
+            self.state_dict = {
+                (
+                    tuple(f_occ),
+                    tuple(af_occ),
+                    tuple([(n, m) for (n, m) in b_occ if m != 0]),
+                ): coeff
+            }
 
     def __str__(self):
-        return (
-            str(self.coeff)
-            + " * |"
-            + ",".join([str(i) for i in self.f_occ][::-1])
-            + "; "
-            + ",".join([str(i) for i in self.af_occ][::-1])
-            + "; "
-            + ",".join([str(i) for i in self.b_occ][::-1])
-            + "⟩"
-        )
+        if len(self.state_dict) == 0:
+            return "0"
+        else:
+            output_str = ""
+            for state, coeff in self.state_dict.items():
+                output_str += f"{coeff} * |{state}⟩ +"
+                output_str += "\n"
+            return output_str[:-3]
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def display(self):
         display(Latex("$" + self.__str__() + "$"))
 
-    def __eq__(self, other):
-        if isinstance(other, Fock):
-            return (
-                self.f_occ == other.f_occ
-                and self.af_occ == other.af_occ
-                and self.b_occ == other.b_occ
-            )
+    def to_list(self) -> List:
+        state_list = []
+        for state, coeff in self.state_dict.items():
+            state_list.append(Fock(state_dict={state: coeff}))
+        return state_list
 
     def __rmul__(self, other):
+
         if isinstance(other, (float, int, complex)):
-            if other == 0:
-                return 0
-            else:
-                coeff = self.coeff * other
-                return Fock(self.f_occ, self.af_occ, self.b_occ, coeff)
-        elif isinstance(other, ConjugateFock):
-            raise NotImplemented
+            coeffs = np.array(list(self.state_dict.values()))
+            return Fock(state_dict=dict(zip(self.state_dict.keys(), other * coeffs)))
+
         elif isinstance(other, Fock):
             raise Exception("Cannot multiply a ket to the left of a ket")
 
-    def __mul__(self, other):
-        # raise NotImplemented
-        return None
+        elif isinstance(other, ParticleOperator):
+            output_state_dict = {}
+            for op in other.to_list():
+                op_coeff = next(iter(op.op_dict.values()))
+                for state in self.to_list():
+                    state_coeff = next(iter(state.state_dict.values()))
+                    split_coeff = 1
+                    for split_op in op.split()[
+                        ::-1
+                    ]:  # AB|f> = A(B|f>) i.e. B comes first
+                        state, new_coeff = split_op._operate_on_state(state)
+                        split_coeff *= new_coeff  # Update coeff for every op in product
+                    output_state_dict[next(iter(state.state_dict))] = (
+                        split_coeff * op_coeff * state_coeff
+                    ) + output_state_dict.get(next(iter(state.state_dict)), 0)
+            return Fock(state_dict=output_state_dict)._cleanup()
 
-    def __add__(self, other):
-        if isinstance(other, Fock):
-            return FockSum([self, other]).cleanup()
-        elif isinstance(other, FockSum):
-            return FockSum([self] + other.states_list).cleanup()
+    def __add__(self, other: "Fock") -> "Fock":
+        # (TODO: could uses sets to find common and different keys and loop only over unique terms)
+        # loop over smaller dict
+        if len(self.state_dict) < len(other.state_dict):
+            new_dict = deepcopy(other.state_dict)
+            for state, coeff in self.state_dict.items():
+                new_dict[state] = coeff + new_dict.get(state, 0)
+        else:
+            new_dict = deepcopy(self.state_dict)
+            for state, coeff in other.state_dict.items():
+                new_dict[state] = coeff + new_dict.get(state, 0)
+        out_state = Fock(state_dict=new_dict)._cleanup()
+        if len(out_state.state_dict) == 0:
+            return 0
+        else:
+            return out_state
+
+    def _cleanup(self, zero_threshold=1e-15) -> "Fock":
+        """
+        remove terms below threshold
+        """
+        if len(self.state_dict) == 0:
+            return self
+        else:
+            # keys, coeffs = zip(*self.state_dict.items())
+            # mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
+            # new_state_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
+            # return Fock(state_dict=new_state_dict)
+
+            ## SLOWER than above, but nested tuples causes problems in numpy
+            ## TODO: speed this up in numba // use numpy mask but do NOT use to mask keys... instead loop over mask as below
+            new_state_dict = dict()
+            for op, coeff in self.state_dict.items():
+                if abs(coeff) > zero_threshold:
+                    new_state_dict[op] = coeff
+
+            return Fock(state_dict=new_state_dict)
 
     def dagger(self):
-        return ConjugateFock.from_state(self)
+        return ConjugateFock(state_dict=self.state_dict)
+
+    def __sub__(self, other: "Fock") -> "Fock":
+        coeffs = list(other.state_dict.values())
+        neg_other = Fock(
+            state_dict=dict(zip(other.state_dict.keys(), -1 * np.array(coeffs)))
+        )
+        return self + neg_other
 
 
 class ConjugateFock:
+    """
+    Defines a Conjugate Fock (bra) state of the form ⟨f, \bar{f}, b|
 
-    def __init__(self, f_occ, af_occ, b_occ, coeff: complex = 1.0):
-        self.f_occ = f_occ
-        self.af_occ = af_occ
-        self.b_occ = b_occ
-        self.coeff = coeff
+    Parameters:
+    ferm_occupancy, antiferm_occupancy, bos_occupancy: List
+    e.g. a hadron with a fermion in mode 2, an antifermion in mode 1 and 2 bosons
+    in mode 1 is
+    ferm_occupancy = [2]
+    antiferm_occupancy = [1]
+    bos_occupancy = [(1, 2)]
+
+    """
+
+    def __init__(
+        self,
+        f_occ: List = None,
+        af_occ: List = None,
+        b_occ: List = None,
+        state_dict: Dict[Tuple[Tuple, Tuple, Tuple], complex] = None,
+        coeff: complex = 1.0,
+        perform_cleanup=True,
+    ):
+        if f_occ is not None and af_occ is not None and b_occ is not None:
+            self.state_dict = {
+                (
+                    tuple(f_occ),
+                    tuple(af_occ),
+                    tuple([(n, m) for (n, m) in b_occ if m != 0]),
+                ): coeff
+            }
+
+        elif state_dict is not None:
+            self.state_dict = state_dict
 
     def __str__(self):
-        return (
-            str(self.coeff)
-            + " * "
-            + "⟨"
-            + ",".join([str(i) for i in self.f_occ][::-1])
-            + "; "
-            + ",".join([str(i) for i in self.af_occ][::-1])
-            + "; "
-            + ",".join([str(i) for i in self.b_occ][::-1])
-            + "|"
-        )
+        if len(self.state_dict) == 0:
+            return "0"
+        else:
+            output_str = ""
+            for state, coeff in self.state_dict.items():
+                output_str += f"{coeff} * ⟨{state}| +"
+                output_str += "\n"
+            return output_str[:-3]
 
-    @classmethod
-    def from_state(cls, state: Fock):
-        f_occ = state.f_occ
-        af_occ = state.af_occ
-        b_occ = state.b_occ
-        coeff = state.coeff.conjugate()
-        return cls(f_occ, af_occ, b_occ, coeff)
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def display(self):
         display(Latex("$" + self.__str__() + "$"))
 
-    def inner_product(self, other):
-        if (
-            self.f_occ == other.f_occ
-            and self.af_occ == other.af_occ
-            and self.b_occ == other.b_occ
-        ):
-            return 1.0 * self.coeff * other.coeff
+    def __rmul__(self, other):
+        if isinstance(other, (float, int, complex)):
+            coeffs = np.array(list(self.state_dict.values()))
+            return ConjugateFock(
+                state_dict=dict(zip(self.state_dict.keys(), other * coeffs))
+            )
+
+    def __add__(self, other: "ConjugateFock") -> "ConjugateFock":
+        # (TODO: could uses sets to find common and different keys and loop only over unique terms)
+        # loop over smaller dict
+        if len(self.state_dict) < len(other.state_dict):
+            new_dict = deepcopy(other.state_dict)
+            for state, coeff in self.state_dict.items():
+                new_dict[state] = coeff + new_dict.get(state, 0)
         else:
-            return 0
+            new_dict = deepcopy(self.state_dict)
+            for state, coeff in other.state_dict.items():
+                new_dict[state] = coeff + new_dict.get(state, 0)
+
+        return ConjugateFock(state_dict=new_dict, perform_cleanup=True)
 
     def dagger(self):
-        return Fock(self.f_occ, self.af_occ, self.b_occ, self.coeff.conjugate())
+        return Fock(state_dict=self.state_dict)
 
-    def __rmul__(self, other):
-        if isinstance(other, (int, float)):
-            return ConjugateFock(self.f_occ, self.af_occ, self.b_occ, coeff=other)
-
-    def __add__(self, other):
-        if isinstance(other, ConjugateFock):
-            return ConjugateFockSum([self, other]).cleanup()
-        elif isinstance(other, ConjugateFockSum):
-            return ConjugateFockSum([self] + other.states_list).cleanup()
-
-    def __eq__(self, other):
-        if isinstance(other, ConjugateFock):
-            return (
-                self.f_occ == other.f_occ
-                and self.af_occ == other.af_occ
-                and self.b_occ == other.b_occ
-            )
+    def inner_product(self, other: "Fock") -> complex:
+        if isinstance(other, Fock):
+            inner_product = 0
+            for state1, coeff1 in self.state_dict.items():
+                for state2, coeff2 in other.state_dict.items():
+                    if state1 == state2:
+                        inner_product += 1.0 * coeff1 * coeff2
+            return inner_product
 
     def __mul__(self, other):
         if isinstance(other, Fock):
             return self.inner_product(other)
-        if isinstance(other, FockSum):
-            output_value = 0
-            for state in other.states_list:
-                output_value += self * state
-            return output_value
         elif isinstance(other, ParticleOperator):
-            # <f|A = (A^dagger |f>)^dagger
-            out_state = other.dagger() * self.dagger()
-            if isinstance(out_state, (int, float)):
-                return out_state
+            out = other.dagger() * self.dagger()
+            if isinstance(out, (int, float, complex)):
+                return 0
             else:
-                return out_state.dagger()
-        elif isinstance(other, ParticleOperatorSum):
-            # <f|(A + B) = ((A^dagger + B^dagger)|f>)^dagger
-            out_state = other.dagger() * self.dagger()
-            if isinstance(out_state, (int, float)):
-                return out_state
-            else:
-                return (out_state).dagger()
+                return out.dagger()  # (<f|A)^\dagger = (A^\dagger * |f>)^\dagger
 
-
-class FockSum:
-    def __init__(self, states_list: List[Fock]):
-        self.states_list = states_list
-
-    def normalize(self):
-        coeffs = []
-        for state in self.states_list:
-            coeffs.append(state.coeff)
-        normalization = sum([i**2 for i in coeffs])
-        return 1.0 / np.sqrt(normalization) * self
-
-    def __eq__(self, other):
-        if isinstance(other, FockSum):
-            lists_equal = True
-            for i in self.states_list:
-                if i not in other.states_list:
-                    lists_equal = False
-            return lists_equal
-
-    def cleanup(self):
-        output_list_of_states = []
-        coeff_counter = 0
-        for i in range(len(self.states_list)):
-            if self.states_list[i] not in output_list_of_states:
-                coeff_counter += self.states_list[
-                    i
-                ].coeff  # add coeff of the first operator
-                for j in range(i + 1, len(self.states_list)):
-                    if (
-                        self.states_list[i].f_occ == self.states_list[j].f_occ
-                        and self.states_list[i].af_occ == self.states_list[j].af_occ
-                        and self.states_list[i].b_occ == self.states_list[j].b_occ
-                    ):
-                        coeff_counter += self.states_list[
-                            j
-                        ].coeff  # add coeffs of other same operators in the list
-
-                output_list_of_states.append(
-                    Fock(
-                        self.states_list[i].f_occ,
-                        self.states_list[i].af_occ,
-                        self.states_list[i].b_occ,
-                        coeff_counter,
-                    )
-                )
-
-                coeff_counter = 0
-        if len(output_list_of_states) == 1:
-            return output_list_of_states[0]
-        else:
-            return FockSum(output_list_of_states)
-
-    def display(self):
-        return display(Latex("$" + self.__str__() + "$"))
-
-    def __str__(self):
-        states_str = ""
-        for index, state in enumerate(self.states_list):
-            if index != len(self.states_list) - 1:
-                states_str += state.__str__() + " + "
-            else:
-                states_str += state.__str__()
-
-        return states_str
-
-    def __rmul__(self, other):
-        if isinstance(other, (float, int)):
-            # const. * (|a> + |b>)
-            out_states = []
-            for state in self.states_list:
-                out_states.append(other * state)
-            return FockSum(out_states)
-
-    def __add__(self, other):
-        if isinstance(other, Fock):
-            return FockSum(self.states_list + [other]).cleanup()
-        elif isinstance(other, FockSum):
-            return FockSum(self.states_list + other.states_list).cleanup()
-
-    def dagger(self):
-        out_state = []
-
-        for op in self.states_list:
-            out_state.append(op.dagger())
-        return ConjugateFockSum(out_state)
-
-
-class ConjugateFockSum:
-
-    def __init__(self, states_list: List[ConjugateFock]):
-        self.states_list = states_list
-
-    def display(self):
-        return display(Latex("$" + self.__str__() + "$"))
-
-    def normalize(self):
-        coeffs = []
-        for state in self.states_list:
-            coeffs.append(state.coeff)
-        normalization = sum([i**2 for i in coeffs])
-        return 1.0 / np.sqrt(normalization) * self
-
-    def __str__(self):
-        states_str = ""
-        for index, state in enumerate(self.states_list):
-            if index != len(self.states_list) - 1:
-                states_str += state.__str__() + " + "
-            else:
-                states_str += state.__str__()
-
-        return states_str
-
-    def dagger(self):
-        out_state = []
-
-        for op in self.states_list:
-            out_state.append(op.dagger())
-        return FockSum(out_state)
-
-    def cleanup(self):
-        output_list_of_states = []
-        coeff_counter = 0
-        for i in range(len(self.states_list)):
-            if self.states_list[i] not in output_list_of_states:
-                coeff_counter += self.states_list[
-                    i
-                ].coeff  # add coeff of the first operator
-                for j in range(i + 1, len(self.states_list)):
-                    if (
-                        self.states_list[i].f_occ == self.states_list[j].f_occ
-                        and self.states_list[i].af_occ == self.states_list[j].af_occ
-                        and self.states_list[i].b_occ == self.states_list[j].b_occ
-                    ):
-                        coeff_counter += self.states_list[
-                            j
-                        ].coeff  # add coeffs of other same operators in the list
-
-                output_list_of_states.append(
-                    ConjugateFock(
-                        self.states_list[i].f_occ,
-                        self.states_list[i].af_occ,
-                        self.states_list[i].b_occ,
-                        coeff_counter,
-                    )
-                )
-
-                coeff_counter = 0
-        if len(output_list_of_states) == 1:
-            return output_list_of_states[0]
-        else:
-            return ConjugateFockSum(output_list_of_states)
-
-    def __rmul__(self, other):
-        if isinstance(other, (int, float)):
-            out_states = []
-            for state in self.states_list:
-                out_states.append(other * state)
-            return ConjugateFockSum(out_states)
-
-    def __mul__(self, other):
-        if isinstance(other, Fock):
-            output_value = 0
-            for conj_state in self.states_list:
-                output_value += conj_state * other
-            return output_value
-        elif isinstance(other, FockSum):
-            output_value = 0
-            for conj_state in self.states_list:
-                for state in other.states_list:
-                    output_value += conj_state * state
-            return output_value
-        elif isinstance(other, ParticleOperator):
-            output_conj_states = []
-            for conj_state in self.states_list:
-                output_conj_states.append(conj_state * other)
-            return ConjugateFockSum(output_conj_states)
-        elif isinstance(other, ParticleOperatorSum):
-            output_conj_states = []
-            for conj_state in self.states_list:
-                for op in other.operator_list:
-                    output_conj_states.append(conj_state * op)
-            return ConjugateFockSum(output_conj_states)
-
-    def __add__(self, other):
-        if isinstance(other, ConjugateFock):
-            return ConjugateFockSum(self.states_list + [other]).cleanup()
-        elif isinstance(other, ConjugateFockSum):
-            return ConjugateFockSum(self.states_list + other.states_list).cleanup()
-
-    def cleanup(self):
-        output_list_of_states = []
-        coeff_counter = 0
-        for i in range(len(self.states_list)):
-            if self.states_list[i] not in output_list_of_states:
-                coeff_counter += self.states_list[
-                    i
-                ].coeff  # add coeff of the first operator
-                for j in range(i + 1, len(self.states_list)):
-                    if (
-                        self.states_list[i].f_occ == self.states_list[j].f_occ
-                        and self.states_list[i].af_occ == self.states_list[j].af_occ
-                        and self.states_list[i].b_occ == self.states_list[j].b_occ
-                    ):
-                        coeff_counter += self.states_list[
-                            j
-                        ].coeff  # add coeffs of other same operators in the list
-
-                output_list_of_states.append(
-                    ConjugateFock(
-                        self.states_list[i].f_occ,
-                        self.states_list[i].af_occ,
-                        self.states_list[i].b_occ,
-                        coeff_counter,
-                    )
-                )
-
-                coeff_counter = 0
-        if len(output_list_of_states) == 1:
-            return output_list_of_states[0]
-        else:
-            return ConjugateFockSum(output_list_of_states)
-
-    def __eq__(self, other):
-        if isinstance(other, ConjugateFockSum):
-            lists_equal = True
-            for i in self.states_list:
-                if i not in other.states_list:
-                    lists_equal = False
-            return lists_equal
+    def __sub__(self, other: "ConjugateFock") -> "ConjugateFock":
+        coeffs = list(other.state_dict.values())
+        neg_other = ConjugateFock(
+            state_dict=dict(zip(other.state_dict.keys(), -1 * np.array(coeffs)))
+        )
+        return self + neg_other
 
 
 class ParticleOperator:
 
-    def __init__(self, input_string, coeff=1.0):
-        # Initializes particle operator in the form of b_n d_n a_n
-        # Parameters:
-        # input_string: e.g. 'b2^ a0'
+    def __init__(self, op_dict: Union[Dict[str, complex], str] = dict()):
 
-        self.input_string = input_string
-        self.coeff = coeff
+        if isinstance(op_dict, str):
+            self.op_dict = {op_dict: 1}
+        elif isinstance(op_dict, dict):
+            self.op_dict = op_dict
+        else:
+            raise ValueError("input must be dictionary or op string")
 
-        particle_type = ""
-        modes = []
-        ca_string = ""
+    def __add__(self, other: "ParticleOperator") -> "ParticleOperator":
 
-        for op in self.input_string.split(" "):
-            type = op[0]
-            orbital = op[1:]
-            if orbital[-1] == "^":
-                orbital = orbital[:-1]
-            particle_type += type
-            modes.append(int(orbital))
-            if op[-1] != "^":
-                ca_string += "a"
-            else:
-                ca_string += "c"
+        # (TODO: could uses sets to find common and different keys and loop only over unique terms)
+        # loop over smaller dict
+        if len(self.op_dict) < len(other.op_dict):
+            new_dict = deepcopy(other.op_dict)
+            for op_str, coeff in self.op_dict.items():
+                new_dict[op_str] = coeff + new_dict.get(op_str, 0)
+        else:
+            new_dict = deepcopy(self.op_dict)
+            for op_str, coeff in other.op_dict.items():
+                new_dict[op_str] = coeff + new_dict.get(op_str, 0)
 
-        self.particle_type = particle_type
-        self.modes = modes
-        self.ca_string = ca_string
+        return ParticleOperator(new_dict)._cleanup()
 
-        fermion_modes = []
-        antifermion_modes = []
-        boson_modes = []
+    def __str__(self) -> str:
+        if len(self.op_dict) == 0:
+            return "0"
+        else:
+            output_str = ""
+            for op, coeff in self.op_dict.items():
+                output_str += f"{coeff} * {op}"
+                output_str += "\n"
+            return output_str
 
-        op_string = ""
-        for index, particle in enumerate(self.particle_type):
+    def _cleanup(self, zero_threshold=1e-15) -> "ParticleOperator":
+        """
+        remove terms below threshold
+        """
+        if len(self.op_dict) == 0:
+            return self
+        else:
+            keys, coeffs = zip(*self.op_dict.items())
+            mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
+            new_op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
+            # new_op_dict = dict()
+            # for idx in mask:
+            #     new_op_dict[keys[idx]] = coeffs[idx]
+            return ParticleOperator(new_op_dict)
 
-            if particle == "b":
-                fermion_modes.append(self.modes[index])
-                if self.ca_string[index] == "c":
-                    op_string += "b^†_{" + str(self.modes[index]) + "}"
-                else:
-                    op_string += "b_{" + str(self.modes[index]) + "}"
+    def __repr__(self) -> str:
+        return self.__str__()
 
-            elif particle == "d":
-                antifermion_modes.append(self.modes[index])
-                if self.ca_string[index] == "c":
-                    op_string += "d^†_{" + str(self.modes[index]) + "}"
-                else:
-                    op_string += "d_{" + str(self.modes[index]) + "}"
+    def latex_string(self) -> Latex:
+        pattern = r"(\d+)"
+        replacement = r"_{\1}"
+        latex_str = ""
+        for s, coeff in self.op_dict.items():
+            new_s = s.replace("^", "^{\dagger}")
+            latex_str += f"{coeff} {re.sub(pattern, replacement, new_s)} +"
 
-            elif particle == "a":
-                boson_modes.append(self.modes[index])
-                if self.ca_string[index] == "c":
-                    op_string += "a^†_{" + str(self.modes[index]) + "}"
-                else:
-                    op_string += "a_{" + str(self.modes[index]) + "}"
-
-        self.op_string = str(self.coeff) + "*" + op_string
-        self.fermion_modes = fermion_modes
-        self.antifermion_modes = antifermion_modes
-        self.boson_modes = boson_modes
-
-    def __str__(self):
-        return self.op_string
-
-    def __eq__(self, other):
-        if isinstance(other, ParticleOperator):
-            return self.input_string == other.input_string
-        if isinstance(other, ParticleOperatorSum):
-            lists_equal = True
-            for i in self:
-                if i not in other.operator_list:
-                    lists_equal = False
-            return lists_equal
-
-    def split(self):
-        op_list = []
-        for op in self.input_string.split(" "):
-            if op[0] == "b":
-                op_list.append(FermionOperator(op[1:]))
-            if op[0] == "d":
-                op_list.append(AntifermionOperator(op[1:]))
-            if op[0] == "a":
-                op_list.append(BosonOperator(op[1:]))
-        return op_list
-
-    @staticmethod
-    def op_list_dagger(list):
-        dag_list = []
-        for op in list[::-1]:
-            if op[-1] == "^":
-                dag_list.append(op[:-1])
-            else:
-                dag_list.append(op + "^")
-        return dag_list
-
-    def dagger(self):
-        elements = self.input_string.split(" ")
-
-        grouped_elements = defaultdict(list)
-        for element in elements:
-            first_letter = element[0]
-            grouped_elements[first_letter].append(element)
-
-        grouped_lists = list(grouped_elements.values())
-
-        list_b = grouped_elements["b"]
-        list_d = grouped_elements["d"]
-        list_a = grouped_elements["a"]
-
-        dag_op_string = " ".join(
-            self.op_list_dagger(list_b)
-            + self.op_list_dagger(list_d)
-            + self.op_list_dagger(list_a)
-        )
-
-        return ParticleOperator(dag_op_string, self.coeff)
+        return Latex("$" + latex_str[:-1] + "$")
 
     def display(self):
-        display(Latex("$" + self.op_string + "$"))
+        display(self.latex_string())
 
-    def __add__(self, other):
-        if isinstance(other, ParticleOperator):
-            if self.input_string == other.input_string:
-                # A + A = 2A
-                return ParticleOperator(self.input_string, self.coeff + other.coeff)
-            else:
-                # A + B = A + B (ParticleOperatorSum Object)
-                return ParticleOperatorSum([self, other])
-        elif isinstance(other, ParticleOperatorSum):
-            # A + (B + C)
-            output = [self] + other.operator_list
-            return ParticleOperatorSum(output).cleanup()
+    def split(self) -> List:
+        split_list = []
+        if len(self.op_dict) == 1:
+            for oper in list(self.op_dict.keys())[0].split(" "):
+                if oper[0] == "a":  # boson
+                    split_list.append(BosonOperator(oper[1:]))
+                elif oper[0] == "b":  # fermion
+                    split_list.append(FermionOperator(oper[1:]))
+                elif oper[0] == "d":  # antifermion
+                    split_list.append(AntifermionOperator(oper[1:]))
+            return split_list
+        else:
+            return NotImplemented
+
+    def to_list(self) -> List:
+        particle_op_list = []
+        for oper, coeff in self.op_dict.items():
+            particle_op_list.append(ParticleOperator({oper: coeff}))
+        return particle_op_list
+
+    def dagger(self) -> "ParticleOperator":
+        dagger_dict = {}
+
+        for i, coeff_i in self.op_dict.items():
+            dagger_str = ""
+            for oper in i.split(" ")[::-1]:
+                if oper[-1] == "^":
+                    dagger_str += oper[:-1]
+                else:
+                    dagger_str += oper + "^"
+                dagger_str += " "
+            dagger_dict[dagger_str[:-1]] = coeff_i.conjugate()
+
+        return ParticleOperator(dagger_dict)
 
     def __rmul__(self, other):
-        if isinstance(other, (int, float)):
-            self.coeff *= other
-            return ParticleOperator(self.input_string, self.coeff)
-
-    def impose_parity_jw(self, state, mode):
-
-        index = state.index(mode)
-        parity_str = state[:index]
-        coeff = (-1) ** len(parity_str)
-        return coeff
-
-    def operate_on_state(self, other):
-        if isinstance(other, (int, float)):
-            return other
-        else:
-            coeff = self.coeff * other.coeff
-            updated_ferm_state = other.f_occ[:]
-            updated_antiferm_state = other.af_occ[:]
-            updated_bos_state = other.b_occ[:]
-
-            op = self.input_string
-            if op[-1] == "^":
-                if op[0] == "b":
-                    if int(op[1:-1]) not in other.f_occ:
-                        updated_ferm_state.append(int(op[1]))
-                        coeff *= self.impose_parity_jw(
-                            sorted(updated_ferm_state), int(op[1])
-                        )
-                    else:
-                        coeff = 0
-                elif op[0] == "d":
-                    if int(op[1:-1]) not in other.af_occ:
-                        updated_antiferm_state.append(int(op[1]))
-                        coeff *= self.impose_parity_jw(
-                            sorted(updated_antiferm_state), int(op[1])
-                        )
-                    else:
-                        coeff = 0
-                elif op[0] == "a":
-                    state_modes, state_occupancies = [i[0] for i in other.b_occ], [
-                        i[1] for i in other.b_occ
-                    ]
-
-                    if int(op[1:-1]) in state_modes:
-                        index = state_modes.index(int(op[1]))
-                        if state_occupancies[index] >= 0:
-                            state_occupancies[index] += 1
-                            coeff *= np.sqrt(state_occupancies[index])
-
-                    else:
-                        state_modes.append(int(op[1]))
-                        state_occupancies.append(1)
-                    # zip up modes and occupancies into an updated list
-                    updated_bos_state = list(zip(state_modes, state_occupancies))
-                    sorted_updated_bos_state = sorted(
-                        updated_bos_state, key=lambda x: x[0]
-                    )
-            else:
-                if op[0] == "b":
-                    if int(op[1:]) in other.f_occ:
-                        coeff *= self.impose_parity_jw(updated_ferm_state, int(op[1]))
-                        updated_ferm_state.remove(int(op[1]))
-
-                    else:
-                        coeff = 0
-                elif op[0] == "d":
-                    if int(op[1:]) in other.af_occ:
-                        coeff *= self.impose_parity_jw(
-                            updated_antiferm_state, int(op[1])
-                        )
-                        updated_antiferm_state.remove(int(op[1]))
-                    else:
-                        coeff = 0
-                elif op[0] == "a":
-                    state_modes, state_occupancies = [i[0] for i in other.b_occ], [
-                        i[1] for i in other.b_occ
-                    ]
-                    if int(op[1:]) in state_modes:
-                        index = state_modes.index(int(op[1]))
-                        if state_occupancies[index] >= 1:
-                            state_occupancies[index] -= 1
-                            coeff *= np.sqrt(state_occupancies[index] + 1)
-                        else:
-                            coeff = 0
-                    else:
-                        coeff = 0
-                    # zip up modes and occupancies into an updated list
-                    updated_bos_state = list(zip(state_modes, state_occupancies))
-                    sorted_updated_bos_state = sorted(
-                        updated_bos_state, key=lambda x: x[0]
-                    )
-
-            if "a" in self.particle_type:
-                return coeff * Fock(
-                    sorted(updated_ferm_state),
-                    sorted(updated_antiferm_state),
-                    sorted_updated_bos_state,
-                )
-            else:
-                return coeff * Fock(
-                    sorted(updated_ferm_state),
-                    sorted(updated_antiferm_state),
-                    updated_bos_state,
-                )
+        coeffs = np.array(list(self.op_dict.values()))
+        return ParticleOperator(dict(zip(self.op_dict.keys(), other * coeffs)))
 
     def __mul__(self, other):
         if isinstance(other, ParticleOperator):
-            updated_coeff = self.coeff * other.coeff
+            product_dict = {}
+            for op1, coeffs1 in list(self.op_dict.items()):
+                for op2, coeffs2 in list(other.op_dict.items()):
+                    product_dict[op1 + " " + op2] = coeffs1 * coeffs2
+            return ParticleOperator(product_dict)
+        return NotImplemented
+
+    def __pow__(self, other) -> "ParticleOperator":
+        if len(self.op_dict) == 1:
             return ParticleOperator(
-                self.input_string + " " + other.input_string, updated_coeff
+                ((str(list(self.op_dict.keys())[0]) + " ") * other)[:-1]
             )
-
-        elif isinstance(other, Fock):
-            po_coeff = self.coeff
-            for op in self.input_string.split(" ")[::-1]:
-                other = ParticleOperator(op).operate_on_state(other)
-
-            return po_coeff * other
-
-        elif isinstance(other, FockSum):
-            updated_states = []
-            for state in other.states_list:
-                state_prime = self.operate_on_state(state)
-                if isinstance(state_prime, Fock):
-                    updated_states.append(state_prime)
-            return FockSum(updated_states)
-
-    def __pow__(self, other):
-        assert isinstance(other, (int, np.int64))
-        return ParticleOperator(((self.input_string + " ") * other)[:-1])
-
-    def __sub__(self, other):
-        if isinstance(other, ParticleOperator):
-            if self.input_string == other.input_string:
-                updated_coeff = self.coeff - other.coeff
-                if updated_coeff == 0:
-                    return 0
-                else:
-                    return ParticleOperator(self.input_string, updated_coeff)
-            else:
-                return ParticleOperatorSum([self, (-1) * other])
-        if isinstance(other, ParticleOperatorSum):
-            output = [self] + [
-                (-1) * ParticleOperator(j.input_string) for j in other.operator_list
-            ]
-            return ParticleOperatorSum(output).cleanup()
-
-
-class ParticleOperatorSum:
-    # Sum of ParticleOperator instances
-    def __init__(self, operator_list: List[ParticleOperator]):
-        self.operator_list = operator_list
-
-    def __str__(self):
-        op_string = ""
-        for index, op in enumerate(self.operator_list):
-            if index != len(self.operator_list) - 1:
-                op_string += op.__str__() + " + "
-            else:
-                op_string += op.__str__()
-        return op_string
-
-    def to_list(self):
-        return self.cleanup().operator_list
-
-    def display(self):
-        return display(Latex("$" + self.__str__() + "$"))
-
-    def dagger(self):
-        out_ops = []
-        for op in self.operator_list:
-            out_ops.append(op.dagger())
-        return ParticleOperatorSum(out_ops)
-
-    def get_modes(self):
-        modes_list = []
-
-        for op in self.operator_list:
-            modes_list.append(tuple(op.modes))
-
-        return modes_list
-
-    def cleanup(self):
-        output_list_of_ops = []
-        coeff_counter = 0
-        for i in range(len(self.operator_list)):
-            if self.operator_list[i] not in output_list_of_ops:
-                coeff_counter += self.operator_list[
-                    i
-                ].coeff  # add coeff of the first operator
-                for j in range(i + 1, len(self.operator_list)):
-                    if (
-                        self.operator_list[i].input_string
-                        == self.operator_list[j].input_string
-                    ):
-                        coeff_counter += self.operator_list[
-                            j
-                        ].coeff  # add coeffs of other same operators in the list
-                if coeff_counter != 0:
-                    output_list_of_ops.append(
-                        ParticleOperator(
-                            self.operator_list[i].input_string, coeff_counter
-                        )
-                    )
-                coeff_counter = 0
-        if len(output_list_of_ops) == 1:
-            return output_list_of_ops[0]
         else:
-            return ParticleOperatorSum(output_list_of_ops)
-
-    def __add__(self, other):
-        if isinstance(other, ParticleOperator):
-            output = self.operator_list + [other]
-            return ParticleOperatorSum(output).cleanup()
-        elif isinstance(other, ParticleOperatorSum):
-            output = self.operator_list + other.operator_list
-            return ParticleOperatorSum(output).cleanup()
+            return NotImplemented
 
     def __sub__(self, other):
-        if isinstance(other, ParticleOperator):
-            output = self.operator_list + [
-                (-other.coeff) * ParticleOperator(other.input_string)
-            ]
-            return ParticleOperatorSum(output).cleanup()
-        elif isinstance(other, ParticleOperatorSum):
-            output = self.operator_list + [
-                (-1) * ParticleOperator(j.input_string) for j in other.operator_list
-            ]
-            return ParticleOperatorSum(output).cleanup()
+        coeffs = list(other.op_dict.values())
+        neg_other = ParticleOperator(
+            dict(zip(other.op_dict.keys(), -1 * np.array(coeffs)))
+        )
+        return self + neg_other
 
-    def __mul__(self, other):
-        if isinstance(other, Fock):
-            out_states = []
-            for op in self.operator_list:
-                out = op * other
-                if isinstance(out, Fock):
-                    out_states.append(out)
-            if len(out_states) == 1:
-                return out_states[0]
-            elif len(out_states) == 0:
-                return 0
-            else:
-                return FockSum(out_states)
-        elif isinstance(other, FockSum):
-            out_states = []
-            for op in self.operator_list:
-                for state in other.states_list:
-                    out = op * state
-                    if isinstance(out, Fock):
-                        out_states.append(out)
-            return FockSum(out_states)
-
-    def __rmul__(self, other):
-        if isinstance(other, (complex, float, int)):
-            output = ParticleOperatorSum([])
-            for operator in self.operator_list:
-                output += other * operator
-            return output
-
-    def __eq__(self, other):
-        if isinstance(other, ParticleOperatorSum):
-            lists_equal = True
-            for i in self.operator_list:
-                if i not in other.operator_list:
-                    lists_equal = False
-            return lists_equal
+    def normal_order(self) -> "ParticleOperator":
+        # Returns a new ParticleOperator object with a normal ordered hash table
+        # normal ordering: b^dagger before b; d^dagger before d; a^dagger before a
+        # b2 b1^ a0 b3 -> b1^ b2 b3 a0
+        # return ParticleOperator(normal_ordered_dict)
+        pass
 
 
 class FermionOperator(ParticleOperator):
 
-    def __init__(self, mode, coeff: float = 1.0):
-        self.mode = mode
-        super().__init__("b" + mode, coeff)
+    def __init__(self, input_string):
+        if input_string[-1] == "^":
+            self.mode = int(input_string[:-1])
+            self.creation = True
+        else:
+            self.mode = int(input_string)
+            self.creation = False
+
+        self.particle_type = "fermion"
+        super().__init__("b" + input_string)
 
     def __str__(self):
         return super().__str__()
@@ -810,12 +399,44 @@ class FermionOperator(ParticleOperator):
 
     def __add__(self, other):
         return super().__add__(other)
+
+    def _operate_on_state(self, other) -> "Fock":
+        f_occ = list(list(other.state_dict.keys())[0][0])
+
+        if self.creation and self.mode not in f_occ:
+            f_occ.append(self.mode)
+            # Get parity
+            coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
+        elif not self.creation and self.mode in f_occ:
+            # Get parity
+            coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
+            f_occ.remove(self.mode)
+        else:
+            return Fock([], [], []), 0
+
+        f_occ = sorted(f_occ)
+
+        return (
+            Fock(
+                f_occ=sorted(f_occ),
+                af_occ=list(list(other.state_dict.keys())[0][1]),
+                b_occ=list(list(other.state_dict.keys())[0][2]),
+            ),
+            coeff,
+        )
 
 
 class AntifermionOperator(ParticleOperator):
-    def __init__(self, mode, coeff: float = 1.0):
-        self.mode = mode
-        super().__init__("d" + mode, coeff)
+    def __init__(self, input_string):
+        if input_string[-1] == "^":
+            self.mode = int(input_string[:-1])
+            self.creation = True
+        else:
+            self.mode = int(input_string)
+            self.creation = False
+
+        self.particle_type = "antifermion"
+        super().__init__("d" + input_string)
 
     def __str__(self):
         return super().__str__()
@@ -825,12 +446,40 @@ class AntifermionOperator(ParticleOperator):
 
     def __add__(self, other):
         return super().__add__(other)
+
+    def _operate_on_state(self, other) -> "Fock":
+        af_occ = list(list(other.state_dict.keys())[0][1])
+        if self.creation and self.mode not in af_occ:
+            af_occ.append(self.mode)
+        elif not self.creation and self.mode in af_occ:
+            af_occ.remove(self.mode)
+        else:
+            return Fock([], [], []), 0
+
+        af_occ = sorted(af_occ)
+        # Get parity
+        coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
+        return (
+            Fock(
+                f_occ=list(list(other.state_dict.keys())[0][0]),
+                af_occ=sorted(af_occ),
+                b_occ=list(list(other.state_dict.keys())[0][2]),
+            ),
+            coeff,
+        )
 
 
 class BosonOperator(ParticleOperator):
-    def __init__(self, mode, coeff: float = 1.0):
-        self.mode = mode
-        super().__init__("a" + mode, coeff)
+    def __init__(self, input_string):
+        if input_string[-1] == "^":
+            self.mode = int(input_string[:-1])
+            self.creation = True
+        else:
+            self.mode = int(input_string)
+            self.creation = False
+
+        self.particle_type = "boson"
+        super().__init__("a" + input_string)
 
     def __str__(self):
         return super().__str__()
@@ -841,9 +490,42 @@ class BosonOperator(ParticleOperator):
     def __add__(self, other):
         return super().__add__(other)
 
+    def _operate_on_state(self, other) -> "Fock":
+        b_occ = list(list(other.state_dict.keys())[0][2])
+        state_modes, state_occupancies = [i[0] for i in b_occ], [i[1] for i in b_occ]
+
+        if self.creation and self.mode in state_modes:
+            index = state_modes.index(self.mode)
+            state_occupancies[index] += 1
+            coeff = np.sqrt(state_occupancies[index])  # sqrt(n + 1)
+        elif self.creation and self.mode not in state_modes:
+            state_modes.append(self.mode)
+            state_occupancies.append(1)
+            coeff = 1
+        elif not self.creation and self.mode in state_modes:
+            index = state_modes.index(self.mode)
+            state_occupancies[index] -= 1
+            coeff = np.sqrt(state_occupancies[index] + 1)  # sqrt(n)
+        else:
+            return Fock([], [], []), 0
+
+        updated_bos_state = list(zip(state_modes, state_occupancies))
+        sorted_updated_bos_state = sorted(updated_bos_state, key=lambda x: x[0])
+
+        if len(b_occ) == 0:
+            coeff = 1
+        return (
+            Fock(
+                f_occ=list(list(other.state_dict.keys())[0][0]),
+                af_occ=list(list(other.state_dict.keys())[0][1]),
+                b_occ=sorted_updated_bos_state,
+            ),
+            coeff,
+        )
+
 
 class NumberOperator(ParticleOperator):
-    def __init__(self, particle_type, mode, coeff: complex = 1.0):
+    def __init__(self, particle_type, mode):
         self.particle_type = particle_type
         self.mode = mode
         super().__init__(
@@ -852,5 +534,4 @@ class NumberOperator(ParticleOperator):
             + "^ "
             + self.particle_type
             + str(self.mode),
-            coeff,
         )
