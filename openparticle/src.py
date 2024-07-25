@@ -413,19 +413,7 @@ class ParticleOperator:
         normal_ds = self.insertion_sort(antifermion_list, 0 if len(antifermion_list) == 0 else 1)
         normal_as = self.insertion_sort(boson_list, 0 if len(boson_list) == 0 else 1)
 
-        # get the combined opstr --> convert it back to the form "bs ds as"
-        # combine_bda_str = ""
-        # for normal_ops in (normal_bs, normal_ds, normal_as):
-        #     # if the dict is not empty, add it to the combined opstr
-        #     if normal_ops.op_dict:
-        #         for key in normal_ops.op_dict.keys():
-        #             combine_bda_str += key + " "
-
-
-                # combine_bda_str += list(normal_ops.op_dict.keys())[0] + " "
-
-        # ordered_op = normal_bs * normal_ds * normal_as
-
+        # create the normal ordered particle operator and restore the coeff
         # don't like this ughhhh
         if normal_bs.op_dict and normal_ds.op_dict and normal_as.op_dict:
             ordered_op = normal_bs * normal_ds * normal_as
@@ -441,11 +429,6 @@ class ParticleOperator:
             ordered_op = normal_ds
         elif normal_as.op_dict:
             ordered_op = normal_as
-        # print("after multiplying bs ds as, the result is: ", ordered_op)
-
-        # create the normal ordered particle operator and restore the coeff
-        # ordered_op = ParticleOperator(combine_bda_str[:-1])
-        # ordered_op.op_dict[combine_bda_str] = coeff
 
         for key in ordered_op.op_dict.keys():
             ordered_op.op_dict[key] *= coeff
@@ -465,9 +448,9 @@ class ParticleOperator:
         
     
     def insertion_sort(self, ops, coeff) -> "ParticleOperator":
-        print("in insertion sort")
-        print(ops)
-        print("coeff: ", coeff)
+        # print("in insertion sort")
+        # print(ops)
+        # print("coeff: ", coeff)
         # base case
         if not ops or coeff == 0:
             return ParticleOperator({})
@@ -482,7 +465,7 @@ class ParticleOperator:
                     result_str += list(ops[i].op_dict.keys())[0] + " "
                 result_op = ParticleOperator(result_str[:-1])
                 result_op.op_dict[result_str[:-1]] = coeff
-            print("result op in base case: ", result_op)
+            # print("result op in base case: ", result_op)
             return result_op
 
         # recursive case
@@ -498,7 +481,6 @@ class ParticleOperator:
 
                 while j >= 0 and not ops[j].creation:
                     # case for non-trivial swap --> introduce extra terms
-
                     # ops[j] is the left annihilation operator
                     if ops[j].mode == right.mode:
                         # for bosons: a_i a_i^ = 1 + a_i^ a_i
@@ -508,28 +490,28 @@ class ParticleOperator:
                         identity = ParticleOperator(" ")
                         new_op_str = list(right.op_dict.keys())[0] + " " + list(ops[j].op_dict.keys())[0]
                         new_op = coeff * (identity + type_coeff * ParticleOperator(new_op_str))
-                        print("new op is: ", new_op)
+                        # print("new op is: ", new_op)
 
                         left_op = self.combine_op(ops, 0, j)
-                        print("left op is: ", left_op)
+                        # print("left op is: ", left_op)
                         right_op = self.combine_op(ops, j + 2, len(ops))
-                        print("right op is: ", right_op)
+                        # print("right op is: ", right_op)
                         
                         tree_split = left_op * new_op * right_op
-                        print("tree split is: ", tree_split)
+                        # print("tree split is: ", tree_split)
 
                         for key_op, val_op in tree_split.op_dict.items():
-                            print("key op: ", key_op)
+                            # print("key op: ", key_op)
                             if key_op == "":
                                 result_op += ParticleOperator(" ")
                             else:
                                 recur_ops = ParticleOperator(key_op).split()
-                                print("recur_ops", recur_ops)
+                                # print("recur_ops", recur_ops)
                                 result_op += self.insertion_sort(recur_ops, val_op)
                             # return result_op
-                            print("return from recursive insertion sort")
+                            # print("return from recursive insertion sort")
 
-                        print("the ulmate result: ", result_op.op_dict)
+                        # print("the ulmate result: ", result_op.op_dict)
                         return result_op
 
                     # swap the ops
@@ -545,7 +527,7 @@ class ParticleOperator:
                     result_str += list(ops[i].op_dict.keys())[0] + " "
                 result_op = ParticleOperator(result_str[:-1])
                 result_op.op_dict[result_str[:-1]] = coeff
-            print("result op: ", result_op)
+            # print("result op: ", result_op)
             return result_op
 
     # helper func to get the particle operator from index i to j as a single instance
