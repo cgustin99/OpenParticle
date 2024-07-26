@@ -36,7 +36,9 @@ def test_defined_particleoperatorsum_act_on_matrix_element_1():
     ket = Fock([], [], [])
 
     assert bra * (Fock([1], [], []) + Fock([1], [], [])) == 2.0
-    assert operator * ket == Fock([1], [], []) + Fock([1], [], [])
+    assert (operator * ket).state_dict == (
+        Fock([1], [], []) + Fock([1], [], [])
+    ).state_dict
     assert bra * operator * ket == 2.0
 
 
