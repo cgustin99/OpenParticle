@@ -372,6 +372,7 @@ class ParticleOperator:
         return self + neg_other
 
     def normal_order(self) -> "ParticleOperator":
+
         # Returns a new ParticleOperator object with a normal ordered hash table
         # normal ordering: b^dagger before b; d^dagger before d; a^dagger before a
         # b2 b1^ a0 b3 -> b1^ b2 b3 a0
@@ -390,14 +391,20 @@ class ParticleOperator:
     # inner func only operates on one particle operator instance
     # i.e. ParticleOperator("a0 b0 a2^ b0^ b0^ b1 d3 a2^ d3^")
     def _normal_order(self, coeff) -> "ParticleOperator":
+        # prevent normal ordering identity/empty op
+        if list(self.op_dict.keys())[0].strip() == "":
+            return self
+        
         # parse the op_str into bs, ds, and as and normal ordering them separately
-                                                 # make sure the signs changes for bs and ds
         op_list = self.split()
         fermion_list = []
         antifermion_list = []
         boson_list = []
+
+        swap_bd = 0
         for op in op_list:
             if isinstance(op, FermionOperator):
+                swap_bd += len(antifermion_list)
                 fermion_list.append(op)
             elif isinstance(op, AntifermionOperator):
                 antifermion_list.append(op)
@@ -413,12 +420,17 @@ class ParticleOperator:
         normal_ds = self.insertion_sort(antifermion_list, 0 if len(antifermion_list) == 0 else 1)
         normal_as = self.insertion_sort(boson_list, 0 if len(boson_list) == 0 else 1)
 
+        # sign change between swapping bs and ds
+        if (swap_bd % 2) == 0:
+            sign_swap_bd = 1
+        else:
+            sign_swap_bd = -1
+
         # create the normal ordered particle operator and restore the coeff
-        # don't like this ughhhh
         if normal_bs.op_dict and normal_ds.op_dict and normal_as.op_dict:
-            ordered_op = normal_bs * normal_ds * normal_as
+            ordered_op = sign_swap_bd * normal_bs * normal_ds * normal_as
         elif normal_bs.op_dict and normal_ds.op_dict:
-            ordered_op = normal_bs * normal_ds
+            ordered_op = sign_swap_bd * normal_bs * normal_ds
         elif normal_bs.op_dict and normal_as.op_dict:
             ordered_op = normal_bs * normal_as
         elif normal_ds.op_dict and normal_as.op_dict:
@@ -448,10 +460,7 @@ class ParticleOperator:
         
     
     def insertion_sort(self, ops, coeff) -> "ParticleOperator":
-        # print("in insertion sort")
-        # print(ops)
-        # print("coeff: ", coeff)
-        # base case
+        # base case(s)
         if not ops or coeff == 0:
             return ParticleOperator({})
 
@@ -465,21 +474,22 @@ class ParticleOperator:
                     result_str += list(ops[i].op_dict.keys())[0] + " "
                 result_op = ParticleOperator(result_str[:-1])
                 result_op.op_dict[result_str[:-1]] = coeff
-            # print("result op in base case: ", result_op)
             return result_op
 
         # recursive case
         else:
             if isinstance(ops[0], BosonOperator):
                 type_coeff = 1
+                is_boson = True
             else:
                 type_coeff = -1
+                is_boson = False
             
             for i in range(1, len(ops)):
                 right = ops[i]
                 j = i - 1
 
-                while j >= 0 and not ops[j].creation:
+                while j >= 0 and not ops[j].creation and not (not ops[j].creation and not right.creation):
                     # case for non-trivial swap --> introduce extra terms
                     # ops[j] is the left annihilation operator
                     if ops[j].mode == right.mode:
@@ -490,29 +500,27 @@ class ParticleOperator:
                         identity = ParticleOperator(" ")
                         new_op_str = list(right.op_dict.keys())[0] + " " + list(ops[j].op_dict.keys())[0]
                         new_op = coeff * (identity + type_coeff * ParticleOperator(new_op_str))
-                        # print("new op is: ", new_op)
 
                         left_op = self.combine_op(ops, 0, j)
-                        # print("left op is: ", left_op)
                         right_op = self.combine_op(ops, j + 2, len(ops))
-                        # print("right op is: ", right_op)
                         
                         tree_split = left_op * new_op * right_op
-                        # print("tree split is: ", tree_split)
 
                         for key_op, val_op in tree_split.op_dict.items():
-                            # print("key op: ", key_op)
                             if key_op == "":
-                                result_op += ParticleOperator(" ")
+                                identity = ParticleOperator(" ")
+                                identity.op_dict[" "] = coeff
+                                result_op += identity
                             else:
                                 recur_ops = ParticleOperator(key_op).split()
-                                # print("recur_ops", recur_ops)
                                 result_op += self.insertion_sort(recur_ops, val_op)
-                            # return result_op
-                            # print("return from recursive insertion sort")
 
-                        # print("the ulmate result: ", result_op.op_dict)
                         return result_op
+                    
+                    # for bs and ds, even modes are different, when we swap them,
+                    # we need to consider the case to change the sign
+                    if not is_boson:
+                        coeff *= -1
 
                     # swap the ops
                     ops[j + 1] = ops[j]
@@ -527,7 +535,6 @@ class ParticleOperator:
                     result_str += list(ops[i].op_dict.keys())[0] + " "
                 result_op = ParticleOperator(result_str[:-1])
                 result_op.op_dict[result_str[:-1]] = coeff
-            # print("result op: ", result_op)
             return result_op
 
     # helper func to get the particle operator from index i to j as a single instance
