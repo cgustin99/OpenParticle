@@ -336,6 +336,12 @@ def test_commutation_relations_bosonic():
     assert op.op_dict == identity.op_dict
 
 
+def test_commutation_relations_bosonic_2():
+    op = ParticleOperator("a0").commutator(ParticleOperator("a1^"))
+    identity = ParticleOperator({})
+    assert op.op_dict == identity.op_dict
+
+
 def test_commutation_relations_fermionic_1():
     # {b_i, b_j^\dagger} = \delta_ij
     op = ParticleOperator("b0").anticommutator(ParticleOperator("b0^"))
