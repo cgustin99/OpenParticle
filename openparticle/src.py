@@ -79,14 +79,26 @@ class Fock:
                 for state in self.to_list():
                     state_coeff = next(iter(state.state_dict.values()))
                     split_coeff = 1
-                    for split_op in op.split()[
-                        ::-1
-                    ]:  # AB|f> = A(B|f>) i.e. B comes first
-                        state, new_coeff = split_op._operate_on_state(state)
-                        split_coeff *= new_coeff  # Update coeff for every op in product
-                    output_state_dict[next(iter(state.state_dict))] = (
-                        split_coeff * op_coeff * state_coeff
-                    ) + output_state_dict.get(next(iter(state.state_dict)), 0)
+                    if next(iter(op.op_dict)) == " ":  # Identity * |state> = |state>
+                        output_state_dict[next(iter(state.state_dict))] = (
+                            op_coeff * state_coeff
+                        ) + output_state_dict.get(next(iter(state.state_dict)), 0)
+                    else:
+                        for split_op in op.split()[
+                            ::-1
+                        ]:  # AB|f> = A(B|f>) i.e. B comes first
+                            # if (
+                            #     next(iter(op.op_dict)) == " "
+                            # ):  # Identity * |state> = |state>
+                            #     state, new_coeff = state, 1
+                            # else:
+                            state, new_coeff = split_op._operate_on_state(state)
+                            split_coeff *= (
+                                new_coeff  # Update coeff for every op in product
+                            )
+                        output_state_dict[next(iter(state.state_dict))] = (
+                            split_coeff * op_coeff * state_coeff
+                        ) + output_state_dict.get(next(iter(state.state_dict)), 0)
             return Fock(state_dict=output_state_dict)._cleanup()
 
     def __add__(self, other: "Fock") -> "Fock":
