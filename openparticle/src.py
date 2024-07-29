@@ -642,14 +642,17 @@ class AntifermionOperator(ParticleOperator):
         af_occ = list(list(other.state_dict.keys())[0][1])
         if self.creation and self.mode not in af_occ:
             af_occ.append(self.mode)
+            # Get parity
+            coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
         elif not self.creation and self.mode in af_occ:
+            # Get parity
+            coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
             af_occ.remove(self.mode)
         else:
             return Fock([], [], []), 0
 
         af_occ = sorted(af_occ)
-        # Get parity
-        coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
+
         return (
             Fock(
                 f_occ=list(list(other.state_dict.keys())[0][0]),
