@@ -371,6 +371,10 @@ class ParticleOperator:
         )
         return self + neg_other
 
+    @property
+    def coeff(self):
+        return np.prod(list(self.op_dict.values()))
+
     def normal_order(self) -> "ParticleOperator":
 
         # Returns a new ParticleOperator object with a normal ordered hash table
