@@ -327,3 +327,83 @@ def test_normal_order_sum_2():
 def test_normal_order_sum_3():
     op = ParticleOperator("a0 a1^") - ParticleOperator("a1^ a0")
     assert op.normal_order().op_dict == {}
+
+
+def test_commutation_relations_bosonic():
+    # [a_i, a_j^\dagger] = \delta_ij
+    op = ParticleOperator("a0").commutator(ParticleOperator("a0^"))
+    identity = ParticleOperator(" ")
+    assert op.op_dict == identity.op_dict
+
+
+def test_commutation_relations_fermionic_1():
+    # {b_i, b_j^\dagger} = \delta_ij
+    op = ParticleOperator("b0").anticommutator(ParticleOperator("b0^"))
+    identity = ParticleOperator(" ")
+    assert op.op_dict == identity.op_dict
+
+
+def test_commutation_relations_fermionic_2():
+    # {b_i, d_j^\dagger} = 0
+    op = ParticleOperator("b0").anticommutator(ParticleOperator("d0^"))
+    comm = ParticleOperator({})
+    assert op.op_dict == comm.op_dict
+
+
+def test_mixed_commutator():
+    op = ParticleOperator("b0").commutator(ParticleOperator("a0^"))
+    comm = ParticleOperator({})
+    assert op.op_dict == comm.op_dict
+
+
+def test_commutation_relations_1():
+    op = ParticleOperator("b0^ b0 a0^").commutator(ParticleOperator("b0^ b0"))
+    comm = ParticleOperator({})
+    assert op.op_dict == comm.op_dict
+
+
+def test_commutation_relations_2():
+    op = ParticleOperator("b0^ b0 a0^").commutator(ParticleOperator("a0^ a0"))
+    comm = ParticleOperator({"b0^ b0 a0^": -1})
+    assert op.op_dict == comm.op_dict
+
+
+def test_commutation_relations_3():
+    op = ParticleOperator("b0^ b0 a0^").commutator(ParticleOperator("b0^ b0 a0"))
+    comm = ParticleOperator({"b0^ b0": -1, "b0^ b0^ b0 b0": 1})
+    assert op.op_dict == comm.op_dict
+
+
+def test_commutation_relations_4():
+    op = ParticleOperator("b0^ b0 a0").commutator(ParticleOperator("b0^ b0"))
+    comm = ParticleOperator({})
+    assert op.op_dict == comm.op_dict
+
+
+def test_commutation_relations_5():
+    op = ParticleOperator("b0^ b0 a0").commutator(ParticleOperator("b0^ b0 a0^"))
+    comm = ParticleOperator("b0^ b0") - ParticleOperator("b0^ b0^ b0 b0")
+    assert op.op_dict == comm.op_dict
+
+
+def test_commutation_relations_6():
+    op = ParticleOperator("b0^ b0 a0").commutator(ParticleOperator("a0^ a0"))
+    comm = ParticleOperator("b0^ b0 a0")
+    assert op.op_dict == comm.op_dict
+
+
+def test_commutation_relations():
+    op1 = ParticleOperator("b0^ b0 a0^") - ParticleOperator("b0^ b0 a0")
+    op2 = (
+        ParticleOperator("b0^ b0")
+        + ParticleOperator("a0^ a0")
+        + ParticleOperator("b0^ b0 a0^")
+        + ParticleOperator("b0^ b0 a0")
+    )
+    comm = (
+        -1 * ParticleOperator("b0^ b0 a0^")
+        - ParticleOperator("b0^ b0 a0")
+        - 2 * ParticleOperator("b0^ b0")
+        + 2 * ParticleOperator("b0^ b0^ b0 b0")
+    )
+    assert op1.commutator(op2).op_dict == comm.op_dict
