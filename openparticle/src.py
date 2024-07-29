@@ -372,11 +372,178 @@ class ParticleOperator:
         return self + neg_other
 
     def normal_order(self) -> "ParticleOperator":
+
         # Returns a new ParticleOperator object with a normal ordered hash table
         # normal ordering: b^dagger before b; d^dagger before d; a^dagger before a
         # b2 b1^ a0 b3 -> b1^ b2 b3 a0
         # return ParticleOperator(normal_ordered_dict)
-        raise NotImplementedError()
+        ordered_op = ParticleOperator({})
+        po_list = self.to_list()
+
+        # for each PO in POS, convert it to normal order
+        for particle_op in po_list:
+            coeff_op = list(particle_op.op_dict.values())[0]
+            normal_ordered_op = particle_op._normal_order(coeff_op)
+            ordered_op += normal_ordered_op
+        return ordered_op
+
+
+    # inner func only operates on one particle operator instance
+    # i.e. ParticleOperator("a0 b0 a2^ b0^ b0^ b1 d3 a2^ d3^")
+    def _normal_order(self, coeff) -> "ParticleOperator":
+        # prevent normal ordering identity/empty op
+        if list(self.op_dict.keys())[0].strip() == "":
+            return self
+        
+        # parse the op_str into bs, ds, and as and normal ordering them separately
+        op_list = self.split()
+        fermion_list = []
+        antifermion_list = []
+        boson_list = []
+
+        swap_bd = 0
+        for op in op_list:
+            if isinstance(op, FermionOperator):
+                swap_bd += len(antifermion_list)
+                fermion_list.append(op)
+            elif isinstance(op, AntifermionOperator):
+                antifermion_list.append(op)
+            elif isinstance(op, BosonOperator):
+                boson_list.append(op)
+            else:
+                raise Exception("Unknown particle type appear in normal order")
+
+        # insertion sort the ops
+        # note that extra terms will be added for nontrivial swaps
+        # normal_{x}s is a particle operator that contains the key with particle op only in type x
+        normal_bs = self.insertion_sort(fermion_list, 0 if len(fermion_list) == 0 else 1)
+        normal_ds = self.insertion_sort(antifermion_list, 0 if len(antifermion_list) == 0 else 1)
+        normal_as = self.insertion_sort(boson_list, 0 if len(boson_list) == 0 else 1)
+
+        # sign change between swapping bs and ds
+        if (swap_bd % 2) == 0:
+            sign_swap_bd = 1
+        else:
+            sign_swap_bd = -1
+
+        # create the normal ordered particle operator and restore the coeff
+        if normal_bs.op_dict and normal_ds.op_dict and normal_as.op_dict:
+            ordered_op = sign_swap_bd * normal_bs * normal_ds * normal_as
+        elif normal_bs.op_dict and normal_ds.op_dict:
+            ordered_op = sign_swap_bd * normal_bs * normal_ds
+        elif normal_bs.op_dict and normal_as.op_dict:
+            ordered_op = normal_bs * normal_as
+        elif normal_ds.op_dict and normal_as.op_dict:
+            ordered_op = normal_ds * normal_as
+        elif normal_bs.op_dict:
+            ordered_op = normal_bs
+        elif normal_ds.op_dict:
+            ordered_op = normal_ds
+        elif normal_as.op_dict:
+            ordered_op = normal_as
+
+        for key in ordered_op.op_dict.keys():
+            ordered_op.op_dict[key] *= coeff
+
+        return ordered_op
+    
+    # ops can get from op.split()
+    def is_normal_ordered(self, ops):
+        found_non_creation = False
+        for op in ops:
+            if op.creation:
+                if found_non_creation:
+                    return False
+            else:
+                found_non_creation = True
+        return True
+        
+    
+    def insertion_sort(self, ops, coeff) -> "ParticleOperator":
+        # base case(s)
+        if not ops or coeff == 0:
+            return ParticleOperator({})
+
+        result_op = ParticleOperator({})
+
+        if self.is_normal_ordered(ops):
+            # return the op with normal ordered key
+            if len(ops) != 0:
+                result_str = ""
+                for i in range(len(ops)):
+                    result_str += list(ops[i].op_dict.keys())[0] + " "
+                result_op = ParticleOperator(result_str[:-1])
+                result_op.op_dict[result_str[:-1]] = coeff
+            return result_op
+
+        # recursive case
+        else:
+            if isinstance(ops[0], BosonOperator):
+                type_coeff = 1
+                is_boson = True
+            else:
+                type_coeff = -1
+                is_boson = False
+            
+            for i in range(1, len(ops)):
+                right = ops[i]
+                j = i - 1
+
+                while j >= 0 and not ops[j].creation and not (not ops[j].creation and not right.creation):
+                    # case for non-trivial swap --> introduce extra terms
+                    # ops[j] is the left annihilation operator
+                    if ops[j].mode == right.mode:
+                        # for bosons: a_i a_i^ = 1 + a_i^ a_i
+                        # for (anti)fermions: b_i b_i^ = 1 - b_i^ b_i (same for 'd's)
+                        
+                        # declare the identity operator
+                        identity = ParticleOperator(" ")
+                        new_op_str = list(right.op_dict.keys())[0] + " " + list(ops[j].op_dict.keys())[0]
+                        new_op = coeff * (identity + type_coeff * ParticleOperator(new_op_str))
+
+                        left_op = self.combine_op(ops, 0, j)
+                        right_op = self.combine_op(ops, j + 2, len(ops))
+                        
+                        tree_split = left_op * new_op * right_op
+
+                        for key_op, val_op in tree_split.op_dict.items():
+                            if key_op == "":
+                                identity = ParticleOperator(" ")
+                                identity.op_dict[" "] = coeff
+                                result_op += identity
+                            else:
+                                recur_ops = ParticleOperator(key_op).split()
+                                result_op += self.insertion_sort(recur_ops, val_op)
+
+                        return result_op
+                    
+                    # for bs and ds, even modes are different, when we swap them,
+                    # we need to consider the case to change the sign
+                    if not is_boson:
+                        coeff *= -1
+
+                    # swap the ops
+                    ops[j + 1] = ops[j]
+                    j -= 1
+                ops[j + 1] = right
+        
+        
+            # return the op with normal ordered key
+            if len(ops) != 0:
+                result_str = ""
+                for i in range(len(ops)):
+                    result_str += list(ops[i].op_dict.keys())[0] + " "
+                result_op = ParticleOperator(result_str[:-1])
+                result_op.op_dict[result_str[:-1]] = coeff
+            return result_op
+
+    # helper func to get the particle operator from index i to j as a single instance
+    def combine_op(self, ops, i, j):
+        result_str = ""
+        for op in range(len(ops)):
+            if op >= i and op < j:
+                result_str += list(ops[op].op_dict.keys())[0] + " "
+        return ParticleOperator(result_str[:-1])
 
     def max_mode(self):
         all_ops_as_str = " ".join(list(self.op_dict.keys()))
