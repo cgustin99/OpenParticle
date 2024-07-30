@@ -290,3 +290,11 @@ def test_identity_in_sum_on_state():
     output = op * state
     expected = 2 * Fock([1], [0, 1, 4], [(0, 3)])
     assert output.state_dict == expected.state_dict
+
+
+def test_particle_op_to_zero_power_on_state():
+    N = 0
+    op = ParticleOperator("a0") ** N
+    state = Fock([], [], [(0, 3)])
+    output = op * state
+    assert output.state_dict == state.state_dict
