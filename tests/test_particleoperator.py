@@ -62,3 +62,9 @@ def test_particle_operator_identity_product():
     op2 = ParticleOperator("a0") ** 0
     op = op1 * op2
     assert op.op_dict == {" ": 1}
+
+
+def test_identity_dagger():
+    identity = ParticleOperator(" ")
+    dagger = identity.dagger()
+    assert identity.op_dict == dagger.op_dict

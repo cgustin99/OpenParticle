@@ -344,13 +344,16 @@ class ParticleOperator:
 
         for i, coeff_i in self.op_dict.items():
             dagger_str = ""
-            for oper in i.split(" ")[::-1]:
-                if oper[-1] == "^":
-                    dagger_str += oper[:-1]
-                else:
-                    dagger_str += oper + "^"
-                dagger_str += " "
-            dagger_dict[dagger_str[:-1]] = coeff_i.conjugate()
+            if i == " ":  # I^dagger = I
+                dagger_dict[" "] = coeff_i.conjugate()
+            else:
+                for oper in i.split(" ")[::-1]:
+                    if oper[-1] == "^":
+                        dagger_str += oper[:-1]
+                    else:
+                        dagger_str += oper + "^"
+                    dagger_str += " "
+                dagger_dict[dagger_str[:-1]] = coeff_i.conjugate()
 
         return ParticleOperator(dagger_dict)
 
