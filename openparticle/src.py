@@ -363,8 +363,11 @@ class ParticleOperator:
             product_dict = {}
             for op1, coeffs1 in list(self.op_dict.items()):
                 for op2, coeffs2 in list(other.op_dict.items()):
-                    # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
-                    product_dict[(op1 + " " + op2).strip()] = coeffs1 * coeffs2
+                    if op1 == " " and op2 == " ":
+                        product_dict[" "] = coeffs1 * coeffs2
+                    else:
+                        # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
+                        product_dict[(op1 + " " + op2).strip()] = coeffs1 * coeffs2
             return ParticleOperator(product_dict)
         return NotImplemented
 

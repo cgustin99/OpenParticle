@@ -55,3 +55,10 @@ def test_particle_operator_to_some_power(power):
     assert (operator**power).op_dict == (
         ParticleOperator((("a0" + " ") * power)[:-1])
     ).op_dict
+
+
+def test_particle_operator_identity_product():
+    op1 = ParticleOperator("a0^") ** 0
+    op2 = ParticleOperator("a0") ** 0
+    op = op1 * op2
+    assert op.op_dict == {" ": 1}
