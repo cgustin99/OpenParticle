@@ -390,10 +390,19 @@ class ParticleOperator:
         )
         return self + neg_other
 
+    def __len__(self):
+        return len(self.op_dict)
+
     @property
     def coeff(self):
-        coeffs = list(self.op_dict.values())
-        return coeffs[0] if len(coeffs) == 1 else coeffs
+        assert (
+            len(self) == 1
+        ), "coeff property exists for 1 element in op_dict only. Use .coeffs property"
+        return next(iter(self.op_dict.values()))
+
+    @property
+    def coeffs(self):
+        return list(self.op_dict.values())
 
     def normal_order(self) -> "ParticleOperator":
 
