@@ -375,15 +375,13 @@ class ParticleOperator:
         return NotImplemented
 
     def __pow__(self, other) -> "ParticleOperator":
-        if len(self.op_dict) == 1:
-            # TODO: Add the case for A^0 = I
-            if other == 0:
-                return ParticleOperator(" ")
-            return ParticleOperator(
-                ((str(list(self.op_dict.keys())[0]) + " ") * other)[:-1]
-            )
+        if other == 0:
+            return ParticleOperator(" ")
         else:
-            return NotImplemented
+            op = self
+            for _ in range(1, other):
+                op *= self
+            return op
 
     def __sub__(self, other):
         coeffs = list(other.op_dict.values())
