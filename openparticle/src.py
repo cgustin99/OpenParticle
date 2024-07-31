@@ -373,7 +373,8 @@ class ParticleOperator:
 
     @property
     def coeff(self):
-        return np.prod(list(self.op_dict.values()))
+        coeffs = list(self.op_dict.values())
+        return coeffs[0] if len(coeffs) == 1 else coeffs
 
     def normal_order(self) -> "ParticleOperator":
 

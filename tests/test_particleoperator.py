@@ -55,3 +55,19 @@ def test_particle_operator_to_some_power(power):
     assert (operator**power).op_dict == (
         ParticleOperator((("a0" + " ") * power)[:-1])
     ).op_dict
+
+
+@pytest.mark.parametrize("coeff", np.random.uniform(-100, 100, size=10))
+def test_coeff_property_on_singleton(coeff):
+    op = ParticleOperator({"a0^ a1": coeff})
+    assert op.coeff == coeff
+
+
+def test_coeff_property_on_larger_dictionary():
+    coeffs = [1, 2, 3]
+    op = (
+        coeffs[0] * ParticleOperator("a0^ a1")
+        + coeffs[1] * ParticleOperator("b1^ d2")
+        + coeffs[2] * ParticleOperator("a0^ a0^ a0")
+    )
+    assert op.coeff == coeffs
