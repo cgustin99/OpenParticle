@@ -70,7 +70,7 @@ def test_coeff_property_on_larger_dictionary():
         + coeffs[1] * ParticleOperator("b1^ d2")
         + coeffs[2] * ParticleOperator("a0^ a0^ a0")
     )
-    assert op.coeff == coeffs
+    assert op.coeffs == coeffs
 
 
 def test_particle_operator_identity_product():
