@@ -390,6 +390,11 @@ class ParticleOperator:
         )
         return self + neg_other
 
+    @property
+    def coeff(self):
+        coeffs = list(self.op_dict.values())
+        return coeffs[0] if len(coeffs) == 1 else coeffs
+
     def normal_order(self) -> "ParticleOperator":
 
         # Returns a new ParticleOperator object with a normal ordered hash table
