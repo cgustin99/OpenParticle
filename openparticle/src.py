@@ -390,11 +390,14 @@ class ParticleOperator:
         )
         return self + neg_other
 
+    def __len__(self):
+        return len(self.op_dict)
+
     @property
     def coeff(self):
         assert (
-            len(self.op_dict) == 1
-        ), "coeff property exists for 1 element in op_dict only"
+            len(self) == 1
+        ), "coeff property exists for 1 element in op_dict only. Use .coeffs property"
         return next(iter(self.op_dict.values()))
 
     @property
