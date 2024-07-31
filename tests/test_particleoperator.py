@@ -141,3 +141,9 @@ def test_power_with_multiple_terms_in_dict_3():
         + ParticleOperator("a0^ a0^ a0^ a0^")
     )
     assert output.op_dict == expected.op_dict
+
+
+def test_len_magic_method_for_particle_op():
+    length = 3
+    op = ParticleOperator("a0") + ParticleOperator("b0") + ParticleOperator("d0")
+    assert len(op) == length
