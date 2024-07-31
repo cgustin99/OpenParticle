@@ -100,3 +100,28 @@ def test_power_with_multiple_terms_in_dict_2():
     )
 
     assert output.op_dict == expected.op_dict
+
+
+def test_power_with_multiple_terms_in_dict_3():
+    power = 4
+    op = ParticleOperator("a0^") + ParticleOperator("a0")
+    output = op**power
+    expected = (
+        ParticleOperator("a0 a0 a0 a0")
+        + ParticleOperator("a0 a0 a0 a0^")
+        + ParticleOperator("a0 a0 a0^ a0")
+        + ParticleOperator("a0 a0 a0^ a0^")
+        + ParticleOperator("a0 a0^ a0 a0")
+        + ParticleOperator("a0 a0^ a0 a0^")
+        + ParticleOperator("a0 a0^ a0^ a0")
+        + ParticleOperator("a0 a0^ a0^ a0^")
+        + ParticleOperator("a0^ a0 a0 a0")
+        + ParticleOperator("a0^ a0 a0 a0^")
+        + ParticleOperator("a0^ a0 a0^ a0")
+        + ParticleOperator("a0^ a0 a0^ a0^")
+        + ParticleOperator("a0^ a0^ a0 a0")
+        + ParticleOperator("a0^ a0^ a0 a0^")
+        + ParticleOperator("a0^ a0^ a0^ a0")
+        + ParticleOperator("a0^ a0^ a0^ a0^")
+    )
+    assert output.op_dict == expected.op_dict
