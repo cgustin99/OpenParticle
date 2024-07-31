@@ -275,3 +275,26 @@ def test_bra_sum_times_bra_sum_diff():
     bra_sum = ConjugateFock([0], [1], []) + ConjugateFock([0], [2], [])
 
     assert bra_sum * bra_sum is None
+
+
+def test_identity_on_state():
+    identity = ParticleOperator(" ")
+    state = Fock([1], [0, 1, 4], [(0, 3)])
+    output = identity * state
+    assert output.state_dict == state.state_dict
+
+
+def test_identity_in_sum_on_state():
+    op = ParticleOperator(" ") + ParticleOperator("b1^ b1")
+    state = Fock([1], [0, 1, 4], [(0, 3)])
+    output = op * state
+    expected = 2 * Fock([1], [0, 1, 4], [(0, 3)])
+    assert output.state_dict == expected.state_dict
+
+
+def test_particle_op_to_zero_power_on_state():
+    N = 0
+    op = ParticleOperator("a0") ** N
+    state = Fock([], [], [(0, 3)])
+    output = op * state
+    assert output.state_dict == state.state_dict

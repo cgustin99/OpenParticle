@@ -79,14 +79,26 @@ class Fock:
                 for state in self.to_list():
                     state_coeff = next(iter(state.state_dict.values()))
                     split_coeff = 1
-                    for split_op in op.split()[
-                        ::-1
-                    ]:  # AB|f> = A(B|f>) i.e. B comes first
-                        state, new_coeff = split_op._operate_on_state(state)
-                        split_coeff *= new_coeff  # Update coeff for every op in product
-                    output_state_dict[next(iter(state.state_dict))] = (
-                        split_coeff * op_coeff * state_coeff
-                    ) + output_state_dict.get(next(iter(state.state_dict)), 0)
+                    if next(iter(op.op_dict)) == " ":  # Identity * |state> = |state>
+                        output_state_dict[next(iter(state.state_dict))] = (
+                            op_coeff * state_coeff
+                        ) + output_state_dict.get(next(iter(state.state_dict)), 0)
+                    else:
+                        for split_op in op.split()[
+                            ::-1
+                        ]:  # AB|f> = A(B|f>) i.e. B comes first
+                            # if (
+                            #     next(iter(op.op_dict)) == " "
+                            # ):  # Identity * |state> = |state>
+                            #     state, new_coeff = state, 1
+                            # else:
+                            state, new_coeff = split_op._operate_on_state(state)
+                            split_coeff *= (
+                                new_coeff  # Update coeff for every op in product
+                            )
+                        output_state_dict[next(iter(state.state_dict))] = (
+                            split_coeff * op_coeff * state_coeff
+                        ) + output_state_dict.get(next(iter(state.state_dict)), 0)
             return Fock(state_dict=output_state_dict)._cleanup()
 
     def __add__(self, other: "Fock") -> "Fock":
@@ -332,13 +344,16 @@ class ParticleOperator:
 
         for i, coeff_i in self.op_dict.items():
             dagger_str = ""
-            for oper in i.split(" ")[::-1]:
-                if oper[-1] == "^":
-                    dagger_str += oper[:-1]
-                else:
-                    dagger_str += oper + "^"
-                dagger_str += " "
-            dagger_dict[dagger_str[:-1]] = coeff_i.conjugate()
+            if i == " ":  # I^dagger = I
+                dagger_dict[" "] = coeff_i.conjugate()
+            else:
+                for oper in i.split(" ")[::-1]:
+                    if oper[-1] == "^":
+                        dagger_str += oper[:-1]
+                    else:
+                        dagger_str += oper + "^"
+                    dagger_str += " "
+                dagger_dict[dagger_str[:-1]] = coeff_i.conjugate()
 
         return ParticleOperator(dagger_dict)
 
@@ -351,18 +366,22 @@ class ParticleOperator:
             product_dict = {}
             for op1, coeffs1 in list(self.op_dict.items()):
                 for op2, coeffs2 in list(other.op_dict.items()):
-                    # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
-                    product_dict[(op1 + " " + op2).strip()] = coeffs1 * coeffs2
+                    if op1 == " " and op2 == " ":
+                        product_dict[" "] = coeffs1 * coeffs2
+                    else:
+                        # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
+                        product_dict[(op1 + " " + op2).strip()] = coeffs1 * coeffs2
             return ParticleOperator(product_dict)
         return NotImplemented
 
     def __pow__(self, other) -> "ParticleOperator":
-        if len(self.op_dict) == 1:
-            return ParticleOperator(
-                ((str(list(self.op_dict.keys())[0]) + " ") * other)[:-1]
-            )
+        if other == 0:
+            return ParticleOperator(" ")
         else:
-            return NotImplemented
+            op = self
+            for _ in range(1, other):
+                op *= self
+            return op
 
     def __sub__(self, other):
         coeffs = list(other.op_dict.values())
