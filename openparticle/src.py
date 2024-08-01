@@ -650,16 +650,16 @@ class FermionOperator(ParticleOperator):
 
         if self.creation and self.mode not in f_occ:
             f_occ.append(self.mode)
+            f_occ = sorted(f_occ)
             # Get parity
             coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
         elif not self.creation and self.mode in f_occ:
             # Get parity
             coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
             f_occ.remove(self.mode)
+            f_occ = sorted(f_occ)
         else:
             return Fock([], [], []), 0
-
-        f_occ = sorted(f_occ)
 
         return (
             Fock(
@@ -697,15 +697,15 @@ class AntifermionOperator(ParticleOperator):
         if self.creation and self.mode not in af_occ:
             af_occ.append(self.mode)
             # Get parity
+            af_occ = sorted(af_occ)
             coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
         elif not self.creation and self.mode in af_occ:
             # Get parity
             coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
             af_occ.remove(self.mode)
+            af_occ = sorted(af_occ)
         else:
             return Fock([], [], []), 0
-
-        af_occ = sorted(af_occ)
 
         return (
             Fock(
