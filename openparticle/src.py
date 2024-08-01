@@ -5,6 +5,7 @@ from IPython.display import display, Latex
 from collections import defaultdict
 import re
 from copy import deepcopy
+from numba import jit
 
 
 class Fock:
@@ -286,9 +287,6 @@ class ParticleOperator:
             keys, coeffs = zip(*self.op_dict.items())
             mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
             new_op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
-            # new_op_dict = dict()
-            # for idx in mask:
-            #     new_op_dict[keys[idx]] = coeffs[idx]
             return ParticleOperator(new_op_dict)
 
     def __repr__(self) -> str:
@@ -385,7 +383,26 @@ class ParticleOperator:
             coeff_op = list(particle_op.op_dict.values())[0]
             normal_ordered_op = particle_op._normal_order(coeff_op)
             ordered_op += normal_ordered_op
-        return ordered_op
+        return ordered_op._cleanup()
+
+    def split_to_string(self):
+        fermion_list = []
+        antifermion_list = []
+        boson_list = []
+        swap_bd = 0
+        for op in list(self.op_dict.keys())[0].split(" "):
+            if op[0] == "a":  # boson
+                boson_list.append(op)
+            elif op[0] == "b":  # fermion
+                swap_bd += len(antifermion_list)
+                fermion_list.append(op)
+            elif op[0] == "d":  # antifermion
+                antifermion_list.append(op)
+            else:
+                raise Exception("Unknown particle type appear in normal order")
+
+        return fermion_list, antifermion_list, boson_list, swap_bd
+
 
     # inner func only operates on one particle operator instance
     # i.e. ParticleOperator("a0 b0 a2^ b0^ b0^ b1 d3 a2^ d3^")
@@ -395,33 +412,36 @@ class ParticleOperator:
             return self
 
         # parse the op_str into bs, ds, and as and normal ordering them separately
-        op_list = self.split()
-        fermion_list = []
-        antifermion_list = []
-        boson_list = []
 
-        swap_bd = 0
-        for op in op_list:
-            if isinstance(op, FermionOperator):
-                swap_bd += len(antifermion_list)
-                fermion_list.append(op)
-            elif isinstance(op, AntifermionOperator):
-                antifermion_list.append(op)
-            elif isinstance(op, BosonOperator):
-                boson_list.append(op)
-            else:
-                raise Exception("Unknown particle type appear in normal order")
+        # op_list = self.split()
+        # fermion_list = []
+        # antifermion_list = []
+        # boson_list = []
+
+        fermion_list, antifermion_list, boson_list, swap_bd = self.split_to_string()
+
+        # swap_bd = 0
+        # for op in op_list:
+        #     if isinstance(op, FermionOperator):
+        #         swap_bd += len(antifermion_list)
+        #         fermion_list.append(op)
+        #     elif isinstance(op, AntifermionOperator):
+        #         antifermion_list.append(op)
+        #     elif isinstance(op, BosonOperator):
+        #         boson_list.append(op)
+        #     else:
+        #         raise Exception("Unknown particle type appear in normal order")
 
         # insertion sort the ops
         # note that extra terms will be added for nontrivial swaps
         # normal_{x}s is a particle operator that contains the key with particle op only in type x
-        normal_bs = self.insertion_sort(
+        normal_bs = ParticleOperator(self.insertion_sort(
             fermion_list, 0 if len(fermion_list) == 0 else 1
-        )
-        normal_ds = self.insertion_sort(
+        ))
+        normal_ds = ParticleOperator(self.insertion_sort(
             antifermion_list, 0 if len(antifermion_list) == 0 else 1
-        )
-        normal_as = self.insertion_sort(boson_list, 0 if len(boson_list) == 0 else 1)
+        ))
+        normal_as = ParticleOperator(self.insertion_sort(boson_list, 0 if len(boson_list) == 0 else 1))
 
         # sign change between swapping bs and ds
         if (swap_bd % 2) == 0:
@@ -444,17 +464,24 @@ class ParticleOperator:
             ordered_op = normal_ds
         elif normal_as.op_dict:
             ordered_op = normal_as
+        else:
+            ordered_op = ParticleOperator({})
 
-        for key in ordered_op.op_dict.keys():
-            ordered_op.op_dict[key] *= coeff
+        if ordered_op.op_dict:
+            for key in ordered_op.op_dict.keys():
+                ordered_op.op_dict[key] *= coeff
 
+        # print("ordered op is: ", ordered_op)
         return ordered_op
 
     # ops can get from op.split()
     def is_normal_ordered(self, ops):
+        print("ops: ", ops)
         found_non_creation = False
         for op in ops:
-            if op.creation:
+            print("op: ", op)
+            # if op is creation
+            if op[-1] == "^":
                 if found_non_creation:
                     return False
             else:
@@ -462,72 +489,154 @@ class ParticleOperator:
         return True
 
     def insertion_sort(self, ops, coeff) -> "ParticleOperator":
+        print("in insertion sort")
         # base case(s)
         if not ops or coeff == 0:
-            return ParticleOperator({})
+            # return ParticleOperator({})
+            return {}
 
-        result_op = ParticleOperator({})
+        # result_op = ParticleOperator({})
+        result_dict = {}
 
         if self.is_normal_ordered(ops):
             # return the op with normal ordered key
             if len(ops) != 0:
-                result_str = ""
-                for i in range(len(ops)):
-                    result_str += list(ops[i].op_dict.keys())[0] + " "
-                result_op = ParticleOperator(result_str[:-1])
-                result_op.op_dict[result_str[:-1]] = coeff
-            return result_op
+                result_str = ' '.join(ops)
+                # result_str = ""
+                # for i in range(len(ops)):
+                #     result_str += list(ops[i].op_dict.keys())[0] + " "
+
+
+                #  TODO: return type tbd!!!!!!!!!!
+                result_dict[result_str] = coeff
+                # result_op = ParticleOperator(result_str)
+                # result_op.op_dict[result_str] = coeff
+            # return result_op
+            return result_dict
 
         # recursive case
         else:
-            if isinstance(ops[0], BosonOperator):
+            # if isinstance(ops[0], BosonOperator):
+            # if it's a list of boson operators
+            if ops[0][0] == "a":
                 type_coeff = 1
                 is_boson = True
             else:
                 type_coeff = -1
                 is_boson = False
-
+            # [a, b, c, d, e, f]
+                      # j  i
             for i in range(1, len(ops)):
                 right = ops[i]
                 j = i - 1
 
+                # kill the term if it's two consecutive and identical ops 
+                # if not is_boson and ops[j].op_dict == right.op_dict:
+                if not is_boson and ops[j] == right:
+                    return {}
+                    # return ParticleOperator({})
+                
                 while (
                     j >= 0
-                    and not ops[j].creation
-                    and not (not ops[j].creation and not right.creation)
+                    # and not ops[j].creation
+                    and not ops[j][-1] == "^"
+                    # and not (not ops[j].creation and not right.creation)
+                    and not (not ops[j][-1] == "^" and not right[-1] == "^")
                 ):
-                    # case for non-trivial swap --> introduce extra terms
+                    print("left is: ", ops[j])
+                    print("right is: ", right)
+                    # case for non-trivial swap if two ops share the same mode
+                    # --> introduce extra terms
                     # ops[j] is the left annihilation operator
-                    if ops[j].mode == right.mode:
+
+                    # if ops[j].mode == right.mode:
+                    # print("ops[j]: ", ops[j])
+                    # print("right: ", right)
+                    if ops[j] == right[:-1]:
+                        # print("ops[j][1]", ops[j][1])
+                        # print("right[1]", right[1])
                         # for bosons: a_i a_i^ = 1 + a_i^ a_i
                         # for (anti)fermions: b_i b_i^ = 1 - b_i^ b_i (same for 'd's)
 
                         # declare the identity operator
-                        identity = ParticleOperator(" ")
-                        new_op_str = (
-                            list(right.op_dict.keys())[0]
-                            + " "
-                            + list(ops[j].op_dict.keys())[0]
-                        )
-                        new_op = coeff * (
-                            identity + type_coeff * ParticleOperator(new_op_str)
-                        )
+                        # identity = ParticleOperator(" ")
+                        # identity = " "
+                        # new_op_str = (
+                        #     list(right.op_dict.keys())[0]
+                        #     + " "
+                        #     + list(ops[j].op_dict.keys())[0]
+                        # )
 
-                        left_op = self.combine_op(ops, 0, j)
-                        right_op = self.combine_op(ops, j + 2, len(ops))
+                        new_op_str = right + " " + ops[j]
+                        print("new opstr is: "+ new_op_str)
+                        # new_op = coeff * (
+                        #     identity + type_coeff * ParticleOperator(new_op_str)
+                        # )
+                        
 
-                        tree_split = left_op * new_op * right_op
+                        # left_op = self.combine_op(ops, 0, j)
+                        # right_op = self.combine_op(ops, j + 2, len(ops))
 
-                        for key_op, val_op in tree_split.op_dict.items():
-                            if key_op == "":
-                                identity = ParticleOperator(" ")
-                                identity.op_dict[" "] = coeff
-                                result_op += identity
+                        # left_op = ParticleOperator(' '.join(ops[:j]))
+                        # right_op = ParticleOperator(' '.join(ops[j + 2 : len(ops)]))
+
+                        left_str = ' '.join(ops[:j])
+                        print("left str is: " + left_str)
+                        right_str = ' '.join(ops[j + 2 : len(ops)])
+                        print("right str is: " + right_str)
+
+                        identity_term = (left_str + " " + right_str).strip()
+                        print("identity term is: " + identity_term)
+                        other_term = (left_str + " " + new_op_str + " " + right_str).strip()
+                        print("other term is: " + other_term)
+
+                        # mullllll
+                        # for op1, coeffs1 in list(self.op_dict.items()):
+                        #     for op2, coeffs2 in list(other.op_dict.items()):
+                        #         # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
+                        #         product_dict[(op1 + " " + op2).strip()] = coeffs1 * coeffs2
+                        # return ParticleOperator(product_dict)
+
+                        # tree_split = left_op * new_op * right_op
+
+                        # new_dict[state] = coeff + new_dict.get(state, 0)
+                        result_dict[identity_term] = coeff + result_dict.get(identity_term, 0)
+                        result_dict[other_term] = (coeff + result_dict.get(other_term, 0)) * type_coeff
+                        print("identity term coeff: ", result_dict[identity_term])
+                        print("other term coeff: ", result_dict[other_term])
+
+                        # b0 b0^ = 1 - b0^ b0
+                        # b0 b0 b0^ b0 = b0 (1 - b0^ b0) b0
+
+                        # result_dict[identity_term] += coeff
+                        # result_dict[other_term] += type_coeff * coeff
+                        output_dict = {}
+                        for key_str, val_coeff in result_dict.items():
+                            if key_str != "":
+                                recur_ops = key_str.split(" ")
+                                # result_dict += self.insertion_sort(recur_ops, val_coeff)
+                                sub_result_dict = self.insertion_sort(recur_ops, val_coeff)
+                                for key, value in sub_result_dict.items():
+                                    if value != 0:
+                                        output_dict[key] = output_dict.get(key, 0) + value
                             else:
-                                recur_ops = ParticleOperator(key_op).split()
-                                result_op += self.insertion_sort(recur_ops, val_op)
+                                output_dict[key_str] = output_dict.get(key_str, 0) + val_coeff
 
-                        return result_op
+
+                        return output_dict
+
+                        # for key_op, val_op in tree_split.op_dict.items():
+                        #     # print("key op is: ", key_op)
+                        #     if key_op == "":
+                        #         identity = ParticleOperator(" ")
+                        #         identity.op_dict[" "] = coeff
+                        #         result_op += identity
+                        #     else:
+                        #         recur_ops = key_op.split(" ")
+                        #         # print("recur ops: ", recur_ops)
+                        #         result_op += self.insertion_sort(recur_ops, val_op)
+
+                        # return result_op
 
                     # for bs and ds, even modes are different, when we swap them,
                     # we need to consider the case to change the sign
@@ -541,12 +650,15 @@ class ParticleOperator:
 
             # return the op with normal ordered key
             if len(ops) != 0:
-                result_str = ""
-                for i in range(len(ops)):
-                    result_str += list(ops[i].op_dict.keys())[0] + " "
-                result_op = ParticleOperator(result_str[:-1])
-                result_op.op_dict[result_str[:-1]] = coeff
-            return result_op
+                result_str = ' '.join(ops)
+                # result_str = ""
+                # for i in range(len(ops)):
+                #     result_str += list(ops[i].op_dict.keys())[0] + " "
+                # result_op = ParticleOperator(result_str)
+                # result_op.op_dict[result_str] = coeff
+                result_dict[result_str] = coeff
+            # return result_op
+            return result_dict
 
     # helper func to get the particle operator from index i to j as a single instance
     def combine_op(self, ops, i, j):
@@ -562,11 +674,11 @@ class ParticleOperator:
 
     def commutator(self, other: "ParticleOperator") -> "ParticleOperator":
         # [A, B] = AB - BA
-        return (self * other).normal_order() - (other * self).normal_order()
+        return ((self * other).normal_order() - (other * self).normal_order())._cleanup()
 
     def anticommutator(self, other: "ParticleOperator") -> "ParticleOperator":
         # {A, B} = AB + BA
-        return (self * other).normal_order() + (other * self).normal_order()
+        return ((self * other).normal_order() + (other * self).normal_order())._cleanup()
 
 
 class FermionOperator(ParticleOperator):
