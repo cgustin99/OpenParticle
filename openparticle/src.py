@@ -404,6 +404,27 @@ class ParticleOperator:
     def coeffs(self):
         return list(self.op_dict.values())
 
+    @property
+    def has_fermions(self):
+        for key in self.op_dict.keys():
+            if "b" in key:
+                return True
+        return False
+
+    @property
+    def has_antifermions(self):
+        for key in self.op_dict.keys():
+            if "d" in key:
+                return True
+        return False
+
+    @property
+    def has_bosons(self):
+        for key in self.op_dict.keys():
+            if "a" in key:
+                return True
+        return False
+
     def normal_order(self) -> "ParticleOperator":
 
         # Returns a new ParticleOperator object with a normal ordered hash table
