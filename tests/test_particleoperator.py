@@ -147,3 +147,33 @@ def test_len_magic_method_for_particle_op():
     length = 3
     op = ParticleOperator("a0") + ParticleOperator("b0") + ParticleOperator("d0")
     assert len(op) == length
+
+
+def test_has_fermions():
+    op = ParticleOperator("b0^ b1") + ParticleOperator("a0")
+    assert op.has_fermions
+
+
+def test_has_fermions_2():
+    op = ParticleOperator("a0^ a0") + ParticleOperator("a0") + ParticleOperator("d1")
+    assert op.has_fermions == False
+
+
+def test_has_antifermions():
+    op = ParticleOperator("b0^ b1") + ParticleOperator("a0")
+    assert op.has_antifermions == False
+
+
+def test_has_antifermions_2():
+    op = ParticleOperator("a0^ a0") + ParticleOperator("a0") + ParticleOperator("d1")
+    assert op.has_antifermions
+
+
+def test_has_bosons():
+    op = ParticleOperator("b0^ b1") + ParticleOperator("a0")
+    assert op.has_bosons
+
+
+def test_has_bosons2():
+    op = ParticleOperator("b1") + ParticleOperator("b0") + ParticleOperator("d1")
+    assert op.has_bosons == False
