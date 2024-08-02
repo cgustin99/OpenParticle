@@ -1,6 +1,6 @@
 import numpy as np
 from sympy import *
-from typing import List, Union, Optional, Dict, Tuple
+from typing import List, Union, Optional, Dict, Tuple, Literal
 from IPython.display import display, Latex
 from collections import defaultdict
 import re
@@ -311,7 +311,7 @@ class ParticleOperator:
         replacement = r"_{\1}"
         latex_str = ""
         for s, coeff in self.op_dict.items():
-            new_s = s.replace("^", "^{\dagger}")
+            new_s = s.replace("^", "^†")
             latex_str += f"{coeff} {re.sub(pattern, replacement, new_s)} +"
 
         return Latex("$" + latex_str[:-1] + "$")
@@ -621,6 +621,51 @@ class ParticleOperator:
     def anticommutator(self, other: "ParticleOperator") -> "ParticleOperator":
         # {A, B} = AB + BA
         return (self * other).normal_order() + (other * self).normal_order()
+
+    @staticmethod
+    def random(
+        particle_types: Optional[
+            List[Literal["fermion", "antifermion", "boson"]]
+        ] = None,
+        n_terms: int = None,
+        max_mode: int = None,
+        max_len_of_terms: int = None,
+        complex_coeffs: bool = True,
+        normal_order: bool = True,
+    ):
+        # Assign None parameters
+        if n_terms is None:
+            n_terms = np.random.randint(1, 20)
+        if max_mode is None:
+            max_mode = np.random.randint(1, 20)
+        if max_len_of_terms is None:
+            max_len_of_terms = np.random.randint(1, 4)
+        if particle_types is None:
+            particle_types = ["fermion", "antifermion", "boson"]
+
+        random_op_dict = {}
+        input_map = {"fermion": "b", "antifermion": "d", "boson": "a"}
+        op_types = [input_map[ptype] for ptype in particle_types]
+        c_or_a = ["", "^"]
+
+        for i in range(n_terms):
+            len_current_term = np.random.randint(1, max_len_of_terms + 1)
+            current_term = ""
+            for j in range(len_current_term):
+                particle = np.random.choice(op_types)
+                mode = np.random.randint(0, max_mode)
+                creation = np.random.choice(c_or_a)
+                current_term += str(particle) + str(mode) + str(creation) + " "
+            random_op_dict[current_term[:-1]] = np.random.uniform(
+                -100, 100
+            ) + 1j * np.random.uniform(-100, 100) * int(
+                complex_coeffs
+            )  # a + ib
+
+        if normal_order:
+            return ParticleOperator(random_op_dict).normal_order()
+        else:
+            return ParticleOperator(random_op_dict)
 
 
 class FermionOperator(ParticleOperator):
