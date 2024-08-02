@@ -339,6 +339,39 @@ class ParticleOperator:
             particle_op_list.append(ParticleOperator({oper: coeff}))
         return particle_op_list
 
+    def parse(self) -> List:
+        if len(list(self.op_dict.keys())) != 1:
+            return NotImplemented
+
+        ops = list(self.op_dict.keys())[0].split(" ")
+
+        split_list = []
+        i = 0
+        while i < len(ops):
+            oper = ops[i]
+            if oper[0] == "a":
+                split_list.append(BosonOperator(oper[1:]))
+            else:
+                if not oper[0] in ["b", "d"]:
+                    raise RuntimeError("particle type unknown: {}".format(oper[0]))
+
+                is_number_op = False
+                if (len(oper) > 2) and (i < (len(ops) - 1)):
+                    if (oper[2] == "^") and (ops[i + 1] == ops[i][:-1]):
+                        is_number_op = True
+
+                if is_number_op:
+                    # If current op is a creation op and next op is annihilation, then create NumberOperator
+                    split_list.append(NumberOperator(oper[0], oper[1]))
+                    i += 1  # skip next operator
+                else:
+                    if oper[0] == "b":
+                        split_list.append(FermionOperator(oper[1:]))
+                    else:
+                        split_list.append(AntifermionOperator(oper[1:]))
+            i += 1
+        return split_list
+
     def dagger(self) -> "ParticleOperator":
         dagger_dict = {}
 
@@ -775,7 +808,7 @@ class BosonOperator(ParticleOperator):
 class NumberOperator(ParticleOperator):
     def __init__(self, particle_type, mode):
         self.particle_type = particle_type
-        self.mode = mode
+        self.mode = int(mode)
         super().__init__(
             self.particle_type
             + str(self.mode)
