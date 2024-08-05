@@ -298,3 +298,18 @@ def test_particle_op_to_zero_power_on_state():
     state = Fock([], [], [(0, 3)])
     output = op * state
     assert output.state_dict == state.state_dict
+
+
+def test_fermionic_parity_1():
+    state = Fock([0, 1], [], [])
+    op = ParticleOperator("b0^ b0")
+    out = op * state
+    assert out.state_dict == state.state_dict
+
+
+def test_fermionic_parity_2():
+    state = Fock([0, 1], [], [])
+    op = ParticleOperator("b0^ b0") + ParticleOperator("b1^ b1")
+    out = op * state
+    expected_out = 2 * state
+    assert out.state_dict == expected_out.state_dict
