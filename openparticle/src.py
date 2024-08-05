@@ -340,6 +340,11 @@ class ParticleOperator:
         return particle_op_list
 
     def parse(self) -> List:
+        """Merges neighboring creation/annihilation operators together into NumberOperators when acting on the same modes.
+
+        Merging only occurs when annihilation operators are immediately followed by creation operators. Therefore, there is
+            a preference for normal ordering the terms before calling this function.
+        """
         if len(list(self.op_dict.keys())) != 1:
             return NotImplemented
 
@@ -347,29 +352,69 @@ class ParticleOperator:
 
         split_list = []
         i = 0
-        while i < len(ops):
-            oper = ops[i]
-            if oper[0] == "a":
-                split_list.append(BosonOperator(oper[1:]))
-            else:
-                if not oper[0] in ["b", "d"]:
-                    raise RuntimeError("particle type unknown: {}".format(oper[0]))
+        stack = []
 
-                is_number_op = False
-                if (len(oper) > 2) and (i < (len(ops) - 1)):
-                    if (oper[2] == "^") and (ops[i + 1] == ops[i][:-1]):
-                        is_number_op = True
+        def _empty_stack(stack):
+            operators = []
+            while len(stack) > 0:
+                current_operator_string = str(stack[0][1])
+                if stack[0][2]:
+                    current_operator_string += "^"
 
-                if is_number_op:
-                    # If current op is a creation op and next op is annihilation, then create NumberOperator
-                    split_list.append(NumberOperator(oper[0], oper[1]))
-                    i += 1  # skip next operator
+                if stack[0][0] == "a":
+                    operators.append(BosonOperator(current_operator_string))
+                elif stack[0][0] == "b":
+                    operators.append(FermionOperator(current_operator_string))
+                elif stack[0][0] == "d":
+                    operators.append(AntifermionOperator(current_operator_string))
                 else:
-                    if oper[0] == "b":
-                        split_list.append(FermionOperator(oper[1:]))
+                    raise RuntimeError("particle type unknown: {}".format(oper[0]))
+                stack = stack[1:]
+            return operators
+
+        def _get_operator_tuple(index):
+            oper = ops[index]
+            particle_type = oper[0]
+            oper = oper[1:]
+            creation = False
+            if oper[-1] == "^":
+                creation = True
+                oper = oper[:-1]
+            mode = int(oper)
+            return (particle_type, mode, creation)
+
+        while i < len(ops):
+            operator = _get_operator_tuple(i)
+            if len(stack) == 0:
+                stack.append(operator)
+            else:
+                if (operator[0] == stack[-1][0]) and (operator[1] == stack[-1][1]):
+                    if operator[2]:
+                        stack.append(operator)
                     else:
-                        split_list.append(AntifermionOperator(oper[1:]))
+                        power = 1
+                        while (i + power < len(ops)) and (power < len(stack)):
+                            next_operator = _get_operator_tuple(i + power)
+                            if (
+                                (next_operator[0] == stack[-1][0])
+                                and (next_operator[1] == stack[-1][1])
+                                and (not next_operator[2])
+                            ):
+                                power += 1
+                            else:
+                                break
+
+                        split_list += _empty_stack(stack[:-power])
+                        stack = []
+                        split_list.append(
+                            OccupationOperator(operator[0], operator[1], power)
+                        )
+                        i += power - 1
+                else:
+                    split_list += _empty_stack(stack)
+                    stack = [operator]
             i += 1
+        split_list += _empty_stack(stack)
         return split_list
 
     def dagger(self) -> "ParticleOperator":
@@ -850,14 +895,23 @@ class BosonOperator(ParticleOperator):
         )
 
 
-class NumberOperator(ParticleOperator):
-    def __init__(self, particle_type, mode):
+class OccupationOperator(ParticleOperator):
+    def __init__(self, particle_type, mode, power):
         self.particle_type = particle_type
         self.mode = int(mode)
-        super().__init__(
-            self.particle_type
-            + str(self.mode)
-            + "^ "
-            + self.particle_type
-            + str(self.mode),
-        )
+        self.power = int(power)
+
+        if (self.particle_type != "a") and (power != 1):
+            raise ValueError(
+                "power of OccupationOperator can only be greater than 1 for bosonic ladder operators"
+            )
+
+        creation_op = ParticleOperator(self.particle_type + str(self.mode) + "^")
+        annihilation_op = ParticleOperator(self.particle_type + str(self.mode))
+        occupation_op = (creation_op**power) * (annihilation_op**power)
+        super().__init__(occupation_op.op_dict)
+
+
+class NumberOperator(OccupationOperator):
+    def __init__(self, particle_type, mode):
+        super().__init__(particle_type, mode, 1)
