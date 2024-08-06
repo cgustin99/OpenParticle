@@ -10,7 +10,7 @@ from .src import (
 )
 
 from .utils import (
-    generate_matrix_from_basis,
+    generate_matrix,
     get_fock_basis,
 )
 from .qubit_mappings import *
