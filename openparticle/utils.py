@@ -83,7 +83,11 @@ def get_fock_basis(operator: ParticleOperator, max_bose_occ: int = 1):
     return basis
 
 
-def generate_matrix_from_basis(operator: ParticleOperator, basis: List[Fock]):
+def generate_matrix(
+    operator: ParticleOperator, basis: List[Fock] = None, max_bose_occ: int = 1
+):
+    if basis is None:
+        basis = get_fock_basis(operator=operator, max_bose_occ=max_bose_occ)
     size = (len(basis), len(basis))
     matrix = np.zeros(size)
 
