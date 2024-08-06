@@ -1,6 +1,6 @@
 import numpy as np
 from sympy import *
-from typing import List, Union, Optional, Dict, Tuple
+from typing import List, Union, Optional, Dict, Tuple, Literal
 from IPython.display import display, Latex
 from collections import defaultdict
 import re
@@ -80,14 +80,26 @@ class Fock:
                 for state in self.to_list():
                     state_coeff = next(iter(state.state_dict.values()))
                     split_coeff = 1
-                    for split_op in op.split()[
-                        ::-1
-                    ]:  # AB|f> = A(B|f>) i.e. B comes first
-                        state, new_coeff = split_op._operate_on_state(state)
-                        split_coeff *= new_coeff  # Update coeff for every op in product
-                    output_state_dict[next(iter(state.state_dict))] = (
-                        split_coeff * op_coeff * state_coeff
-                    ) + output_state_dict.get(next(iter(state.state_dict)), 0)
+                    if next(iter(op.op_dict)) == " ":  # Identity * |state> = |state>
+                        output_state_dict[next(iter(state.state_dict))] = (
+                            op_coeff * state_coeff
+                        ) + output_state_dict.get(next(iter(state.state_dict)), 0)
+                    else:
+                        for split_op in op.split()[
+                            ::-1
+                        ]:  # AB|f> = A(B|f>) i.e. B comes first
+                            # if (
+                            #     next(iter(op.op_dict)) == " "
+                            # ):  # Identity * |state> = |state>
+                            #     state, new_coeff = state, 1
+                            # else:
+                            state, new_coeff = split_op._operate_on_state(state)
+                            split_coeff *= (
+                                new_coeff  # Update coeff for every op in product
+                            )
+                        output_state_dict[next(iter(state.state_dict))] = (
+                            split_coeff * op_coeff * state_coeff
+                        ) + output_state_dict.get(next(iter(state.state_dict)), 0)
             return Fock(state_dict=output_state_dict)._cleanup()
 
     def __add__(self, other: "Fock") -> "Fock":
@@ -297,7 +309,7 @@ class ParticleOperator:
         replacement = r"_{\1}"
         latex_str = ""
         for s, coeff in self.op_dict.items():
-            new_s = s.replace("^", "^{\dagger}")
+            new_s = s.replace("^", "^†")
             latex_str += f"{coeff} {re.sub(pattern, replacement, new_s)} +"
 
         return Latex("$" + latex_str[:-1] + "$")
@@ -325,18 +337,102 @@ class ParticleOperator:
             particle_op_list.append(ParticleOperator({oper: coeff}))
         return particle_op_list
 
+    def parse(self) -> List:
+        """Merges neighboring creation/annihilation operators together into NumberOperators when acting on the same modes.
+
+        Merging only occurs when annihilation operators are immediately followed by creation operators. Therefore, there is
+            a preference for normal ordering the terms before calling this function.
+        """
+        if len(list(self.op_dict.keys())) != 1:
+            return NotImplemented
+
+        ops = list(self.op_dict.keys())[0].split(" ")
+
+        split_list = []
+        i = 0
+        stack = []
+
+        def _empty_stack(stack):
+            operators = []
+            while len(stack) > 0:
+                current_operator_string = str(stack[0][1])
+                if stack[0][2]:
+                    current_operator_string += "^"
+
+                if stack[0][0] == "a":
+                    operators.append(BosonOperator(current_operator_string))
+                elif stack[0][0] == "b":
+                    operators.append(FermionOperator(current_operator_string))
+                elif stack[0][0] == "d":
+                    operators.append(AntifermionOperator(current_operator_string))
+                else:
+                    raise RuntimeError("particle type unknown: {}".format(stack[0]))
+                stack = stack[1:]
+            return operators
+
+        def _get_operator_tuple(index):
+            oper = ops[index]
+            particle_type = oper[0]
+            oper = oper[1:]
+            creation = False
+            if oper[-1] == "^":
+                creation = True
+                oper = oper[:-1]
+            mode = int(oper)
+            return (particle_type, mode, creation)
+
+        while i < len(ops):
+            operator = _get_operator_tuple(i)
+            if len(stack) == 0:
+                if operator[2]:
+                    stack.append(operator)
+                else:
+                    split_list += _empty_stack([operator])
+            else:
+                if (operator[0] == stack[-1][0]) and (operator[1] == stack[-1][1]):
+                    if operator[2]:
+                        stack.append(operator)
+                    else:
+                        power = 1
+                        while (i + power < len(ops)) and (power < len(stack)):
+                            next_operator = _get_operator_tuple(i + power)
+                            if (
+                                (next_operator[0] == stack[-1][0])
+                                and (next_operator[1] == stack[-1][1])
+                                and (not next_operator[2])
+                            ):
+                                power += 1
+                            else:
+                                break
+
+                        split_list += _empty_stack(stack[:-power])
+                        stack = []
+                        split_list.append(
+                            OccupationOperator(operator[0], operator[1], power)
+                        )
+                        i += power - 1
+                else:
+                    split_list += _empty_stack(stack)
+                    stack = [operator]
+            i += 1
+        split_list += _empty_stack(stack)
+        return split_list
+
     def dagger(self) -> "ParticleOperator":
         dagger_dict = {}
 
         for i, coeff_i in self.op_dict.items():
             dagger_str = ""
-            for oper in i.split(" ")[::-1]:
-                if oper[-1] == "^":
-                    dagger_str += oper[:-1]
-                else:
-                    dagger_str += oper + "^"
-                dagger_str += " "
-            dagger_dict[dagger_str[:-1]] = coeff_i.conjugate()
+            if i == " ":  # I^dagger = I
+                dagger_dict[" "] = coeff_i.conjugate()
+            else:
+                for oper in i.split(" ")[::-1]:
+                    if oper[-1] == "^":
+                        dagger_str += oper[:-1]
+                    else:
+                        dagger_str += oper + "^"
+                    dagger_str += " "
+                dagger_dict[dagger_str[:-1]] = coeff_i.conjugate()
 
         return ParticleOperator(dagger_dict)
 
@@ -349,18 +445,22 @@ class ParticleOperator:
             product_dict = {}
             for op1, coeffs1 in list(self.op_dict.items()):
                 for op2, coeffs2 in list(other.op_dict.items()):
-                    # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
-                    product_dict[(op1 + " " + op2).strip()] = coeffs1 * coeffs2
+                    if op1 == " " and op2 == " ":
+                        product_dict[" "] = coeffs1 * coeffs2
+                    else:
+                        # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
+                        product_dict[(op1 + " " + op2).strip()] = coeffs1 * coeffs2
             return ParticleOperator(product_dict)
         return NotImplemented
 
     def __pow__(self, other) -> "ParticleOperator":
-        if len(self.op_dict) == 1:
-            return ParticleOperator(
-                ((str(list(self.op_dict.keys())[0]) + " ") * other)[:-1]
-            )
+        if other == 0:
+            return ParticleOperator(" ")
         else:
-            return NotImplemented
+            op = self
+            for _ in range(1, other):
+                op *= self
+            return op
 
     def __sub__(self, other):
         coeffs = list(other.op_dict.values())
@@ -368,6 +468,41 @@ class ParticleOperator:
             dict(zip(other.op_dict.keys(), -1 * np.array(coeffs)))
         )
         return self + neg_other
+
+    def __len__(self):
+        return len(self.op_dict)
+
+    @property
+    def coeff(self):
+        assert (
+            len(self) == 1
+        ), "coeff property exists for 1 element in op_dict only. Use .coeffs property"
+        return next(iter(self.op_dict.values()))
+
+    @property
+    def coeffs(self):
+        return list(self.op_dict.values())
+
+    @property
+    def has_fermions(self):
+        for key in self.op_dict.keys():
+            if "b" in key:
+                return True
+        return False
+
+    @property
+    def has_antifermions(self):
+        for key in self.op_dict.keys():
+            if "d" in key:
+                return True
+        return False
+
+    @property
+    def has_bosons(self):
+        for key in self.op_dict.keys():
+            if "a" in key:
+                return True
+        return False
 
     def normal_order(self) -> "ParticleOperator":
 
@@ -600,6 +735,51 @@ class ParticleOperator:
         # {A, B} = AB + BA
         return ((self * other).normal_order() + (other * self).normal_order())._cleanup()
 
+    @staticmethod
+    def random(
+        particle_types: Optional[
+            List[Literal["fermion", "antifermion", "boson"]]
+        ] = None,
+        n_terms: int = None,
+        max_mode: int = None,
+        max_len_of_terms: int = None,
+        complex_coeffs: bool = True,
+        normal_order: bool = True,
+    ):
+        # Assign None parameters
+        if n_terms is None:
+            n_terms = np.random.randint(1, 20)
+        if max_mode is None:
+            max_mode = np.random.randint(1, 20)
+        if max_len_of_terms is None:
+            max_len_of_terms = np.random.randint(1, 4)
+        if particle_types is None:
+            particle_types = ["fermion", "antifermion", "boson"]
+
+        random_op_dict = {}
+        input_map = {"fermion": "b", "antifermion": "d", "boson": "a"}
+        op_types = [input_map[ptype] for ptype in particle_types]
+        c_or_a = ["", "^"]
+
+        for i in range(n_terms):
+            len_current_term = np.random.randint(1, max_len_of_terms + 1)
+            current_term = ""
+            for j in range(len_current_term):
+                particle = np.random.choice(op_types)
+                mode = np.random.randint(0, max_mode)
+                creation = np.random.choice(c_or_a)
+                current_term += str(particle) + str(mode) + str(creation) + " "
+            random_op_dict[current_term[:-1]] = np.random.uniform(
+                -100, 100
+            ) + 1j * np.random.uniform(-100, 100) * int(
+                complex_coeffs
+            )  # a + ib
+
+        if normal_order:
+            return ParticleOperator(random_op_dict).normal_order()
+        else:
+            return ParticleOperator(random_op_dict)
+
 
 class FermionOperator(ParticleOperator):
 
@@ -628,16 +808,16 @@ class FermionOperator(ParticleOperator):
 
         if self.creation and self.mode not in f_occ:
             f_occ.append(self.mode)
+            f_occ = sorted(f_occ)
             # Get parity
             coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
         elif not self.creation and self.mode in f_occ:
             # Get parity
             coeff = (-1) ** len(f_occ[: f_occ.index(self.mode)])
             f_occ.remove(self.mode)
+            f_occ = sorted(f_occ)
         else:
             return Fock([], [], []), 0
-
-        f_occ = sorted(f_occ)
 
         return (
             Fock(
@@ -674,14 +854,17 @@ class AntifermionOperator(ParticleOperator):
         af_occ = list(list(other.state_dict.keys())[0][1])
         if self.creation and self.mode not in af_occ:
             af_occ.append(self.mode)
+            # Get parity
+            af_occ = sorted(af_occ)
+            coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
         elif not self.creation and self.mode in af_occ:
+            # Get parity
+            coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
             af_occ.remove(self.mode)
+            af_occ = sorted(af_occ)
         else:
             return Fock([], [], []), 0
 
-        af_occ = sorted(af_occ)
-        # Get parity
-        coeff = (-1) ** len(af_occ[: af_occ.index(self.mode)])
         return (
             Fock(
                 f_occ=list(list(other.state_dict.keys())[0][0]),
@@ -747,14 +930,23 @@ class BosonOperator(ParticleOperator):
         )
 
 
-class NumberOperator(ParticleOperator):
-    def __init__(self, particle_type, mode):
+class OccupationOperator(ParticleOperator):
+    def __init__(self, particle_type, mode, power):
         self.particle_type = particle_type
-        self.mode = mode
-        super().__init__(
-            self.particle_type
-            + str(self.mode)
-            + "^ "
-            + self.particle_type
-            + str(self.mode),
-        )
+        self.mode = int(mode)
+        self.power = int(power)
+
+        if (self.particle_type != "a") and (power != 1):
+            raise ValueError(
+                "power of OccupationOperator can only be greater than 1 for bosonic ladder operators"
+            )
+
+        creation_op = ParticleOperator(self.particle_type + str(self.mode) + "^")
+        annihilation_op = ParticleOperator(self.particle_type + str(self.mode))
+        occupation_op = (creation_op**power) * (annihilation_op**power)
+        super().__init__(occupation_op.op_dict)
+
+
+class NumberOperator(OccupationOperator):
+    def __init__(self, particle_type, mode):
+        super().__init__(particle_type, mode, 1)

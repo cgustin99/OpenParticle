@@ -159,3 +159,17 @@ def test_inner_product(
         == c_b_occ_orbital * b_occ_occupancy
         == c_b_occ_occupancy
     )
+
+
+def test_subtract_fock_states():
+    state1 = Fock([1], [], [(0, 3)])
+    state2 = Fock([], [2, 3, 5], [])
+    state = state1 - state2
+    assert state.state_dict == {((1,), (), ((0, 3),)): 1.0, ((), (2, 3, 5), ()): -1.0}
+
+
+def test_subtract_conjugate_fock_states():
+    state1 = ConjugateFock([1], [], [(0, 3)])
+    state2 = ConjugateFock([], [2, 3, 5], [])
+    state = state1 - state2
+    assert state.state_dict == {((1,), (), ((0, 3),)): 1.0, ((), (2, 3, 5), ()): -1.0}

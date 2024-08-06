@@ -6,7 +6,11 @@ from .src import (
     AntifermionOperator,
     BosonOperator,
     NumberOperator,
+    OccupationOperator,
 )
 
-from .utils import generate_matrix_from_basis, get_computational_states_fermionic
+from .utils import (
+    generate_matrix,
+    get_fock_basis,
+)
 from .qubit_mappings import *
