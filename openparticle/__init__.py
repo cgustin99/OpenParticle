@@ -9,5 +9,8 @@ from .src import (
     OccupationOperator,
 )
 
-from .utils import generate_matrix_from_basis, get_computational_states_fermionic
+from .utils import (
+    generate_matrix_from_basis,
+    get_fock_basis,
+)
 from .qubit_mappings import *
