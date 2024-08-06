@@ -212,6 +212,16 @@ def test_parse_bosons():
         assert str(parsed_op) == str(expected_op)
 
 
+def test_parse_bosons2():
+    op = ParticleOperator("a1^ a1 a1 a1")
+    expected_ops = [
+        OccupationOperator("a", 1, 1),
+        BosonOperator("1"),
+    ]
+    for parsed_op, expected_op in zip(op.parse(), expected_ops):
+        assert str(parsed_op) == str(expected_op)
+
+
 def test_parse_mix():
     op = ParticleOperator("a0^ a0 a1^ a1^ a1^ a1 a1 b0^ d0^ d0 a0")
     expected_ops = [

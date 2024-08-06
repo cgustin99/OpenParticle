@@ -368,7 +368,7 @@ class ParticleOperator:
                 elif stack[0][0] == "d":
                     operators.append(AntifermionOperator(current_operator_string))
                 else:
-                    raise RuntimeError("particle type unknown: {}".format(oper[0]))
+                    raise RuntimeError("particle type unknown: {}".format(stack[0]))
                 stack = stack[1:]
             return operators
 
@@ -386,7 +386,10 @@ class ParticleOperator:
         while i < len(ops):
             operator = _get_operator_tuple(i)
             if len(stack) == 0:
-                stack.append(operator)
+                if operator[2]:
+                    stack.append(operator)
+                else:
+                    split_list += _empty_stack([operator])
             else:
                 if (operator[0] == stack[-1][0]) and (operator[1] == stack[-1][1]):
                     if operator[2]:
