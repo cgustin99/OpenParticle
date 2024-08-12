@@ -615,6 +615,25 @@ class ParticleOperator:
     
         return output_dict
 
+    @staticmethod
+    def has_duplicates(ops):
+        freq = {}
+        for op in ops:
+            is_creation = op[-1] == "^"
+            if op in freq:
+                if freq[op] == 1 and is_creation:
+                    if op[:-1] in freq and freq[op[:-1]] == 0 or op[:-1] not in freq:
+                        return True
+                elif freq[op] == 1 and not is_creation:
+                    if (op + "^") in freq and freq[op + "^"] == 0 or (op + "^") not in freq:
+                        return True
+            freq[op] = 1
+            if is_creation and op[:-1] in freq and freq[op[:-1]] == 1:
+                freq[op[:-1]] = 0
+            elif not is_creation and (op + "^") in freq and freq[op + "^"] == 1:
+                freq[op + "^"] = 0
+        return False
+
 
     # ops can get from op.split()
     def is_normal_ordered(self, ops):
@@ -631,6 +650,9 @@ class ParticleOperator:
     def insertion_sort(self, ops, coeff) -> dict:
         # base case(s)
         if not ops or coeff == 0:
+            return {}
+        
+        if self.has_duplicates(ops): 
             return {}
 
         result_dict = {}
