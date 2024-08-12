@@ -652,7 +652,7 @@ class ParticleOperator:
         if not ops or coeff == 0:
             return {}
         
-        if self.has_duplicates(ops): 
+        if not ops[0][0] == "a" and self.has_duplicates(ops): 
             return {}
 
         result_dict = {}

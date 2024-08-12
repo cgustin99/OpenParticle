@@ -42,7 +42,7 @@ def test_simply_fermion_same_mode():
     # b0 b0^ --> 1 - b0^ b0
     op = ParticleOperator("b0 b0^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator({" ": 1, "b0^ b0": -1})
+    expected = ParticleOperator({"": 1, "b0^ b0": -1})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -51,7 +51,7 @@ def test_simply_antifermion_same_mode():
     # d0 d0^ --> 1 - d0^ d0
     op = ParticleOperator("d0 d0^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator({" ": 1, "d0^ d0": -1})
+    expected = ParticleOperator({"": 1, "d0^ d0": -1})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -60,7 +60,7 @@ def test_simply_boson_same_mode():
     # a0 a0^ --> 1 + a0^ a0
     op = ParticleOperator("a0 a0^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator({" ": 1, "a0^ a0": 1})
+    expected = ParticleOperator({"": 1, "a0^ a0": 1})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -191,7 +191,7 @@ def test_sign_change_between_b_and_d_5():
 def test_complex_fermions_1():
     op = ParticleOperator("b1 b1 b1^ b1^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator({"b1^ b1^ b1 b1": 1})
+    expected = ParticleOperator({})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -199,7 +199,7 @@ def test_complex_fermions_1():
 def test_complex_fermions_2():
     op = ParticleOperator("b1 b2 b1^ b2^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator({" ": -1, "b1^ b1": 1, "b2^ b2": 1, "b1^ b2^ b1 b2": 1})
+    expected = ParticleOperator({"": -1, "b1^ b1": 1, "b2^ b2": 1, "b1^ b2^ b1 b2": 1})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -208,7 +208,7 @@ def test_complex_fermions_3():
     op = ParticleOperator("b1 b2 b2^ b1^")
     normal_order_op = op.normal_order()
     expected = ParticleOperator(
-        {" ": 1, "b1^ b1": -1, "b2^ b2": -1, "b2^ b1^ b1 b2": 1}
+        {"": 1, "b1^ b1": -1, "b2^ b2": -1, "b2^ b1^ b1 b2": 1}
     )
 
     assert expected.op_dict == normal_order_op.op_dict
@@ -217,7 +217,7 @@ def test_complex_fermions_3():
 def test_complex_fermions_4():
     op = ParticleOperator("b1 b1 b1 b1^ b1^ b1^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator({"b1^ b1^ b1 b1": 1, "b1^ b1^ b1^ b1 b1 b1": -1})
+    expected = ParticleOperator({})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -225,7 +225,7 @@ def test_complex_fermions_4():
 def test_complex_fermions_5():
     op = ParticleOperator("b1 b1 b1^ b1^ b1^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator({"b1^ b1^ b1^ b1 b1": 1})
+    expected = ParticleOperator({})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -233,7 +233,7 @@ def test_complex_fermions_5():
 def test_complex_fermions_6():
     op = ParticleOperator("b1 b1 b1 b1^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator({"b1^ b1 b1 b1": -1, "b1 b1": 1})
+    expected = ParticleOperator({})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -241,14 +241,7 @@ def test_complex_fermions_6():
 def test_complex_fermions_7():
     op = ParticleOperator("b1 b1 b1 b1^ b1^ b1^ b1 b1^ b1 b1^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator(
-        {
-            "b1^ b1^ b1 b1": 1,
-            "b1^ b1^ b1^ b1 b1 b1": -1,
-            "b1^ b1^ b1^ b1^ b1 b1 b1 b1": -2,
-            "b1^ b1^ b1^ b1^ b1^ b1 b1 b1 b1 b1": 1,
-        }
-    )
+    expected = ParticleOperator({})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -256,15 +249,7 @@ def test_complex_fermions_7():
 def test_complex_fermions_8():
     op = ParticleOperator("b1 b1^ b1 b1 b1 b1^ b1^ b1^ b1 b1^ b1 b1^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator(
-        {
-            "b1^ b1^ b1 b1": 1,
-            "b1^ b1^ b1^ b1 b1 b1": -1,
-            "b1^ b1^ b1^ b1^ b1 b1 b1 b1": -3,
-            "b1^ b1^ b1^ b1^ b1^ b1 b1 b1 b1 b1": 2,
-            "b1^ b1^ b1^ b1^ b1^ b1^ b1 b1 b1 b1 b1 b1": 1,
-        }
-    )
+    expected = ParticleOperator({})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -274,7 +259,7 @@ def test_complex_fermions_9():
     normal_order_op = op.normal_order()
     expected = ParticleOperator(
         {
-            " ": 1,
+            "": 1,
             "b1^ b1": -1,
             "b2^ b2": -1,
             "b2^ b1^ b1 b2": 1,
@@ -293,11 +278,8 @@ def test_complex_fermions_10():
     normal_order_op = op.normal_order()
     expected = ParticleOperator(
         {
-            " ": 1,
-            "b1^ b1": -1,
-            "b1^ b1^ b1 b1": -3,
-            "b1^ b1^ b1^ b1 b1 b1": 2,
-            "b1^ b1^ b1^ b1^ b1 b1 b1 b1": 1,
+            "": 1,
+            "b1^ b1": -1
         }
     )
 
@@ -307,7 +289,7 @@ def test_complex_fermions_10():
 def test_complex_bosons():
     op = ParticleOperator("a1 a1 a1^ a1^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator({" ": 2, "a1^ a1": 4, "a1^ a1^ a1 a1": 1})
+    expected = ParticleOperator({"": 2, "a1^ a1": 4, "a1^ a1^ a1 a1": 1})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -332,7 +314,7 @@ def test_normal_order_sum_3():
 def test_commutation_relations_bosonic():
     # [a_i, a_j^\dagger] = \delta_ij
     op = ParticleOperator("a0").commutator(ParticleOperator("a0^"))
-    identity = ParticleOperator(" ")
+    identity = ParticleOperator("")
     assert op.op_dict == identity.op_dict
 
 
@@ -345,7 +327,7 @@ def test_commutation_relations_bosonic_2():
 def test_commutation_relations_fermionic_1():
     # {b_i, b_j^\dagger} = \delta_ij
     op = ParticleOperator("b0").anticommutator(ParticleOperator("b0^"))
-    identity = ParticleOperator(" ")
+    identity = ParticleOperator("")
     assert op.op_dict == identity.op_dict
 
 
@@ -376,7 +358,7 @@ def test_commutation_relations_2():
 
 def test_commutation_relations_3():
     op = ParticleOperator("b0^ b0 a0^").commutator(ParticleOperator("b0^ b0 a0"))
-    comm = ParticleOperator({"b0^ b0": -1, "b0^ b0^ b0 b0": 1})
+    comm = ParticleOperator({"b0^ b0": -1})
     assert op.op_dict == comm.op_dict
 
 
@@ -388,7 +370,7 @@ def test_commutation_relations_4():
 
 def test_commutation_relations_5():
     op = ParticleOperator("b0^ b0 a0").commutator(ParticleOperator("b0^ b0 a0^"))
-    comm = ParticleOperator("b0^ b0") - ParticleOperator("b0^ b0^ b0 b0")
+    comm = ParticleOperator("b0^ b0")
     assert op.op_dict == comm.op_dict
 
 
@@ -410,6 +392,5 @@ def test_commutation_relations():
         -1 * ParticleOperator("b0^ b0 a0^")
         - ParticleOperator("b0^ b0 a0")
         - 2 * ParticleOperator("b0^ b0")
-        + 2 * ParticleOperator("b0^ b0^ b0 b0")
     )
     assert op1.commutator(op2).op_dict == comm.op_dict
