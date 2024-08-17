@@ -736,7 +736,9 @@ class ParticleOperator:
                 particle = np.random.choice(op_types)
                 mode = np.random.randint(0, max_mode)
                 creation = np.random.choice(c_or_a)
-                current_term += str(particle) + str(mode) + str(creation) + " "
+                operator = str(particle) + str(mode) + str(creation) + " "
+                if (particle == "a") or (operator not in current_term):
+                    current_term += operator
             random_op_dict[current_term[:-1]] = np.random.uniform(
                 -100, 100
             ) + 1j * np.random.uniform(-100, 100) * int(
@@ -747,6 +749,12 @@ class ParticleOperator:
             return ParticleOperator(random_op_dict).normal_order()
         else:
             return ParticleOperator(random_op_dict)
+
+    def remove_identity(self):
+        if self.op_dict.get(" ", None) is not None:
+            del self.op_dict[" "]
+        if self.op_dict.get("", None) is not None:
+            del self.op_dict[""]
 
 
 class FermionOperator(ParticleOperator):
