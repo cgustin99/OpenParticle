@@ -551,6 +551,13 @@ class ParticleOperator:
 
         return fermion_list, antifermion_list, boson_list, swap_bd
 
+    def is_canonical_ordered(self):
+        # this method is meant to check particle operator with only one term
+        assert(len(self.op_dict) == 1)
+
+        # parse the op_str into bs, ds, and as
+        fermion_list, antifermion_list, boson_list, _ = self.split_to_string()
+        return self.is_normal_ordered(fermion_list) and self.is_normal_ordered(antifermion_list) and self.is_normal_ordered(boson_list)
 
     # inner func only operates on one particle operator instance
     # i.e. ParticleOperator("a0 b0 a2^ b0^ b0^ b1 d3 a2^ d3^")
