@@ -505,15 +505,13 @@ class ParticleOperator:
         return False
 
     def normal_order(self) -> "ParticleOperator":
-
-        if list(self.op_dict.keys())[0].strip() == "":
-            return self
-
+        """
         # Returns a new ParticleOperator object with a normal ordered hash table
         # normal ordering: b^dagger before b; d^dagger before d; a^dagger before a
         # b2 b1^ a0 b3 -> b1^ b2 b3 a0
-        # return ParticleOperator(normal_ordered_dict)
-        # ordered_op = ParticleOperator({})
+        """
+        if list(self.op_dict.keys())[0].strip() == "":
+            return self
         po_list = self.to_list()
         output_op = {}
 
@@ -534,6 +532,10 @@ class ParticleOperator:
         return ParticleOperator(output_op)
 
     def split_to_string(self):
+        """
+        this function splits a particle operator into 3 lists of different types
+        of operators (represented by string)
+        """
         fermion_list = []
         antifermion_list = []
         boson_list = []
@@ -559,9 +561,12 @@ class ParticleOperator:
         fermion_list, antifermion_list, boson_list, _ = self.split_to_string()
         return self.is_normal_ordered(fermion_list) and self.is_normal_ordered(antifermion_list) and self.is_normal_ordered(boson_list)
 
-    # inner func only operates on one particle operator instance
-    # i.e. ParticleOperator("a0 b0 a2^ b0^ b0^ b1 d3 a2^ d3^")
+    
     def _normal_order(self, coeff) -> dict:
+        """
+        # inner func only operates on one particle operator instance
+        # i.e. ParticleOperator("a0 b0 a2^ b0^ b0^ b1 d3 a2^ d3^")
+        """
         # prevent normal ordering identity/empty op
         if list(self.op_dict.keys())[0].strip() == "":
             return self
@@ -624,13 +629,23 @@ class ParticleOperator:
 
     @staticmethod
     def has_duplicates(ops):
+        """
+        used for fermions/antifermions
+        checks if there are two identical particle operators acting on the same
+        mode existing in a row (ignoring the in between ops operatoring on diff
+        modes) 
+        i.e. b0 b1 b2 b0 -> True == has duplicates -> kill the state
+             b0 b0^ b0 -> False == not has duplicates 
+        """
         freq = {}
         for op in ops:
             is_creation = op[-1] == "^"
             if op in freq:
+                # case for two creation ops in a row
                 if freq[op] == 1 and is_creation:
                     if op[:-1] in freq and freq[op[:-1]] == 0 or op[:-1] not in freq:
                         return True
+                # two annihilation ops in a row
                 elif freq[op] == 1 and not is_creation:
                     if (op + "^") in freq and freq[op + "^"] == 0 or (op + "^") not in freq:
                         return True
@@ -642,8 +657,11 @@ class ParticleOperator:
         return False
 
 
-    # ops can get from op.split()
     def is_normal_ordered(self, ops):
+        """
+        check if the ops is normal_ordered
+        expects: ops should be a list of ops in a single type
+        """
         found_non_creation = False
         for op in ops:
             # if op is creation
@@ -655,6 +673,9 @@ class ParticleOperator:
         return True
 
     def insertion_sort(self, ops, coeff) -> dict:
+        """
+        main function handles normal ordering
+        """
         # base case(s)
         if not ops or coeff == 0:
             return {}
@@ -744,13 +765,6 @@ class ParticleOperator:
             # return result_op
             return result_dict
 
-    # helper func to get the particle operator from index i to j as a single instance
-    def combine_op(self, ops, i, j):
-        result_str = ""
-        for op in range(len(ops)):
-            if op >= i and op < j:
-                result_str += list(ops[op].op_dict.keys())[0] + " "
-        return ParticleOperator(result_str[:-1])
 
     def max_mode(self):
         all_ops_as_str = " ".join(list(self.op_dict.keys()))
