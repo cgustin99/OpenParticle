@@ -695,6 +695,45 @@ class ParticleOperator:
         all_ops_as_str = " ".join(list(self.op_dict.keys()))
         return max(list(map(lambda x: int(x), re.findall(r"\d+", all_ops_as_str))))
 
+    @property
+    def max_fermionic_mode(self):
+        assert self.has_fermions
+
+        max_fermionic_mode = 0
+
+        for op_product in self.to_list():
+            for op in op_product.split():
+                if isinstance(op, FermionOperator):
+                    if op.mode > max_fermionic_mode:
+                        max_fermionic_mode = op.mode
+        return max_fermionic_mode
+
+    @property
+    def max_antifermionic_mode(self):
+        assert self.has_antifermions
+
+        max_antifermionic_mode = 0
+
+        for op_product in self.to_list():
+            for op in op_product.split():
+                if isinstance(op, AntifermionOperator):
+                    if op.mode > max_antifermionic_mode:
+                        max_antifermionic_mode = op.mode
+        return max_antifermionic_mode
+
+    @property
+    def max_bosonic_mode(self):
+        assert self.has_bosons
+
+        max_bosonic_mode = 0
+
+        for op_product in self.to_list():
+            for op in op_product.split():
+                if isinstance(op, BosonOperator):
+                    if op.mode > max_bosonic_mode:
+                        max_bosonic_mode = op.mode
+        return max_bosonic_mode
+
     def commutator(self, other: "ParticleOperator") -> "ParticleOperator":
         # [A, B] = AB - BA
         return (self * other).normal_order() - (other * self).normal_order()
