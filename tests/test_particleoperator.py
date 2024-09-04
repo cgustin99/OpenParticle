@@ -234,3 +234,30 @@ def test_parse_mix():
     ]
     for parsed_op, expected_op in zip(op.parse(), expected_ops):
         assert str(parsed_op) == str(expected_op)
+
+
+def test_random_particleoperator_generation():
+    for _ in range(1000):
+        possible_types = [
+            ["fermion"],
+            ["antifermion"],
+            ["boson"],
+            ["fermion", "antifermion"],
+            ["fermion", "boson"],
+            ["antifermion", "boson"],
+            ["fermion", "antifermion", "boson"],
+        ]
+        types = possible_types[np.random.choice(range(7))]
+        n_terms = np.random.choice(range(1, 17))
+        max_mode = np.random.choice(range(1, 9))
+        max_len_of_terms = np.random.choice(range(1, 9))
+        operator = ParticleOperator.random(
+            types,
+            n_terms,
+            max_mode=max_mode,
+            max_len_of_terms=max_len_of_terms,
+            complex_coeffs=False,
+            normal_order=True,
+        ).normal_order()
+
+        assert isinstance(operator, ParticleOperator)

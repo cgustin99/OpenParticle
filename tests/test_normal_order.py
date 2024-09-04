@@ -207,9 +207,7 @@ def test_complex_fermions_2():
 def test_complex_fermions_3():
     op = ParticleOperator("b1 b2 b2^ b1^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator(
-        {"": 1, "b1^ b1": -1, "b2^ b2": -1, "b2^ b1^ b1 b2": 1}
-    )
+    expected = ParticleOperator({"": 1, "b1^ b1": -1, "b2^ b2": -1, "b2^ b1^ b1 b2": 1})
 
     assert expected.op_dict == normal_order_op.op_dict
 
@@ -276,12 +274,7 @@ def test_complex_fermions_9():
 def test_complex_fermions_10():
     op = ParticleOperator("b1 b1^ b1 b1^ b1 b1^ b1 b1^")
     normal_order_op = op.normal_order()
-    expected = ParticleOperator(
-        {
-            "": 1,
-            "b1^ b1": -1
-        }
-    )
+    expected = ParticleOperator({"": 1, "b1^ b1": -1})
 
     assert expected.op_dict == normal_order_op.op_dict
 
