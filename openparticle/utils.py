@@ -85,7 +85,7 @@ def get_fock_basis(operator: ParticleOperator, max_bose_occ: int = 1):
 
 def generate_matrix(operator: ParticleOperator, basis: List[Fock]):
     size = (len(basis), len(basis))
-    matrix = np.zeros(size)
+    matrix = np.zeros(size, dtype=complex)
 
     for i, state_i in enumerate(basis):
         for j, state_j in enumerate(basis):
