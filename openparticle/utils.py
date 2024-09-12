@@ -88,8 +88,8 @@ def generate_matrix(operator: ParticleOperator, basis: List[Fock]):
     matrix = np.zeros(size)
 
     for i, state_i in enumerate(basis):
+        state_o = state_i.dagger() * operator
         for j, state_j in enumerate(basis):
-            matrix_element = state_i.dagger() * operator * state_j
-            matrix[i][j] = matrix_element
+            matrix[i][j] = state_o * state_j
 
     return matrix
