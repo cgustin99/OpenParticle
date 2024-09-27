@@ -29,8 +29,12 @@ class FermionField:
             (2 * L)
             / np.sqrt(4 * np.pi * np.abs(k))
             * (
-                np.heaviside(k, 0) * u(p(k)) * ParticleOperator("b" + str(k))
-                + np.heaviside(-k, 0) * v(p(-k)) * ParticleOperator("d" + str(-k) + "^")
+                np.heaviside(k, 0)
+                * u(p(k))
+                * ParticleOperator("b" + str(int(np.ceil(k))))
+                + np.heaviside(-k, 0)
+                * v(p(-k))
+                * ParticleOperator("d" + str(-int(np.ceil(k))) + "^")
             )
         )
 
@@ -40,9 +44,9 @@ class FermionField:
             * (
                 np.heaviside(k, 0)
                 * (u(k).reshape([1, -1]))
-                * ParticleOperator("b" + str(k) + "^")
+                * ParticleOperator("b" + str(int(np.ceil(k))) + "^")
                 + np.heaviside(-k, 0)
                 * (v(-k).reshape([1, -1]))
-                * ParticleOperator("d" + str(-k))
+                * ParticleOperator("d" + str(-int(np.ceil(k))))
             )
         )
