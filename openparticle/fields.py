@@ -13,8 +13,8 @@ class ScalarField:
             (2 * L)
             / np.sqrt(4 * np.pi * np.abs(k))
             * (
-                np.heaviside(k, 0) * ParticleOperator("a" + str(k))
-                + np.heaviside(-k, 0) * ParticleOperator("a" + str(-k) + "^")
+                np.heaviside(k, 0) * ParticleOperator("a" + str(k - 1))
+                + np.heaviside(-k, 0) * ParticleOperator("a" + str(-k - 1) + "^")
             )
         )
 
@@ -31,10 +31,10 @@ class FermionField:
             * (
                 np.heaviside(k, 0)
                 * u(p(k))
-                * ParticleOperator("b" + str(int(np.ceil(k))))
+                * ParticleOperator("b" + str(int(k - 1 / 2)))
                 + np.heaviside(-k, 0)
                 * v(p(-k))
-                * ParticleOperator("d" + str(-int(np.ceil(k))) + "^")
+                * ParticleOperator("d" + str(-int(k + 1 / 2)) + "^")
             )
         )
 
@@ -43,10 +43,10 @@ class FermionField:
             / np.sqrt(4 * np.pi * np.abs(k))
             * (
                 np.heaviside(k, 0)
-                * (u(k).reshape([1, -1]))
-                * ParticleOperator("b" + str(int(np.ceil(k))) + "^")
+                * (u(p(k)).reshape([1, -1]))
+                * ParticleOperator("b" + str(int(k - 1 / 2)) + "^")
                 + np.heaviside(-k, 0)
-                * (v(-k).reshape([1, -1]))
-                * ParticleOperator("d" + str(-int(np.ceil(k))))
+                * (v(p(-k)).reshape([1, -1]))
+                * ParticleOperator("d" + str(-int(k + 1 / 2)))
             )
         )
