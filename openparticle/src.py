@@ -36,9 +36,9 @@ class Fock:
         else:
             self.state_dict = {
                 (
-                    tuple(f_occ),
-                    tuple(af_occ),
-                    tuple([(n, m) for (n, m) in b_occ if m != 0]),
+                    tuple(sorted(f_occ)),
+                    tuple(sorted(af_occ)),
+                    tuple(sorted(tuple([(n, m) for (n, m) in b_occ if m != 0]))),
                 ): coeff
             }
 
@@ -149,6 +149,11 @@ class Fock:
             state_dict=dict(zip(other.state_dict.keys(), -1 * np.array(coeffs)))
         )
         return self + neg_other
+
+    @property
+    def coeff(self):
+        assert len(self.state_dict) == 1
+        return next(iter(self.state_dict.values()))
 
 
 class ConjugateFock:
