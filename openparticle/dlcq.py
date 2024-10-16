@@ -7,6 +7,7 @@ from openparticle import Fock, ParticleOperator
 gamma0 = np.array([[0, 1], [1, 0]])
 gamma1 = np.array([[0, -1], [1, 0]])
 gammap = gamma0 + gamma1
+gammam = gamma0 - gamma1
 Lambdap = 0.5 * gamma0.dot(gammap)
 
 
