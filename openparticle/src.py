@@ -144,7 +144,9 @@ class ParticleOperator:
     def to_list(self) -> List:
         particle_op_list = []
         for oper, coeff in self.op_dict.items():
-            particle_op_list.append(ParticleOperator({oper: coeff}))
+            particle_op_list.append(
+                ParticleOperator({ParticleOperator.key_to_op_string(oper): coeff})
+            )
         return particle_op_list
 
     def parse(self) -> List:
@@ -232,17 +234,13 @@ class ParticleOperator:
         dagger_dict = {}
 
         for i, coeff_i in self.op_dict.items():
-            dagger_str = ""
-            if i == " ":  # I^dagger = I
-                dagger_dict[" "] = coeff_i.conjugate()
+            if i == ():  # I^dagger = I
+                dagger_dict[()] = coeff_i.conjugate()
             else:
-                for oper in i.split(" ")[::-1]:
-                    if oper[-1] == "^":
-                        dagger_str += oper[:-1]
-                    else:
-                        dagger_str += oper + "^"
-                    dagger_str += " "
-                dagger_dict[dagger_str[:-1]] = coeff_i.conjugate()
+                key = []
+                for oper in i[::-1]:
+                    key.append((oper[0], oper[1], 1 - oper[2]))
+                dagger_dict[tuple(key)] = coeff_i.conjugate()
 
         return ParticleOperator(dagger_dict)
 
@@ -255,13 +253,12 @@ class ParticleOperator:
             product_dict = {}
             for op1, coeffs1 in list(self.op_dict.items()):
                 for op2, coeffs2 in list(other.op_dict.items()):
-                    if op1 == " " and op2 == " ":
-                        product_dict[" "] = coeffs1 * coeffs2
+                    if op1 == () and op2 == ():
+                        product_dict[()] = coeffs1 * coeffs2
                     else:
                         # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
-                        product_dict[(op1 + " " + op2).strip()] = coeffs1 * coeffs2
+                        product_dict[op1 + op2] = coeffs1 * coeffs2
             return ParticleOperator(product_dict)
-        return NotImplemented
 
     def __pow__(self, other) -> "ParticleOperator":
         if other == 0:
@@ -296,21 +293,21 @@ class ParticleOperator:
     @property
     def has_fermions(self):
         for key in self.op_dict.keys():
-            if "b" in key:
+            if "b" in ParticleOperator.key_to_op_string(key):
                 return True
         return False
 
     @property
     def has_antifermions(self):
         for key in self.op_dict.keys():
-            if "d" in key:
+            if "d" in ParticleOperator.key_to_op_string(key):
                 return True
         return False
 
     @property
     def has_bosons(self):
         for key in self.op_dict.keys():
-            if "a" in key:
+            if "a" in ParticleOperator.key_to_op_string(key):
                 return True
         return False
 
@@ -320,7 +317,7 @@ class ParticleOperator:
         # normal ordering: b^dagger before b; d^dagger before d; a^dagger before a
         # b2 b1^ a0 b3 -> b1^ b2 b3 a0
         """
-        if list(self.op_dict.keys())[0].strip() == "":
+        if list(self.op_dict.keys())[0] == ():
             return self
         po_list = self.to_list()
         output_op = {}
@@ -338,7 +335,6 @@ class ParticleOperator:
                         del output_op[key]
                 else:
                     output_op[key] = final_val
-
         return ParticleOperator(output_op)
 
     def split_to_string(self):
@@ -350,7 +346,9 @@ class ParticleOperator:
         antifermion_list = []
         boson_list = []
         swap_bd = 0
-        for op in list(self.op_dict.keys())[0].split(" "):
+        for op in ParticleOperator.key_to_op_string(list(self.op_dict.keys())[0]).split(
+            " "
+        ):
             if op[0] == "a":  # boson
                 boson_list.append(op)
             elif op[0] == "b":  # fermion
@@ -381,7 +379,7 @@ class ParticleOperator:
         # i.e. ParticleOperator("a0 b0 a2^ b0^ b0^ b1 d3 a2^ d3^")
         """
         # prevent normal ordering identity/empty op
-        if list(self.op_dict.keys())[0].strip() == "":
+        if list(self.op_dict.keys())[0] == ():
             return self.op_dict
 
         # parse the op_str into bs, ds, and as and normal ordering them separately
