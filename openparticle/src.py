@@ -700,6 +700,61 @@ class ParticleOperator:
         if self.op_dict.get("", None) is not None:
             del self.op_dict[""]
 
+    def as_state(self):
+        if self.op_dict == {}:
+            return 0
+
+        assert (
+            self.all_creation() or self.all_annihilation()
+        )  # ParticleOperator is all creation or all annihilation operators
+
+        f_occ = []
+        af_occ = []
+        b_modes = []
+        ops = next(iter(self.op_dict))
+
+        for op in ops:
+            mode = op[1]
+            if op[0] == 0:
+                f_occ.append(mode)
+            elif op[0] == 1:
+                af_occ.append(mode)
+            elif op[0] == 2:
+                b_modes.append(mode)
+
+        boson_counter = Counter(b_modes)
+        b_occ = [(mode, frequency) for mode, frequency in boson_counter.items()]
+
+        if self.all_creation():
+            return Fock(f_occ=f_occ, af_occ=af_occ, b_occ=b_occ, coeff=self.coeff)
+        elif self.all_annihilation():
+            return ConjugateFock(
+                f_occ=f_occ, af_occ=af_occ, b_occ=b_occ, coeff=self.coeff
+            )
+
+    def all_creation(self):
+        # Takes in the tuple key of one ParticleOperator term and returns True if all ops are creation
+        assert len(self.op_dict) == 1
+        tup = next(iter(self.op_dict))
+        creation = [t[-1] for t in tup]
+        return all(x == 1 for x in creation)
+
+    def all_annihilation(self):
+        # Takes in the tuple key of one ParticleOperator term and returns True if all ops are annihilation
+        # Takes in the tuple key of one ParticleOperator term and returns True if all ops are creation
+        assert len(self.op_dict) == 1
+        tup = next(iter(self.op_dict))
+        creation = [t[-1] for t in tup]
+        return all(x == 0 for x in creation)
+
+    def vme(self):
+        """
+        vme: Vacuum matrix element
+        Calculate ⟨0|operator|0⟩ by normal ordering the operator,
+          and taking the coefficient of the identity term (if no identity term, return 0)
+        """
+        return self.normal_order().op_dict.get((), 0)
+
 
 class Fock(ParticleOperator):
 
