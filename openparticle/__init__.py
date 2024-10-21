@@ -9,10 +9,7 @@ from .src import (
     OccupationOperator,
 )
 
-from .utils import (
-    generate_matrix,
-    get_fock_basis,
-)
+from .utils import generate_matrix, get_fock_basis
 from .qubit_mappings import *
 
 from .fields import ScalarField, FermionField
