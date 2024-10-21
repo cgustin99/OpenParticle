@@ -796,13 +796,79 @@ class Fock(ParticleOperator):
     def display(self):
         display(Latex("$" + self.__str__() + "$"))
 
-    def state(self):
-        return self.state_dict
+    def __rmul__(self, other):
+        if isinstance(other, ParticleOperator):
+            good_terms = ParticleOperator({})
+            new_op = other * ParticleOperator((self.state_opdict))
+
+            if new_op.normal_order().op_dict == {}:
+                return 0
+            else:
+                for term in (new_op).normal_order().to_list():
+                    if term.all_creation():
+                        good_terms += term
+                return good_terms.as_state()
 
 
 class ConjugateFock(ParticleOperator):
-    def __init__(self, f_occ, af_occ, b_occ, coeff):
-        pass
+    def __init__(self, f_occ, af_occ, b_occ, coeff: complex = 1.0):
+        self.f_occ = f_occ
+        self.af_occ = af_occ
+        self.b_occ = b_occ
+        self.state_dict = {
+            (
+                tuple(sorted(f_occ)),
+                tuple(sorted(af_occ)),
+                tuple(sorted(tuple([(n, m) for (n, m) in b_occ if m != 0]))),
+            ): coeff
+        }
+
+        f_tup = tuple([(0, i, 0) for i in f_occ[::-1]])
+        af_tup = tuple([(1, i, 0) for i in af_occ[::-1]])
+        b_tup = tuple((2, i, 0) for i, b in b_occ[::-1] for _ in range(b))
+
+        key = f_tup + af_tup + b_tup
+        self.state_opdict = {key: coeff / np.sqrt(max(len(b_tup), 1))}
+
+        super().__init__(self.state_opdict)
+
+    def __str__(self):
+        if len(self.state_dict) == 0:
+            return "0"
+        else:
+            output_str = ""
+            for state, coeff in self.state_dict.items():
+                output_str += f"{coeff} * ⟨{state}| +"
+                output_str += "\n"
+            return output_str[:-3]
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def display(self):
+        display(Latex("$" + self.__str__() + "$"))
+
+    def __mul__(self, other):
+        if isinstance(other, Fock):
+            product = ParticleOperator(self.state_opdict) * ParticleOperator(
+                other.state_opdict
+            )
+            return product.vme()
+        elif isinstance(other, ParticleOperator):
+            good_terms = ParticleOperator({})
+            new_op = (
+                ParticleOperator((self.state_opdict)) * other
+            )  # conjugate_state * op
+
+            new_op_normal_ordered = new_op.normal_order()
+            if new_op_normal_ordered.op_dict == {}:
+                return 0
+            else:
+                for term in new_op_normal_ordered.to_list():
+                    if term.all_annihilation():
+                        good_terms += term
+
+                return good_terms.as_state()
 
 
 class FermionOperator(ParticleOperator):
