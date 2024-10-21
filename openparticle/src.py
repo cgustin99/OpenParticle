@@ -771,13 +771,12 @@ class Fock(ParticleOperator):
             ): coeff
         }
 
-        b_op_str = "".join(["b" + str(i) + "^ " for i in f_occ])[:-1]
-        d_op_str = "".join(["d" + str(i) + "^ " for i in af_occ])[:-1]
-        a_op_str = "".join([" ".join(["a" + str(i[0]) + "^"] * i[1]) for i in b_occ])
+        f_tup = tuple([(0, i, 1) for i in f_occ[::-1]])
+        af_tup = tuple([(1, i, 1) for i in af_occ[::-1]])
+        b_tup = tuple((2, i, 1) for i, b in b_occ[::-1] for _ in range(b))
 
-        full_op_str = " ".join([s for s in [b_op_str, d_op_str, a_op_str] if s])
-
-        self.state_opdict = {full_op_str: coeff / np.sqrt(a_op_str.count("a"))}
+        key = f_tup + af_tup + b_tup
+        self.state_opdict = {key: coeff / np.sqrt(max(len(b_tup), 1))}
 
         super().__init__(self.state_opdict)
 
