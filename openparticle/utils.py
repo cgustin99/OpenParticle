@@ -83,13 +83,17 @@ def get_fock_basis(operator: ParticleOperator, max_bose_occ: int = 1):
     return basis
 
 
-def generate_matrix(operator: ParticleOperator, basis: List[Fock]):
+def get_matrix_element(state, conjugate_state, op):
+    # A_{ij}
+    return (conjugate_state.dagger() * op * ParticleOperator(state.op_dict)).VEV()
+
+
+def generate_matrix(op, basis):
     size = (len(basis), len(basis))
     matrix = np.zeros(size, dtype=complex)
 
     for i, state_i in enumerate(basis):
-        state_o = state_i.dagger() * operator
         for j, state_j in enumerate(basis):
-            matrix[i][j] = state_o * state_j
-
+            if j <= i:  # only calculate lower triangular elements
+                matrix[i][j] = matrix[j][i] = get_matrix_element(state_i, state_j, op)
     return matrix
