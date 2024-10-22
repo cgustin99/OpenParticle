@@ -1,6 +1,5 @@
 from .src import (
     Fock,
-    ConjugateFock,
     ParticleOperator,
     FermionOperator,
     AntifermionOperator,
