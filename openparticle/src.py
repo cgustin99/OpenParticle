@@ -719,37 +719,48 @@ class ParticleOperator:
         if self.op_dict.get("", None) is not None:
             del self.op_dict[""]
 
+    @staticmethod
+    def sort_fermi_occs(fermi_occ):
+        # bubble sort (anti)fermionic occupancies and count swaps to induce parity
+        n = len(fermi_occ)
+        swap_count = 0
+        for i in range(n):
+            for j in range(0, n - i - 1):
+                if fermi_occ[j] > fermi_occ[j + 1]:
+                    # Swap elements
+                    fermi_occ[j], fermi_occ[j + 1] = fermi_occ[j + 1], fermi_occ[j]
+                    swap_count += 1
+        return fermi_occ, swap_count
+
     def as_state(self):
-        if self.op_dict == {}:
-            return 0
-
-        assert (
-            self.all_creation() or self.all_annihilation()
-        )  # ParticleOperator is all creation or all annihilation operators
-
+        state_dict = {}
         f_occ = []
         af_occ = []
         b_modes = []
-        ops = next(iter(self.op_dict))
 
-        for op in ops:
-            mode = op[1]
-            if op[0] == 0:
-                f_occ.append(mode)
-            elif op[0] == 1:
-                af_occ.append(mode)
-            elif op[0] == 2:
-                b_modes.append(mode)
+        coeff = 1
+        for key, val in self.op_dict.items():
+            coeff *= val
+            f_occ = []
+            af_occ = []
+            b_modes = []
+            for op in key:
+                if op[0] == 0:
+                    f_occ.append(op[1])
+                elif op[0] == 1:
+                    af_occ.append(op[1])
+                elif op[0] == 2:
+                    b_modes.append(op[1])
+                boson_counter = Counter(b_modes)
+                b_occ = [(mode, frequency) for mode, frequency in boson_counter.items()]
 
-        boson_counter = Counter(b_modes)
-        b_occ = [(mode, frequency) for mode, frequency in boson_counter.items()]
+            sorted_f_occ, f_swaps = ParticleOperator.sort_fermi_occs(f_occ)
+            sorted_af_occ, af_swaps = ParticleOperator.sort_fermi_occs(af_occ)
+            current_key = (tuple(sorted_f_occ), tuple(sorted_af_occ), tuple(b_occ))
+            parity_factor = (-1) ** (f_swaps + af_swaps)
 
-        if self.all_creation():
-            return Fock(f_occ=f_occ, af_occ=af_occ, b_occ=b_occ, coeff=self.coeff)
-        elif self.all_annihilation():
-            return ConjugateFock(
-                f_occ=f_occ, af_occ=af_occ, b_occ=b_occ, coeff=self.coeff
-            )
+            state_dict[current_key] = coeff * parity_factor
+        return Fock(state_dict=state_dict)
 
     def all_creation(self):
         # Takes in the tuple key of one ParticleOperator term and returns True if all ops are creation
@@ -760,15 +771,14 @@ class ParticleOperator:
 
     def all_annihilation(self):
         # Takes in the tuple key of one ParticleOperator term and returns True if all ops are annihilation
-        # Takes in the tuple key of one ParticleOperator term and returns True if all ops are creation
         assert len(self.op_dict) == 1
         tup = next(iter(self.op_dict))
-        creation = [t[-1] for t in tup]
-        return all(x == 0 for x in creation)
+        annihilation = [t[-1] for t in tup]
+        return all(x == 0 for x in annihilation)
 
-    def vme(self):
+    def VEV(self):
         """
-        vme: Vacuum matrix element
+        VEV: Vacuum mn_bosons_in_opatrix element
         Calculate ⟨0|operator|0⟩ by normal ordering the operator,
           and taking the coefficient of the identity term (if no identity term, return 0)
         """
@@ -777,27 +787,51 @@ class ParticleOperator:
 
 class Fock(ParticleOperator):
 
-    def __init__(self, f_occ, af_occ, b_occ, coeff: complex = 1.0):
+    def __init__(
+        self,
+        f_occ: List = None,
+        af_occ: List = None,
+        b_occ: List = None,
+        state_dict: Dict[Tuple[Tuple, Tuple, Tuple], complex] = None,
+        coeff: complex = 1.0,
+    ):
+        if state_dict is not None:
+            self.state_dict = state_dict
 
-        self.f_occ = f_occ
-        self.af_occ = af_occ
-        self.b_occ = b_occ
-        self.state_dict = {
-            (
-                tuple(sorted(f_occ)),
-                tuple(sorted(af_occ)),
-                tuple(sorted(tuple([(n, m) for (n, m) in b_occ if m != 0]))),
-            ): coeff
-        }
+            op_dict = {}
+            for key, val in self.state_dict.items():
+                f_occ = list(key[0])
+                af_occ = list(key[1])
+                b_occ = list(key[2])
 
-        f_tup = tuple([(0, i, 1) for i in f_occ[::-1]])
-        af_tup = tuple([(1, i, 1) for i in af_occ[::-1]])
-        b_tup = tuple((2, i, 1) for i, b in b_occ[::-1] for _ in range(b))
+                f_tup = tuple([(0, i, 1) for i in f_occ])
+                af_tup = tuple([(1, i, 1) for i in af_occ])
+                b_tup = tuple((2, i, 1) for i, b in b_occ for _ in range(b))
 
-        key = f_tup + af_tup + b_tup
-        self.state_opdict = {key: coeff / np.sqrt(max(len(b_tup), 1))}
+                current_key = f_tup + af_tup + b_tup
+                op_dict[current_key] = val
 
-        super().__init__(self.state_opdict)
+            self.state_opdict = op_dict
+            super().__init__(op_dict, coeff=coeff)
+
+        else:
+            self.state_dict = {
+                (
+                    tuple(sorted(f_occ)),
+                    tuple(sorted(af_occ)),
+                    tuple(sorted(tuple([(n, m) for (n, m) in b_occ if m != 0]))),
+                ): coeff
+            }
+            f_tup = tuple([(0, i, 1) for i in f_occ])
+            af_tup = tuple([(1, i, 1) for i in af_occ])
+            b_tup = tuple((2, i, 1) for i, b in b_occ for _ in range(b))
+
+            key = f_tup + af_tup + b_tup
+            self.state_opdict = {
+                key: coeff / np.sqrt(max(math.factorial(len(b_tup)), 1))
+            }
+
+            super().__init__(self.state_opdict, coeff=coeff)
 
     def __str__(self):
         if len(self.state_dict) == 0:
