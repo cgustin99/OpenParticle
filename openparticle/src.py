@@ -849,79 +849,50 @@ class Fock(ParticleOperator):
     def display(self):
         display(Latex("$" + self.__str__() + "$"))
 
+    @property
+    def coeff(self):
+        return next(iter(self.state_dict.values()))
+
     def __rmul__(self, other):
         if isinstance(other, ParticleOperator):
             good_terms = ParticleOperator({})
+
+            n_bosons_in_op = other.n_bosons
+
             new_op = other * ParticleOperator((self.state_opdict))
 
             if new_op.normal_order().op_dict == {}:
                 return 0
             else:
-                for term in (new_op).normal_order().to_list():
-                    if term.all_creation():
-                        good_terms += term
+                for term in new_op.to_list():
+                    for no_term in term.normal_order().to_list():
+                        if no_term.all_creation():
+                            new_dict = {
+                                next(iter(no_term.op_dict)): 1.0
+                                * max(np.sqrt(math.factorial(n_bosons_in_op)), 0)
+                            }
+                            good_terms += ParticleOperator(new_dict)
                 return good_terms.as_state()
-
-
-class ConjugateFock(ParticleOperator):
-    def __init__(self, f_occ, af_occ, b_occ, coeff: complex = 1.0):
-        self.f_occ = f_occ
-        self.af_occ = af_occ
-        self.b_occ = b_occ
-        self.state_dict = {
-            (
-                tuple(sorted(f_occ)),
-                tuple(sorted(af_occ)),
-                tuple(sorted(tuple([(n, m) for (n, m) in b_occ if m != 0]))),
-            ): coeff
-        }
-
-        f_tup = tuple([(0, i, 0) for i in f_occ[::-1]])
-        af_tup = tuple([(1, i, 0) for i in af_occ[::-1]])
-        b_tup = tuple((2, i, 0) for i, b in b_occ[::-1] for _ in range(b))
-
-        key = f_tup + af_tup + b_tup
-        self.state_opdict = {key: coeff / np.sqrt(max(len(b_tup), 1))}
-
-        super().__init__(self.state_opdict)
-
-    def __str__(self):
-        if len(self.state_dict) == 0:
-            return "0"
-        else:
-            output_str = ""
-            for state, coeff in self.state_dict.items():
-                output_str += f"{coeff} * ⟨{state}| +"
-                output_str += "\n"
-            return output_str[:-3]
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-    def display(self):
-        display(Latex("$" + self.__str__() + "$"))
-
-    def __mul__(self, other):
-        if isinstance(other, Fock):
-            product = ParticleOperator(self.state_opdict) * ParticleOperator(
-                other.state_opdict
-            )
-            return product.vme()
-        elif isinstance(other, ParticleOperator):
-            good_terms = ParticleOperator({})
-            new_op = (
-                ParticleOperator((self.state_opdict)) * other
-            )  # conjugate_state * op
-
-            new_op_normal_ordered = new_op.normal_order()
-            if new_op_normal_ordered.op_dict == {}:
+        elif isinstance(other, (float, int, complex)):
+            if other == 0:
                 return 0
-            else:
-                for term in new_op_normal_ordered.to_list():
-                    if term.all_annihilation():
-                        good_terms += term
+            new_dict = {key: other for key in self.op_dict.keys()}
+            return ParticleOperator(new_dict).as_state()
 
-                return good_terms.as_state()
+    def __add__(self, other):
+        if len(self.state_dict) < len(other.state_dict):
+            new_dict = deepcopy(other.state_dict)
+            for state, coeff in self.state_dict.items():
+                new_dict[state] = coeff + new_dict.get(state, 0)
+        else:
+            new_dict = deepcopy(self.state_dict)
+            for state, coeff in other.state_dict.items():
+                new_dict[state] = coeff + new_dict.get(state, 0)
+        out_state = Fock(state_dict=new_dict)
+        if len(out_state.state_dict) == 0:
+            return 0
+        else:
+            return out_state
 
 
 class FermionOperator(ParticleOperator):
