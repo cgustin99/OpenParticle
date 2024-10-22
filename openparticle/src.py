@@ -6,6 +6,7 @@ from collections import defaultdict, Counter
 import re
 from copy import deepcopy
 from itertools import product
+import math
 
 
 class ParticleOperator:
@@ -100,16 +101,26 @@ class ParticleOperator:
         """
         remove terms below threshold
         """
-        # TODO
-        return self
-        # if len(self.op_dict) == 0:
-        #     return self
-        # else:
-        #     keys, coeffs = zip(*self.op_dict.items())
-        #     mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
-        #     print(keys, coeffs, mask)
-        #     new_op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
-        #     return ParticleOperator(new_op_dict)
+        if len(self.op_dict) == 0:
+            return self
+        else:
+            keys, coeffs = zip(*self.op_dict.items())
+            mask = np.where(abs(np.array(coeffs)) > 1e-15)[0]
+
+            new_keys = np.array(keys, dtype=object)
+            if len(new_keys.shape) == 1:
+                new_op_dict = dict(
+                    zip(
+                        np.take(np.array(keys, dtype=object), mask),
+                        np.take(coeffs, mask),
+                    )
+                )
+            else:
+                ## odd edge case where only have single terms
+                new_op_dict = {}
+                for idx in mask:
+                    new_op_dict[keys[idx]] = coeffs[idx]
+            return ParticleOperator(new_op_dict)
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -310,6 +321,14 @@ class ParticleOperator:
             if "a" in ParticleOperator.key_to_op_string(key):
                 return True
         return False
+
+    @property
+    def n_bosons(self):
+        for key in self.op_dict.keys():
+            if "a" in ParticleOperator.key_to_op_string(key):
+                return ParticleOperator.key_to_op_string(key).count("a")
+            else:
+                return 0
 
     def normal_order(self) -> "ParticleOperator":
         """
