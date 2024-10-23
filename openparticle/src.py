@@ -720,7 +720,7 @@ class ParticleOperator:
             del self.op_dict[""]
 
     @staticmethod
-    def sort_fermi_occs(fermi_occ):
+    def fermionic_parity(fermi_occ):
         # bubble sort (anti)fermionic occupancies and count swaps to induce parity
         n = len(fermi_occ)
         swap_count = 0
@@ -730,36 +730,42 @@ class ParticleOperator:
                     # Swap elements
                     fermi_occ[j], fermi_occ[j + 1] = fermi_occ[j + 1], fermi_occ[j]
                     swap_count += 1
-        return fermi_occ, swap_count
+        return fermi_occ, (-1) ** swap_count
 
-    def as_state(self):
+    @staticmethod
+    def partition_term(term_key):
+        # Splits a ParticleOperator by particle type
+        grouped_ops = defaultdict(list)
+        for t in term_key:
+            grouped_ops[t[0]].append(t[1])  # append mode acted on
+        return dict(grouped_ops)
+
+    def act_on_vacuum(self):
         state_dict = {}
-        f_occ = []
-        af_occ = []
-        b_modes = []
 
-        coeff = 1
         for key, val in self.op_dict.items():
-            coeff *= val
-            f_occ = []
-            af_occ = []
-            b_modes = []
-            for op in key:
-                if op[0] == 0:
-                    f_occ.append(op[1])
-                elif op[0] == 1:
-                    af_occ.append(op[1])
-                elif op[0] == 2:
-                    b_modes.append(op[1])
-                boson_counter = Counter(b_modes)
-                b_occ = [(mode, frequency) for mode, frequency in boson_counter.items()]
+            split_key = ParticleOperator.partition_term(key)
+            if 0 in split_key:
+                f_occ, f_parity = ParticleOperator.fermionic_parity(split_key[0])
+            else:
+                f_occ = []
+                f_parity = 1
+            if 1 in split_key:
+                af_occ, af_parity = ParticleOperator.fermionic_parity(split_key[1])
+            else:
+                af_occ = []
+                af_parity = 1
+            if 2 in split_key:
+                b_occ = [(num, count) for num, count in Counter(split_key[2]).items()]
+                b_coeff = len(split_key[2])
+            else:
+                b_occ = []
+                b_coeff = 1
 
-            sorted_f_occ, f_swaps = ParticleOperator.sort_fermi_occs(f_occ)
-            sorted_af_occ, af_swaps = ParticleOperator.sort_fermi_occs(af_occ)
-            current_key = (tuple(sorted_f_occ), tuple(sorted_af_occ), tuple(b_occ))
-            parity_factor = (-1) ** (f_swaps + af_swaps)
+            coeff = val * f_parity * af_parity * np.sqrt(math.factorial(b_coeff))
+            state_dict_key = (tuple(f_occ), tuple(af_occ), tuple(b_occ))
+            state_dict[state_dict_key] = coeff + state_dict.get(state_dict_key, 0)
 
-            state_dict[current_key] = coeff * parity_factor
         return Fock(state_dict=state_dict)
 
     def all_creation(self):
@@ -855,29 +861,19 @@ class Fock(ParticleOperator):
 
     def __rmul__(self, other):
         if isinstance(other, ParticleOperator):
-            good_terms = ParticleOperator({})
+            output = ParticleOperator({})
+            new_op = other * ParticleOperator(self.op_dict)
 
-            n_bosons_in_op = other.n_bosons
+            for term in new_op.normal_order().to_list():
+                if term.all_creation():
+                    output += term
+            return output.act_on_vacuum()
 
-            new_op = other * ParticleOperator((self.state_opdict))
-
-            if new_op.normal_order().op_dict == {}:
-                return 0
-            else:
-                for term in new_op.to_list():
-                    for no_term in term.normal_order().to_list():
-                        if no_term.all_creation():
-                            new_dict = {
-                                next(iter(no_term.op_dict)): 1.0
-                                * max(np.sqrt(math.factorial(n_bosons_in_op)), 0)
-                            }
-                            good_terms += ParticleOperator(new_dict)
-                return good_terms.as_state()
         elif isinstance(other, (float, int, complex)):
             if other == 0:
                 return 0
-            new_dict = {key: other for key in self.op_dict.keys()}
-            return ParticleOperator(new_dict).as_state()
+            new_dict = {key: other * val for key, val in self.state_dict.items()}
+            return Fock(state_dict=new_dict)
 
     def __add__(self, other):
         if len(self.state_dict) < len(other.state_dict):
