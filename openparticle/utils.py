@@ -92,8 +92,19 @@ def generate_matrix(op, basis):
     size = (len(basis), len(basis))
     matrix = np.zeros(size, dtype=complex)
 
-    for i, state_i in enumerate(basis):
-        for j, state_j in enumerate(basis):
+    for j, state_j in enumerate(basis):
+        rhs = op * state_j
+        for i, state_i in enumerate(basis):
             if j <= i:  # only calculate lower triangular elements
-                matrix[i][j] = matrix[j][i] = get_matrix_element(state_i, state_j, op)
+                val = (state_i.dagger() * ParticleOperator(rhs.op_dict)).VEV()
+                matrix[i][j] = matrix[j][i] = val
     return matrix
+
+
+def remove_symmetry_terms(operator, proper_length: int):
+    cleaned_up_op = ParticleOperator({})
+    for terms in operator.to_list():
+        if len(next(iter(terms.op_dict))) == proper_length:
+            cleaned_up_op += terms
+
+    return cleaned_up_op

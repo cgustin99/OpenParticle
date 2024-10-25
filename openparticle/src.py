@@ -714,10 +714,8 @@ class ParticleOperator:
             return ParticleOperator(random_op_dict)
 
     def remove_identity(self):
-        if self.op_dict.get(" ", None) is not None:
-            del self.op_dict[" "]
-        if self.op_dict.get("", None) is not None:
-            del self.op_dict[""]
+        if () in self.op_dict:
+            del self.op_dict[()]
 
     @staticmethod
     def fermionic_parity(fermi_occ):

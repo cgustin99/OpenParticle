@@ -2,6 +2,7 @@ import numpy as np
 from openparticle.fields import ScalarField, FermionField
 from openparticle.dlcq import *
 from openparticle import ParticleOperator
+from openparticle.utils import remove_symmetry_terms
 
 
 # Non-interacting Hamiltonians
@@ -62,19 +63,16 @@ def instantaneous_yukawa(Lambda, g=1, L=1):
             for k3 in [i for i in range(-Lambda, Lambda + 1) if i != 0]:
                 for k4 in np.arange(-Lambda + 1 / 2, Lambda + 1 / 2, 1):
                     if k1 == k2 + k3 + k4:
-                        four_point += (
-                            1
-                            / (p(k3) + p(k4))
-                            * (
-                                (FermionField(k1).psi_dagger * ScalarField(k2).phi).dot(
-                                    Lambdap.dot(
-                                        ScalarField(k3).phi * FermionField(k4).psi
-                                    )
-                                )
-                            )
-                        )[0][0].normal_order()
-    four_point.remove_identity()
+                        left = FermionField(k1).psi_dagger * ScalarField(k2).phi
+                        right = FermionField(k4).psi * ScalarField(k3).phi
+                        op = 1 / (p(k3) + p(k4)) * (left.dot(Lambdap.dot(right))[0][0])
+                        if len(op.op_dict) != 0:
+                            four_point += op.normal_order()
 
+    four_point.remove_identity()
+    four_point = remove_symmetry_terms(four_point, 4)
+
+    # return g**2 / (2 * L) ** 3 * four_point
     return 4 * np.pi * g**2 / (2 * L) ** 4 * four_point
 
 
