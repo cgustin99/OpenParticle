@@ -141,7 +141,9 @@ class ParticleOperator:
     def split(self) -> List:
         split_list = []
         if len(self.op_dict) == 1:
-            for oper in list(self.op_dict.keys())[0].split(" "):
+            for oper in ParticleOperator.key_to_op_string(
+                list(self.op_dict.keys())[0]
+            ).split(" "):
                 if oper[0] == "a":  # boson
                     split_list.append(BosonOperator(oper[1:]))
                 elif oper[0] == "b":  # fermion

@@ -253,6 +253,13 @@ def test_parse_mix():
         assert str(parsed_op) == str(expected_op)
 
 
+def test_split():
+    op = ParticleOperator("a0^ a0")
+    split_op = op.split()
+    assert split_op[0].op_dict == BosonOperator("0^").op_dict
+    assert split_op[1].op_dict == BosonOperator("0").op_dict
+
+
 # def test_random_particleoperator_generation():
 #     for _ in range(1000):
 #         possible_types = [
