@@ -1,6 +1,5 @@
 from .src import (
     Fock,
-    ConjugateFock,
     ParticleOperator,
     FermionOperator,
     AntifermionOperator,
@@ -9,10 +8,7 @@ from .src import (
     OccupationOperator,
 )
 
-from .utils import (
-    generate_matrix,
-    get_fock_basis,
-)
+from .utils import generate_matrix, get_fock_basis, remove_symmetry_terms
 from .qubit_mappings import *
 
 from .fields import ScalarField, FermionField

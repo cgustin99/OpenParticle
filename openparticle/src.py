@@ -2,278 +2,81 @@ import numpy as np
 from sympy import *
 from typing import List, Union, Optional, Dict, Tuple, Literal
 from IPython.display import display, Latex
-from collections import defaultdict
+from collections import defaultdict, Counter
 import re
 from copy import deepcopy
 from itertools import product
-
-
-class Fock:
-    """
-    Defines a Fock state (ket) of the form |f, \bar{f}, b⟩
-
-    Parameters:
-    ferm_occupancy, antiferm_occupancy, bos_occupancy: List
-    e.g. a hadron with a fermion in mode 2, an antifermion in mode 1 and 2 bosons
-    in mode 1 is
-    ferm_occupancy = [2]
-    antiferm_occupancy = [1]
-    bos_occupancy = [(1, 2)]
-
-    """
-
-    def __init__(
-        self,
-        f_occ: List = None,
-        af_occ: List = None,
-        b_occ: List = None,
-        state_dict: Dict[Tuple[Tuple, Tuple, Tuple], complex] = None,
-        coeff: complex = 1.0,
-    ):
-        if state_dict is not None:
-            self.state_dict = state_dict
-
-        else:
-            self.state_dict = {
-                (
-                    tuple(sorted(f_occ)),
-                    tuple(sorted(af_occ)),
-                    tuple(sorted(tuple([(n, m) for (n, m) in b_occ if m != 0]))),
-                ): coeff
-            }
-
-    def __str__(self):
-        if len(self.state_dict) == 0:
-            return "0"
-        else:
-            output_str = ""
-            for state, coeff in self.state_dict.items():
-                output_str += f"{coeff} * |{state}⟩ +"
-                output_str += "\n"
-            return output_str[:-3]
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-    def display(self):
-        display(Latex("$" + self.__str__() + "$"))
-
-    def to_list(self) -> List:
-        state_list = []
-        for state, coeff in self.state_dict.items():
-            state_list.append(Fock(state_dict={state: coeff}))
-        return state_list
-
-    def __rmul__(self, other):
-
-        if isinstance(other, (float, int, complex)):
-            coeffs = np.array(list(self.state_dict.values()))
-            return Fock(state_dict=dict(zip(self.state_dict.keys(), other * coeffs)))
-
-        elif isinstance(other, Fock):
-            raise Exception("Cannot multiply a ket to the left of a ket")
-
-        elif isinstance(other, ParticleOperator):
-            output_state_dict = {}
-            for op in other.to_list():
-                op_coeff = next(iter(op.op_dict.values()))
-                for state in self.to_list():
-                    state_coeff = next(iter(state.state_dict.values()))
-                    split_coeff = 1
-                    if next(iter(op.op_dict)) == " ":  # Identity * |state> = |state>
-                        output_state_dict[next(iter(state.state_dict))] = (
-                            op_coeff * state_coeff
-                        ) + output_state_dict.get(next(iter(state.state_dict)), 0)
-                    else:
-                        for split_op in op.split()[
-                            ::-1
-                        ]:  # AB|f> = A(B|f>) i.e. B comes first
-                            # if (
-                            #     next(iter(op.op_dict)) == " "
-                            # ):  # Identity * |state> = |state>
-                            #     state, new_coeff = state, 1
-                            # else:
-                            state, new_coeff = split_op._operate_on_state(state)
-                            split_coeff *= (
-                                new_coeff  # Update coeff for every op in product
-                            )
-                        output_state_dict[next(iter(state.state_dict))] = (
-                            split_coeff * op_coeff * state_coeff
-                        ) + output_state_dict.get(next(iter(state.state_dict)), 0)
-            return Fock(state_dict=output_state_dict)._cleanup()
-
-    def __add__(self, other: "Fock") -> "Fock":
-        # (TODO: could uses sets to find common and different keys and loop only over unique terms)
-        # loop over smaller dict
-        if len(self.state_dict) < len(other.state_dict):
-            new_dict = deepcopy(other.state_dict)
-            for state, coeff in self.state_dict.items():
-                new_dict[state] = coeff + new_dict.get(state, 0)
-        else:
-            new_dict = deepcopy(self.state_dict)
-            for state, coeff in other.state_dict.items():
-                new_dict[state] = coeff + new_dict.get(state, 0)
-        out_state = Fock(state_dict=new_dict)._cleanup()
-        if len(out_state.state_dict) == 0:
-            return 0
-        else:
-            return out_state
-
-    def _cleanup(self, zero_threshold=1e-15) -> "Fock":
-        """
-        remove terms below threshold
-        """
-        if len(self.state_dict) == 0:
-            return self
-        else:
-            # keys, coeffs = zip(*self.state_dict.items())
-            # mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
-            # new_state_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
-            # return Fock(state_dict=new_state_dict)
-
-            ## SLOWER than above, but nested tuples causes problems in numpy
-            ## TODO: speed this up in numba // use numpy mask but do NOT use to mask keys... instead loop over mask as below
-            new_state_dict = dict()
-            for op, coeff in self.state_dict.items():
-                if abs(coeff) > zero_threshold:
-                    new_state_dict[op] = coeff
-
-            return Fock(state_dict=new_state_dict)
-
-    def dagger(self):
-        return ConjugateFock(state_dict=self.state_dict)
-
-    def __sub__(self, other: "Fock") -> "Fock":
-        coeffs = list(other.state_dict.values())
-        neg_other = Fock(
-            state_dict=dict(zip(other.state_dict.keys(), -1 * np.array(coeffs)))
-        )
-        return self + neg_other
-
-    @property
-    def coeff(self):
-        assert len(self.state_dict) == 1
-        return next(iter(self.state_dict.values()))
-
-
-class ConjugateFock:
-    """
-    Defines a Conjugate Fock (bra) state of the form ⟨f, \bar{f}, b|
-
-    Parameters:
-    ferm_occupancy, antiferm_occupancy, bos_occupancy: List
-    e.g. a hadron with a fermion in mode 2, an antifermion in mode 1 and 2 bosons
-    in mode 1 is
-    ferm_occupancy = [2]
-    antiferm_occupancy = [1]
-    bos_occupancy = [(1, 2)]
-
-    """
-
-    def __init__(
-        self,
-        f_occ: List = None,
-        af_occ: List = None,
-        b_occ: List = None,
-        state_dict: Dict[Tuple[Tuple, Tuple, Tuple], complex] = None,
-        coeff: complex = 1.0,
-        perform_cleanup=True,
-    ):
-        if f_occ is not None and af_occ is not None and b_occ is not None:
-            self.state_dict = {
-                (
-                    tuple(f_occ),
-                    tuple(af_occ),
-                    tuple([(n, m) for (n, m) in b_occ if m != 0]),
-                ): coeff
-            }
-
-        elif state_dict is not None:
-            self.state_dict = state_dict
-
-    def __str__(self):
-        if len(self.state_dict) == 0:
-            return "0"
-        else:
-            output_str = ""
-            for state, coeff in self.state_dict.items():
-                output_str += f"{coeff} * ⟨{state}| +"
-                output_str += "\n"
-            return output_str[:-3]
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-    def display(self):
-        display(Latex("$" + self.__str__() + "$"))
-
-    def __rmul__(self, other):
-        if isinstance(other, (float, int, complex)):
-            coeffs = np.array(list(self.state_dict.values()))
-            return ConjugateFock(
-                state_dict=dict(zip(self.state_dict.keys(), other * coeffs))
-            )
-
-    def __add__(self, other: "ConjugateFock") -> "ConjugateFock":
-        # (TODO: could uses sets to find common and different keys and loop only over unique terms)
-        # loop over smaller dict
-        if len(self.state_dict) < len(other.state_dict):
-            new_dict = deepcopy(other.state_dict)
-            for state, coeff in self.state_dict.items():
-                new_dict[state] = coeff + new_dict.get(state, 0)
-        else:
-            new_dict = deepcopy(self.state_dict)
-            for state, coeff in other.state_dict.items():
-                new_dict[state] = coeff + new_dict.get(state, 0)
-
-        return ConjugateFock(state_dict=new_dict, perform_cleanup=True)
-
-    def dagger(self):
-        return Fock(state_dict=self.state_dict)
-
-    def inner_product(self, other: "Fock") -> complex:
-        if isinstance(other, Fock):
-            inner_product = 0
-            for state1, coeff1 in self.state_dict.items():
-                for state2, coeff2 in other.state_dict.items():
-                    if state1 == state2:
-                        inner_product += 1.0 * coeff1 * coeff2
-            return inner_product
-
-    def __mul__(self, other):
-        if isinstance(other, Fock):
-            return self.inner_product(other)
-        elif isinstance(other, ParticleOperator):
-            out = other.dagger() * self.dagger()
-            if isinstance(out, (int, float, complex)):
-                return 0
-            else:
-                return out.dagger()  # (<f|A)^\dagger = (A^\dagger * |f>)^\dagger
-
-    def __sub__(self, other: "ConjugateFock") -> "ConjugateFock":
-        coeffs = list(other.state_dict.values())
-        neg_other = ConjugateFock(
-            state_dict=dict(zip(other.state_dict.keys(), -1 * np.array(coeffs)))
-        )
-        return self + neg_other
+import math
 
 
 class ParticleOperator:
 
-    def __init__(self, op_dict: Union[Dict[str, complex], str] = dict()):
+    def __init__(
+        self, operator: Union[Dict[str, complex], str] = dict(), coeff: complex = 1.0
+    ):
 
-        if isinstance(op_dict, str):
-            self.op_dict = {op_dict: 1}
-        elif isinstance(op_dict, dict):
-            self.op_dict = op_dict
+        if isinstance(operator, str):
+            key, val = ParticleOperator.op_string_to_key(operator, coeff)
+            self.op_dict = {key: val}
+        elif isinstance(operator, dict):
+            if operator == {}:
+                self.op_dict = {}
+            else:
+                # iterate over terms in dictionary
+                self.op_dict = {}
+                for i, j in operator.items():
+                    if isinstance(i, tuple):
+                        self.op_dict[i] = j
+                    elif isinstance(i, str):
+                        key, val = ParticleOperator.op_string_to_key(i, j)
+                        self.op_dict[key] = val
         else:
             raise ValueError("input must be dictionary or op string")
+
+    @staticmethod
+    def op_string_to_key(op_str, coeff: complex = 1.0):
+        key = []
+
+        for op in op_str.split():
+            if op[-1] == "^":
+                create_or_annihilate = 1
+                mode = op[1:-1]
+            else:
+                create_or_annihilate = 0
+                mode = op[1:]
+            if op[0] == "b":
+                particle_type = 0
+            elif op[0] == "d":
+                particle_type = 1
+            elif op[0] == "a":
+                particle_type = 2
+            key.append((particle_type, int(mode), create_or_annihilate))
+
+        return tuple(key), coeff
+
+    @staticmethod
+    def key_to_op_string(key):
+        op_str = ""
+        for op in key:
+            if op[0] == 0:
+                op_str += "b"
+            elif op[0] == 1:
+                op_str += "d"
+            elif op[0] == 2:
+                op_str += "a"
+
+            if op[2] == 1:
+                op_str += str(op[1]) + "^ "
+            elif op[2] == 0:
+                op_str += str(op[1]) + " "
+        return op_str[:-1]
 
     def __add__(self, other: "ParticleOperator") -> "ParticleOperator":
 
         # (TODO: could uses sets to find common and different keys and loop only over unique terms)
         # loop over smaller dict
         if len(self.op_dict) < len(other.op_dict):
+
             new_dict = deepcopy(other.op_dict)
             for op_str, coeff in self.op_dict.items():
                 new_dict[op_str] = coeff + new_dict.get(op_str, 0)
@@ -290,7 +93,7 @@ class ParticleOperator:
         else:
             output_str = ""
             for op, coeff in self.op_dict.items():
-                output_str += f"{coeff} * {op}"
+                output_str += f"{coeff} * {ParticleOperator.key_to_op_string(op)}"
                 output_str += "\n"
             return output_str
 
@@ -302,8 +105,21 @@ class ParticleOperator:
             return self
         else:
             keys, coeffs = zip(*self.op_dict.items())
-            mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
-            new_op_dict = dict(zip(np.take(keys, mask), np.take(coeffs, mask)))
+            mask = np.where(abs(np.array(coeffs)) > 1e-15)[0]
+
+            new_keys = np.array(keys, dtype=object)
+            if len(new_keys.shape) == 1:
+                new_op_dict = dict(
+                    zip(
+                        np.take(np.array(keys, dtype=object), mask),
+                        np.take(coeffs, mask),
+                    )
+                )
+            else:
+                ## odd edge case where only have single terms
+                new_op_dict = {}
+                for idx in mask:
+                    new_op_dict[keys[idx]] = coeffs[idx]
             return ParticleOperator(new_op_dict)
 
     def __repr__(self) -> str:
@@ -339,7 +155,9 @@ class ParticleOperator:
     def to_list(self) -> List:
         particle_op_list = []
         for oper, coeff in self.op_dict.items():
-            particle_op_list.append(ParticleOperator({oper: coeff}))
+            particle_op_list.append(
+                ParticleOperator({ParticleOperator.key_to_op_string(oper): coeff})
+            )
         return particle_op_list
 
     def parse(self) -> List:
@@ -427,17 +245,13 @@ class ParticleOperator:
         dagger_dict = {}
 
         for i, coeff_i in self.op_dict.items():
-            dagger_str = ""
-            if i == " ":  # I^dagger = I
-                dagger_dict[" "] = coeff_i.conjugate()
+            if i == ():  # I^dagger = I
+                dagger_dict[()] = coeff_i.conjugate()
             else:
-                for oper in i.split(" ")[::-1]:
-                    if oper[-1] == "^":
-                        dagger_str += oper[:-1]
-                    else:
-                        dagger_str += oper + "^"
-                    dagger_str += " "
-                dagger_dict[dagger_str[:-1]] = coeff_i.conjugate()
+                key = []
+                for oper in i[::-1]:
+                    key.append((oper[0], oper[1], 1 - oper[2]))
+                dagger_dict[tuple(key)] = coeff_i.conjugate()
 
         return ParticleOperator(dagger_dict)
 
@@ -450,13 +264,12 @@ class ParticleOperator:
             product_dict = {}
             for op1, coeffs1 in list(self.op_dict.items()):
                 for op2, coeffs2 in list(other.op_dict.items()):
-                    if op1 == " " and op2 == " ":
-                        product_dict[" "] = coeffs1 * coeffs2
+                    if op1 == () and op2 == ():
+                        product_dict[()] = coeffs1 * coeffs2
                     else:
                         # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
-                        product_dict[(op1 + " " + op2).strip()] = coeffs1 * coeffs2
+                        product_dict[op1 + op2] = coeffs1 * coeffs2
             return ParticleOperator(product_dict)
-        return NotImplemented
 
     def __pow__(self, other) -> "ParticleOperator":
         if other == 0:
@@ -491,23 +304,31 @@ class ParticleOperator:
     @property
     def has_fermions(self):
         for key in self.op_dict.keys():
-            if "b" in key:
+            if "b" in ParticleOperator.key_to_op_string(key):
                 return True
         return False
 
     @property
     def has_antifermions(self):
         for key in self.op_dict.keys():
-            if "d" in key:
+            if "d" in ParticleOperator.key_to_op_string(key):
                 return True
         return False
 
     @property
     def has_bosons(self):
         for key in self.op_dict.keys():
-            if "a" in key:
+            if "a" in ParticleOperator.key_to_op_string(key):
                 return True
         return False
+
+    @property
+    def n_bosons(self):
+        for key in self.op_dict.keys():
+            if "a" in ParticleOperator.key_to_op_string(key):
+                return ParticleOperator.key_to_op_string(key).count("a")
+            else:
+                return 0
 
     def normal_order(self) -> "ParticleOperator":
         """
@@ -515,7 +336,7 @@ class ParticleOperator:
         # normal ordering: b^dagger before b; d^dagger before d; a^dagger before a
         # b2 b1^ a0 b3 -> b1^ b2 b3 a0
         """
-        if list(self.op_dict.keys())[0].strip() == "":
+        if list(self.op_dict.keys())[0] == ():
             return self
         po_list = self.to_list()
         output_op = {}
@@ -533,7 +354,6 @@ class ParticleOperator:
                         del output_op[key]
                 else:
                     output_op[key] = final_val
-
         return ParticleOperator(output_op)
 
     def split_to_string(self):
@@ -545,7 +365,9 @@ class ParticleOperator:
         antifermion_list = []
         boson_list = []
         swap_bd = 0
-        for op in list(self.op_dict.keys())[0].split(" "):
+        for op in ParticleOperator.key_to_op_string(list(self.op_dict.keys())[0]).split(
+            " "
+        ):
             if op[0] == "a":  # boson
                 boson_list.append(op)
             elif op[0] == "b":  # fermion
@@ -576,7 +398,7 @@ class ParticleOperator:
         # i.e. ParticleOperator("a0 b0 a2^ b0^ b0^ b1 d3 a2^ d3^")
         """
         # prevent normal ordering identity/empty op
-        if list(self.op_dict.keys())[0].strip() == "":
+        if list(self.op_dict.keys())[0] == ():
             return self.op_dict
 
         # parse the op_str into bs, ds, and as and normal ordering them separately
@@ -892,10 +714,179 @@ class ParticleOperator:
             return ParticleOperator(random_op_dict)
 
     def remove_identity(self):
-        if self.op_dict.get(" ", None) is not None:
-            del self.op_dict[" "]
-        if self.op_dict.get("", None) is not None:
-            del self.op_dict[""]
+        if () in self.op_dict:
+            del self.op_dict[()]
+
+    @staticmethod
+    def fermionic_parity(fermi_occ):
+        # bubble sort (anti)fermionic occupancies and count swaps to induce parity
+        n = len(fermi_occ)
+        swap_count = 0
+        for i in range(n):
+            for j in range(0, n - i - 1):
+                if fermi_occ[j] > fermi_occ[j + 1]:
+                    # Swap elements
+                    fermi_occ[j], fermi_occ[j + 1] = fermi_occ[j + 1], fermi_occ[j]
+                    swap_count += 1
+        return fermi_occ, (-1) ** swap_count
+
+    @staticmethod
+    def partition_term(term_key):
+        # Splits a ParticleOperator by particle type
+        grouped_ops = defaultdict(list)
+        for t in term_key:
+            grouped_ops[t[0]].append(t[1])  # append mode acted on
+        return dict(grouped_ops)
+
+    def act_on_vacuum(self):
+        state_dict = {}
+
+        for key, val in self.op_dict.items():
+            split_key = ParticleOperator.partition_term(key)
+            if 0 in split_key:
+                f_occ, f_parity = ParticleOperator.fermionic_parity(split_key[0])
+            else:
+                f_occ = []
+                f_parity = 1
+            if 1 in split_key:
+                af_occ, af_parity = ParticleOperator.fermionic_parity(split_key[1])
+            else:
+                af_occ = []
+                af_parity = 1
+            if 2 in split_key:
+                b_occ = [(num, count) for num, count in Counter(split_key[2]).items()]
+                b_coeff = len(split_key[2])
+            else:
+                b_occ = []
+                b_coeff = 1
+
+            coeff = val * f_parity * af_parity * np.sqrt(math.factorial(b_coeff))
+            state_dict_key = (tuple(f_occ), tuple(af_occ), tuple(b_occ))
+            state_dict[state_dict_key] = coeff + state_dict.get(state_dict_key, 0)
+
+        return Fock(state_dict=state_dict)
+
+    def all_creation(self):
+        # Takes in the tuple key of one ParticleOperator term and returns True if all ops are creation
+        assert len(self.op_dict) == 1
+        tup = next(iter(self.op_dict))
+        creation = [t[-1] for t in tup]
+        return all(x == 1 for x in creation)
+
+    def all_annihilation(self):
+        # Takes in the tuple key of one ParticleOperator term and returns True if all ops are annihilation
+        assert len(self.op_dict) == 1
+        tup = next(iter(self.op_dict))
+        annihilation = [t[-1] for t in tup]
+        return all(x == 0 for x in annihilation)
+
+    def VEV(self):
+        """
+        VEV: Vacuum mn_bosons_in_opatrix element
+        Calculate ⟨0|operator|0⟩ by normal ordering the operator,
+          and taking the coefficient of the identity term (if no identity term, return 0)
+        """
+        return self.normal_order().op_dict.get((), 0)
+
+
+class Fock(ParticleOperator):
+
+    def __init__(
+        self,
+        f_occ: List = None,
+        af_occ: List = None,
+        b_occ: List = None,
+        state_dict: Dict[Tuple[Tuple, Tuple, Tuple], complex] = None,
+        coeff: complex = 1.0,
+    ):
+        if state_dict is not None:
+            self.state_dict = state_dict
+
+            op_dict = {}
+            for key, val in self.state_dict.items():
+                f_occ = list(key[0])
+                af_occ = list(key[1])
+                b_occ = list(key[2])
+
+                f_tup = tuple([(0, i, 1) for i in f_occ])
+                af_tup = tuple([(1, i, 1) for i in af_occ])
+                b_tup = tuple((2, i, 1) for i, b in b_occ for _ in range(b))
+
+                current_key = f_tup + af_tup + b_tup
+                op_dict[current_key] = val
+
+            self.state_opdict = op_dict
+            super().__init__(op_dict, coeff=coeff)
+
+        else:
+            self.state_dict = {
+                (
+                    tuple(sorted(f_occ)),
+                    tuple(sorted(af_occ)),
+                    tuple(sorted(tuple([(n, m) for (n, m) in b_occ if m != 0]))),
+                ): coeff
+            }
+            f_tup = tuple([(0, i, 1) for i in f_occ])
+            af_tup = tuple([(1, i, 1) for i in af_occ])
+            b_tup = tuple((2, i, 1) for i, b in b_occ for _ in range(b))
+
+            key = f_tup + af_tup + b_tup
+            self.state_opdict = {
+                key: coeff / np.sqrt(max(math.factorial(len(b_tup)), 1))
+            }
+
+            super().__init__(self.state_opdict, coeff=coeff)
+
+    def __str__(self):
+        if len(self.state_dict) == 0:
+            return "0"
+        else:
+            output_str = ""
+            for state, coeff in self.state_dict.items():
+                output_str += f"{coeff} * |{state}⟩ +"
+                output_str += "\n"
+            return output_str[:-3]
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def display(self):
+        display(Latex("$" + self.__str__() + "$"))
+
+    @property
+    def coeff(self):
+        return next(iter(self.state_dict.values()))
+
+    def __rmul__(self, other):
+        if isinstance(other, ParticleOperator):
+            output = ParticleOperator({})
+            new_op = other * ParticleOperator(self.op_dict)
+
+            for term in new_op.normal_order().to_list():
+                if term.all_creation():
+                    output += term
+            return output.act_on_vacuum()
+
+        elif isinstance(other, (float, int, complex)):
+            if other == 0:
+                return 0
+            new_dict = {key: other * val for key, val in self.state_dict.items()}
+            return Fock(state_dict=new_dict)
+
+    def __add__(self, other):
+        if len(self.state_dict) < len(other.state_dict):
+            new_dict = deepcopy(other.state_dict)
+            for state, coeff in self.state_dict.items():
+                new_dict[state] = coeff + new_dict.get(state, 0)
+        else:
+            new_dict = deepcopy(self.state_dict)
+            for state, coeff in other.state_dict.items():
+                new_dict[state] = coeff + new_dict.get(state, 0)
+        out_state = Fock(state_dict=new_dict)
+        if len(out_state.state_dict) == 0:
+            return 0
+        else:
+            return out_state
 
 
 class FermionOperator(ParticleOperator):

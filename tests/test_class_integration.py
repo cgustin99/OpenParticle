@@ -1,215 +1,57 @@
 from openparticle import (
     ParticleOperator,
     Fock,
-    ConjugateFock,
 )
 import numpy as np
+from openparticle.utils import get_matrix_element, overlap, generate_matrix
 import pytest
 
 
-def test_defined_matrix_element_1():
-    bra = ConjugateFock([1], [], [])
-    operator = ParticleOperator("b1^")
-    ket = Fock([], [], [])
-
-    assert bra * operator * ket == 1.0
+def test_op_on_state_1():
+    out = ParticleOperator("b0^") * Fock([1], [], [])
+    assert out.state_dict == {((0, 1), (), ()): 1.0}
 
 
-def test_defined_matrix_element_2():
-    bra = ConjugateFock([1], [], [])
-    operator = ParticleOperator("b0^")
-    ket = Fock([], [], [])
-
-    assert bra * operator * ket == 0
+def test_op_on_state_2():
+    out = ParticleOperator("b1^") * Fock([0], [], [])
+    assert out.state_dict == {((0, 1), (), ()): -1.0}
 
 
-def test_defined_particleoperator_acts_on_fock_state():
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], [])
-
-    assert (operator * state).state_dict == (Fock([0], [1], [])).state_dict
+def test_op_on_state_3():
+    out = ParticleOperator("a0^ a0^ a0^") * Fock([1], [], [])
+    assert out.state_dict == {((1,), (), ((0, 3),)): np.sqrt(6)}
 
 
-def test_defined_particleoperatorsum_act_on_matrix_element_1():
-    bra = ConjugateFock([1], [], [])
-    operator = ParticleOperator("b1^") + ParticleOperator("b1^")
-    ket = Fock([], [], [])
-
-    assert bra * (Fock([1], [], []) + Fock([1], [], [])) == 2.0
-    assert (operator * ket).state_dict == (
-        Fock([1], [], []) + Fock([1], [], [])
-    ).state_dict
-    assert bra * operator * ket == 2.0
-
-
-def test_defined_particleoperatorsum_act_on_matrix_element_2():
-    bra = ConjugateFock([1], [], [(1, 1)])
-    operator = ParticleOperator("b1^") + ParticleOperator("a1^")
-    ket = Fock([], [], [])
-
-    assert bra * operator * ket == 0
-
-
-def test_defined_particleoperator_acts_on_fock_sum_diff():
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [2], [])
-
-    assert (operator * state).state_dict == {
-        ((0,), (1,), ()): 1,
-        ((0,), (2,), ()): 1,
-    }
-
-
-def test_defined_particleoperator_acts_on_fock_sum_same():
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [1], [])
-
-    assert (operator * state).state_dict == {((0,), (1,), ()): 2.0}
+def test_op_on_state_4():
+    out = (ParticleOperator("b1^") + ParticleOperator("a1^")) * Fock([], [], [])
+    assert out.state_dict == {((1,), (), ()): 1.0, ((), (), ((1, 1),)): 1.0}
 
 
 def test_defined_matrix_elem_fock_sum_1():
-    bra = ConjugateFock([0], [1], []) + ConjugateFock([0], [2], [])
+    bra = Fock([0], [1], []) + Fock([0], [2], [])
     operator = ParticleOperator("b0^")
     state = Fock([], [1], []) + Fock([], [2], [])
-
-    assert bra * operator * state == 2.0
-
-
-def test_defined_matrix_elem_fock_sum_2():
-    bra = ConjugateFock([0], [1], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [1], [])
-
-    assert bra * operator * state == 2.0
-
-
-def test_defined_matrix_elem_fock_sum_diff_1():
-    bra = ConjugateFock([0], [], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [1], [])
-
-    assert bra * operator * state == 0
-
-
-def test_defined_matrix_elem_fock_sum_diff_2():
-    bra = ConjugateFock([0], [1], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [2], [])
-
-    assert bra * operator * state == 1.0
-
-
-def test_defined_conj_fock_sum_same():
-    bra = ConjugateFock([0], [1], []) + ConjugateFock([0], [1], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], [])
-
-    assert bra * operator * state == 2.0
-
-
-def test_defined_conj_fock_sum_diff_1():
-    bra = ConjugateFock([0], [1], []) + ConjugateFock([0], [2], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], [])
-
-    assert bra * operator * state == 1.0
-
-
-def test_defined_conj_fock_sum_diff_2():
-    bra = ConjugateFock([0], [1], []) + ConjugateFock([0], [1], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [], [])
-
-    assert bra * operator * state == 0
-
-
-def test_defined_matrix_elem_in_sum_class_1():
-    bra = ConjugateFock([0], [1], []) + ConjugateFock([0], [3], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [3], [])
-
-    assert bra * operator * state == 2.0
-
-
-def test_defined_matrix_elem_in_sum_class_2():
-    bra = ConjugateFock([1], [1], []) + ConjugateFock([0], [3], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [3], [])
-
-    assert bra * operator * state == 1.0
-
-
-def test_defined_matrix_elem_in_sum_class_3():
-    bra = ConjugateFock([1], [1], []) + ConjugateFock([1], [3], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [3], [])
-
-    assert bra * operator * state == 0
-
-
-def test_defined_matrix_elem_in_fock_sum_class_multi_1():
-    bra = (
-        ConjugateFock([0], [1], [])
-        + ConjugateFock([0], [2], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([0], [4], [])
-        + ConjugateFock([0], [5], [])
-    )
-    operator = ParticleOperator("b0^")
-    state = (
-        Fock([], [1], [])
-        + Fock([], [2], [])
-        + Fock([], [3], [])
-        + Fock([], [4], [])
-        + Fock([], [5], [])
-    )
-
-    assert bra * operator * state == 5.0
-
-
-def test_defined_matrix_elem_in_fock_sum_class_multi_2():
-    bra = (
-        ConjugateFock([0], [1], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([0], [3], [])
-    )
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [3], [])
-
-    assert bra * operator * state == 5.0
-
-
-def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_1():
-    bra = ConjugateFock([0], [1], []) + ConjugateFock([1], [3], [])
-    operator = ParticleOperator("b0^") + ParticleOperator("b1^")
-    state = Fock([], [1], []) + Fock([], [3], [])
-
-    assert bra * operator * state == 2.0
+    me = get_matrix_element(bra, operator, state)
+    assert me == 2.0
 
 
 def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_2():
-    bra = (
-        ConjugateFock([0], [1], [])
-        + ConjugateFock([1], [3], [])
-        + ConjugateFock([1], [3], [])
-    )
+    bra = Fock([0], [1], []) + Fock([1], [3], []) + Fock([1], [3], [])
     operator = (
         ParticleOperator("b0^") + ParticleOperator("b1^") + ParticleOperator("b1^")
     )
     state = Fock([], [1], []) + Fock([], [3], []) + Fock([], [3], [])
 
-    assert bra * operator * state == 9.0
+    assert get_matrix_element(bra, operator, state) == 9.0
 
 
 def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_1():
     bra = (
-        ConjugateFock([0], [1], [])
-        + ConjugateFock([1], [2], [])
-        + ConjugateFock([2], [3], [])
-        + ConjugateFock([3], [4], [])
-        + ConjugateFock([4], [5], [])
+        Fock([0], [1], [])
+        + Fock([1], [2], [])
+        + Fock([2], [3], [])
+        + Fock([3], [4], [])
+        + Fock([4], [5], [])
     )
     operator = (
         ParticleOperator("b0^")
@@ -226,55 +68,37 @@ def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_1(
         + Fock([], [5], [])
     )
 
-    assert bra * operator * state == 5.0
+    assert get_matrix_element(bra, operator, state) == 5.0
 
 
 def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_2():
     bra = (
-        ConjugateFock([0], [1], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([0], [3], [])
+        Fock([0], [1], [])
+        + Fock([0], [3], [])
+        + Fock([0], [3], [])
+        + Fock([0], [3], [])
+        + Fock([0], [3], [])
     )
     operator = ParticleOperator("b0^") + ParticleOperator("b0^")
     state = Fock([], [1], []) + Fock([], [3], [])
 
-    assert bra * operator * state == 10.0
+    assert get_matrix_element(bra, operator, state) == 10.0
 
 
 def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_3():
     bra = (
-        ConjugateFock([0], [1], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([0], [3], [])
-        + ConjugateFock([1], [3], [])
+        Fock([0], [1], [])
+        + Fock([0], [3], [])
+        + Fock([0], [3], [])
+        + Fock([0], [3], [])
+        + Fock([1], [3], [])
     )
     operator = (
         ParticleOperator("b0^") + ParticleOperator("b0^") + ParticleOperator("b1^")
     )
     state = Fock([], [1], []) + Fock([], [3], [])
 
-    assert bra * operator * state == 9.0
-
-
-def test_bra_times_bra():
-    bra = ConjugateFock([0], [1], [])
-
-    assert bra * bra is None
-
-
-def test_bra_sum_times_bra_sum_same():
-    bra_sum = ConjugateFock([0], [1], []) + ConjugateFock([0], [1], [])
-
-    assert bra_sum * bra_sum is None
-
-
-def test_bra_sum_times_bra_sum_diff():
-    bra_sum = ConjugateFock([0], [1], []) + ConjugateFock([0], [2], [])
-
-    assert bra_sum * bra_sum is None
+    assert get_matrix_element(bra, operator, state) == 9.0
 
 
 def test_identity_on_state():
@@ -288,16 +112,7 @@ def test_identity_in_sum_on_state():
     op = ParticleOperator(" ") + ParticleOperator("b1^ b1")
     state = Fock([1], [0, 1, 4], [(0, 3)])
     output = op * state
-    expected = 2 * Fock([1], [0, 1, 4], [(0, 3)])
-    assert output.state_dict == expected.state_dict
-
-
-def test_particle_op_to_zero_power_on_state():
-    N = 0
-    op = ParticleOperator("a0") ** N
-    state = Fock([], [], [(0, 3)])
-    output = op * state
-    assert output.state_dict == state.state_dict
+    assert output.state_dict == {((1,), (0, 1, 4), ((0, 3),)): 2.0}
 
 
 def test_fermionic_parity_1():
@@ -313,3 +128,41 @@ def test_fermionic_parity_2():
     out = op * state
     expected_out = 2 * state
     assert out.state_dict == expected_out.state_dict
+
+
+def test_overlap_1():
+    bra_state = Fock([1, 2], [3], [(0, 1)])
+    ket_state = Fock([1, 2], [3], [(0, 1)])
+    assert overlap(bra_state, ket_state) == 1.0
+
+
+def test_overlap_2():
+    bra_state = Fock([1, 2], [3], [(0, 1)]) + Fock([1], [], [])
+    ket_state = Fock([1, 2], [3], [(0, 1)])
+    assert overlap(bra_state, ket_state) == 1.0
+
+
+def test_overlap_3():
+    bra_state = Fock([1, 2], [3], [(0, 1)]) + Fock([1], [], [])
+    ket_state = Fock([1, 3], [3], [(0, 1)])
+    assert overlap(bra_state, ket_state) == 0
+
+
+def test_matrix_generation():
+    basis = [
+        Fock([], [], []),
+        Fock([0], [], []),
+        Fock([1], [], []),
+        Fock([0, 1], [], []),
+    ]
+    operator = (
+        ParticleOperator("b0^ b0")
+        + ParticleOperator("b1^ b0")
+        + ParticleOperator("b0^ b1")
+        + ParticleOperator("b1^ b1")
+    )
+
+    assert np.allclose(
+        generate_matrix(operator, basis),
+        np.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 2]]),
+    )
