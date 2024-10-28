@@ -97,12 +97,22 @@ def generate_matrix(op, basis):
     for j, state_j in enumerate(basis):
         rhs = op * state_j
         for i, state_i in enumerate(basis):
-            if j <= i:  # only calculate lower triangular elements
+
+            if op.dagger().op_dict == op.op_dict:  # op is Hermitian
+                if i <= j:  # Only calculate lower triangular matrix
+                    if rhs.op_dict == {}:
+                        matrix[i][j] = 0
+                    else:
+                        val = (state_i.dagger() * ParticleOperator(rhs.op_dict)).VEV()
+                        matrix[i][j] = val
+                        matrix[j][i] = val.conjugate()
+            else:
                 if rhs.op_dict == {}:
-                    val = 0
+                    matrix[i][j] = 0
                 else:
                     val = (state_i.dagger() * ParticleOperator(rhs.op_dict)).VEV()
-                matrix[i][j] = matrix[j][i] = val
+                    matrix[i][j] = val
+
     return matrix
 
 
