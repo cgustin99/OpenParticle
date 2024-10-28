@@ -169,7 +169,8 @@ class ParticleOperator:
         if len(list(self.op_dict.keys())) != 1:
             return NotImplemented
 
-        ops = list(self.op_dict.keys())[0].split(" ")
+        # ops = list(self.op_dict.keys())[0].split(" ")
+        ops = ParticleOperator.key_to_op_string(list(self.op_dict.keys())[0]).split(" ")
 
         split_list = []
         i = 0
