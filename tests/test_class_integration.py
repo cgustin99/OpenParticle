@@ -3,7 +3,7 @@ from openparticle import (
     Fock,
 )
 import numpy as np
-from openparticle.utils import get_matrix_element
+from openparticle.utils import get_matrix_element, overlap, generate_matrix
 import pytest
 
 
@@ -31,7 +31,7 @@ def test_defined_matrix_elem_fock_sum_1():
     bra = Fock([0], [1], []) + Fock([0], [2], [])
     operator = ParticleOperator("b0^")
     state = Fock([], [1], []) + Fock([], [2], [])
-    me = get_matrix_element(bra, state, operator)
+    me = get_matrix_element(bra, operator, state)
     assert me == 2.0
 
 
@@ -42,7 +42,7 @@ def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_2():
     )
     state = Fock([], [1], []) + Fock([], [3], []) + Fock([], [3], [])
 
-    assert get_matrix_element(bra, state, operator) == 9.0
+    assert get_matrix_element(bra, operator, state) == 9.0
 
 
 def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_1():
@@ -68,7 +68,7 @@ def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_1(
         + Fock([], [5], [])
     )
 
-    assert get_matrix_element(bra, state, operator) == 5.0
+    assert get_matrix_element(bra, operator, state) == 5.0
 
 
 def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_2():
@@ -82,7 +82,7 @@ def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_2(
     operator = ParticleOperator("b0^") + ParticleOperator("b0^")
     state = Fock([], [1], []) + Fock([], [3], [])
 
-    assert get_matrix_element(bra, state, operator) == 10.0
+    assert get_matrix_element(bra, operator, state) == 10.0
 
 
 def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_3():
@@ -98,7 +98,7 @@ def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_3(
     )
     state = Fock([], [1], []) + Fock([], [3], [])
 
-    assert get_matrix_element(bra, state, operator) == 9.0
+    assert get_matrix_element(bra, operator, state) == 9.0
 
 
 def test_identity_on_state():
@@ -128,3 +128,41 @@ def test_fermionic_parity_2():
     out = op * state
     expected_out = 2 * state
     assert out.state_dict == expected_out.state_dict
+
+
+def test_overlap_1():
+    bra_state = Fock([1, 2], [3], [(0, 1)])
+    ket_state = Fock([1, 2], [3], [(0, 1)])
+    assert overlap(bra_state, ket_state) == 1.0
+
+
+def test_overlap_2():
+    bra_state = Fock([1, 2], [3], [(0, 1)]) + Fock([1], [], [])
+    ket_state = Fock([1, 2], [3], [(0, 1)])
+    assert overlap(bra_state, ket_state) == 1.0
+
+
+def test_overlap_3():
+    bra_state = Fock([1, 2], [3], [(0, 1)]) + Fock([1], [], [])
+    ket_state = Fock([1, 3], [3], [(0, 1)])
+    assert overlap(bra_state, ket_state) == 0
+
+
+def test_matrix_generation():
+    basis = [
+        Fock([], [], []),
+        Fock([0], [], []),
+        Fock([1], [], []),
+        Fock([0, 1], [], []),
+    ]
+    operator = (
+        ParticleOperator("b0^ b0")
+        + ParticleOperator("b1^ b0")
+        + ParticleOperator("b0^ b1")
+        + ParticleOperator("b1^ b1")
+    )
+
+    assert np.allclose(
+        generate_matrix(operator, basis),
+        np.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 2]]),
+    )

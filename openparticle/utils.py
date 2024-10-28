@@ -83,9 +83,11 @@ def get_fock_basis(operator: ParticleOperator, max_bose_occ: int = 1):
     return basis
 
 
-def get_matrix_element(state, conjugate_state, op):
-    # A_{ij}
-    return (conjugate_state.dagger() * op * ParticleOperator(state.op_dict)).VEV()
+def get_matrix_element(left_state, operator, right_state):
+    # A_{ij} = ⟨bra|operator|ket⟩
+    return (
+        left_state.dagger() * operator * ParticleOperator(right_state.op_dict)
+    ).VEV()
 
 
 def generate_matrix(op, basis):
@@ -96,7 +98,10 @@ def generate_matrix(op, basis):
         rhs = op * state_j
         for i, state_i in enumerate(basis):
             if j <= i:  # only calculate lower triangular elements
-                val = (state_i.dagger() * ParticleOperator(rhs.op_dict)).VEV()
+                if rhs.op_dict == {}:
+                    val = 0
+                else:
+                    val = (state_i.dagger() * ParticleOperator(rhs.op_dict)).VEV()
                 matrix[i][j] = matrix[j][i] = val
     return matrix
 
@@ -108,3 +113,8 @@ def remove_symmetry_terms(operator, proper_length: int):
             cleaned_up_op += terms
 
     return cleaned_up_op
+
+
+def overlap(bra, ket):
+    # Calculates overlap between two states ⟨bra|ket⟩
+    return (bra.dagger() * ParticleOperator(ket.op_dict)).VEV()
