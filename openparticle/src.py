@@ -294,7 +294,7 @@ class ParticleOperator:
                 output_str += "\n"
             return output_str
 
-    def _cleanup(self, zero_threshold=1e-15) -> "ParticleOperator":
+    def _cleanup(self, zero_threshold=1e-64) -> "ParticleOperator":
         """
         remove terms below threshold
         """
