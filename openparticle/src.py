@@ -169,7 +169,8 @@ class ParticleOperator:
         if len(list(self.op_dict.keys())) != 1:
             return NotImplemented
 
-        ops = list(self.op_dict.keys())[0].split(" ")
+        # ops = list(self.op_dict.keys())[0].split(" ")
+        ops = ParticleOperator.key_to_op_string(list(self.op_dict.keys())[0]).split(" ")
 
         split_list = []
         i = 0
@@ -612,8 +613,13 @@ class ParticleOperator:
             return result_dict
 
     def max_mode(self):
-        all_ops_as_str = " ".join(list(self.op_dict.keys()))
-        return max(list(map(lambda x: int(x), re.findall(r"\d+", all_ops_as_str))))
+        maximum_mode = None
+        for outer_tuple in self.op_dict.keys():
+            for inner_tuple in outer_tuple:
+                mode = inner_tuple[1]  # Extract the middle entry
+                if maximum_mode is None or mode > maximum_mode:
+                    maximum_mode = mode
+        return maximum_mode
 
     @property
     def max_fermionic_mode(self):

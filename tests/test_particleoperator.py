@@ -185,56 +185,72 @@ def test_has_bosons2():
     assert op.has_bosons == False
 
 
-# def test_parse_fermions():
-#     op = ParticleOperator("b0^ b0 b1^ b1")
-#     expected_ops = [OccupationOperator("b", 0, 1), OccupationOperator("b", 1, 1)]
-#     # assert op.parse() ==
-#     for parsed_op, expected_op in zip(op.parse(), expected_ops):
-#         assert str(parsed_op) == str(expected_op)
+def test_max_mode():
+    modes = np.random.randint(0, 100, size=3)
+    op_str = (
+        "b" + str(modes[0]) + "^ " + "d" + str(modes[1]) + "^ " + "a" + str(modes[2])
+    )
+
+    assert ParticleOperator(op_str).max_mode() == max(modes)
 
 
-# def test_parse_antifermions():
-#     op = ParticleOperator("d1^ d1 d0^ d0")
-#     expected_ops = [OccupationOperator("d", 1, 1), OccupationOperator("d", 0, 1)]
-#     for parsed_op, expected_op in zip(op.parse(), expected_ops):
-#         assert str(parsed_op) == str(expected_op)
+def test_max_mode_2():
+    modes = np.random.randint(0, 100, size=4)
+    op = ParticleOperator(
+        "b" + str(modes[0]) + "^ " + "d" + str(modes[1])
+    ) + ParticleOperator("a" + str(modes[2]) + "^ " + "a" + str(modes[3]))
+    assert op.max_mode() == max(modes)
 
 
-# def test_parse_bosons():
-#     op = ParticleOperator("a1^ a1 a2^ a2^ a2^ a2 a2 a1^ a1 a0")
-#     expected_ops = [
-#         OccupationOperator("a", 1, 1),
-#         BosonOperator("2^"),
-#         OccupationOperator("a", 2, 2),
-#         OccupationOperator("a", 1, 1),
-#         BosonOperator("0"),
-#     ]
-#     for parsed_op, expected_op in zip(op.parse(), expected_ops):
-#         assert str(parsed_op) == str(expected_op)
+def test_parse_fermions():
+    op = ParticleOperator("b0^ b0 b1^ b1")
+    expected_ops = [OccupationOperator("b", 0, 1), OccupationOperator("b", 1, 1)]
+    for parsed_op, expected_op in zip(op.parse(), expected_ops):
+        assert str(parsed_op) == str(expected_op)
 
 
-# def test_parse_bosons2():
-#     op = ParticleOperator("a1^ a1 a1 a1")
-#     expected_ops = [
-#         OccupationOperator("a", 1, 1),
-#         BosonOperator("1"),
-#     ]
-#     for parsed_op, expected_op in zip(op.parse(), expected_ops):
-#         assert str(parsed_op) == str(expected_op)
+def test_parse_antifermions():
+    op = ParticleOperator("d1^ d1 d0^ d0")
+    expected_ops = [OccupationOperator("d", 1, 1), OccupationOperator("d", 0, 1)]
+    for parsed_op, expected_op in zip(op.parse(), expected_ops):
+        assert str(parsed_op) == str(expected_op)
 
 
-# def test_parse_mix():
-#     op = ParticleOperator("a0^ a0 a1^ a1^ a1^ a1 a1 b0^ d0^ d0 a0")
-#     expected_ops = [
-#         OccupationOperator("a", 0, 1),
-#         BosonOperator("1^"),
-#         OccupationOperator("a", 1, 2),
-#         FermionOperator("0^"),
-#         OccupationOperator("d", 0, 1),
-#         BosonOperator("0"),
-#     ]
-#     for parsed_op, expected_op in zip(op.parse(), expected_ops):
-#         assert str(parsed_op) == str(expected_op)
+def test_parse_bosons():
+    op = ParticleOperator("a1^ a1 a2^ a2^ a2^ a2 a2 a1^ a1 a0")
+    expected_ops = [
+        OccupationOperator("a", 1, 1),
+        BosonOperator("2^"),
+        OccupationOperator("a", 2, 2),
+        OccupationOperator("a", 1, 1),
+        BosonOperator("0"),
+    ]
+    for parsed_op, expected_op in zip(op.parse(), expected_ops):
+        assert str(parsed_op) == str(expected_op)
+
+
+def test_parse_bosons2():
+    op = ParticleOperator("a1^ a1 a1 a1")
+    expected_ops = [
+        OccupationOperator("a", 1, 1),
+        BosonOperator("1"),
+    ]
+    for parsed_op, expected_op in zip(op.parse(), expected_ops):
+        assert str(parsed_op) == str(expected_op)
+
+
+def test_parse_mix():
+    op = ParticleOperator("a0^ a0 a1^ a1^ a1^ a1 a1 b0^ d0^ d0 a0")
+    expected_ops = [
+        OccupationOperator("a", 0, 1),
+        BosonOperator("1^"),
+        OccupationOperator("a", 1, 2),
+        FermionOperator("0^"),
+        OccupationOperator("d", 0, 1),
+        BosonOperator("0"),
+    ]
+    for parsed_op, expected_op in zip(op.parse(), expected_ops):
+        assert str(parsed_op) == str(expected_op)
 
 
 # def test_random_particleoperator_generation():
