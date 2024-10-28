@@ -185,6 +185,23 @@ def test_has_bosons2():
     assert op.has_bosons == False
 
 
+def test_max_mode():
+    modes = np.random.randint(0, 100, size=3)
+    op_str = (
+        "b" + str(modes[0]) + "^ " + "d" + str(modes[1]) + "^ " + "a" + str(modes[2])
+    )
+
+    assert ParticleOperator(op_str).max_mode() == max(modes)
+
+
+def test_max_mode_2():
+    modes = np.random.randint(0, 100, size=4)
+    op = ParticleOperator(
+        "b" + str(modes[0]) + "^ " + "d" + str(modes[1])
+    ) + ParticleOperator("a" + str(modes[2]) + "^ " + "a" + str(modes[3]))
+    assert op.max_mode() == max(modes)
+
+
 # def test_parse_fermions():
 #     op = ParticleOperator("b0^ b0 b1^ b1")
 #     expected_ops = [OccupationOperator("b", 0, 1), OccupationOperator("b", 1, 1)]
