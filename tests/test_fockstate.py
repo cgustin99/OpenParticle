@@ -1,6 +1,7 @@
-from openparticle import Fock
+from openparticle import Fock, ParticleOperator
 import pytest
 import numpy as np
+import math
 
 
 def test_fock_state_stores_correct_occupancies():
@@ -29,3 +30,25 @@ def test_fock_state_mul_by_constant(coeff):
 def test_fock_states_add_two_different_states():
     state = Fock([1, 2], [], []) + Fock([], [1], [])
     assert state.op_dict == {((0, 1, 1), (0, 2, 1)): 1.0, ((1, 1, 1),): 1.0}
+
+
+def test_bosonic_fock_state_generation():
+    state = Fock([], [], [(0, 3)])
+    op = 1 / (np.sqrt(math.factorial(3))) * ParticleOperator("a0^ a0^ a0^")
+    vacuum = Fock([], [], [])
+
+    assert (op * vacuum).coeff == state.coeff
+
+
+def test_bosonic_fock_state_generation_2():
+    vacuum = Fock([], [], [])
+    op = ParticleOperator("a0^ a1^")
+    expected_state = Fock([], [], [[0, 1], [1, 1]])
+    assert (op * vacuum).coeff == expected_state.coeff  # == 1
+
+
+def test_bosonic_fock_state_generation_3():
+    vacuum = Fock([], [], [])
+    op = 1 / np.sqrt(2) * ParticleOperator("a0^ a0^ a1^")
+    expected_state = Fock([], [], [[0, 2], [1, 1]])
+    assert (op * vacuum).coeff == expected_state.coeff  # np.sqrt(2)

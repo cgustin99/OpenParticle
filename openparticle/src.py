@@ -7,6 +7,7 @@ import re
 from copy import deepcopy
 from itertools import product
 import math
+import scipy
 
 
 class ParticleOperator:
@@ -763,12 +764,14 @@ class ParticleOperator:
                 af_parity = 1
             if 2 in split_key:
                 b_occ = [(num, count) for num, count in Counter(split_key[2]).items()]
-                b_coeff = len(split_key[2])
+                b_coeff = np.prod(
+                    np.sqrt(scipy.special.factorial(np.array(b_occ)[:, 1]))
+                )
             else:
                 b_occ = []
                 b_coeff = 1
 
-            coeff = val * f_parity * af_parity * np.sqrt(math.factorial(b_coeff))
+            coeff = val * f_parity * af_parity * b_coeff
             state_dict_key = (tuple(f_occ), tuple(af_occ), tuple(b_occ))
             state_dict[state_dict_key] = coeff + state_dict.get(state_dict_key, 0)
 
@@ -838,10 +841,15 @@ class Fock(ParticleOperator):
             af_tup = tuple([(1, i, 1) for i in af_occ])
             b_tup = tuple((2, i, 1) for i, b in b_occ for _ in range(b))
 
+            if b_occ != []:
+                b_coeff = np.prod(
+                    np.sqrt(scipy.special.factorial(np.array(b_occ)[:, 1]))
+                )
+            else:
+                b_coeff = 1
+
             key = f_tup + af_tup + b_tup
-            self.state_opdict = {
-                key: coeff / np.sqrt(max(math.factorial(len(b_tup)), 1))
-            }
+            self.state_opdict = {key: coeff / b_coeff}
 
             super().__init__(self.state_opdict, coeff=coeff)
 
