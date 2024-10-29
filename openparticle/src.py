@@ -904,6 +904,10 @@ class Fock(ParticleOperator):
         else:
             return out_state
 
+    @staticmethod
+    def vacuum():
+        return Fock([], [], [])
+
 
 class FermionOperator(ParticleOperator):
 
