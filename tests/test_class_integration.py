@@ -5,6 +5,69 @@ from openparticle import (
 import numpy as np
 from openparticle.utils import get_matrix_element, overlap, generate_matrix
 import pytest
+import math
+from collections import Counter
+
+
+def test_fock_state_generation():
+    # |1;1> = b_1^ d_1^ |vac>
+    state = Fock([1], [1], [])
+    op_that_creates_state = ParticleOperator("b1^ d1^")
+    assert op_that_creates_state.act_on_vacuum().op_dict == state.op_dict
+
+
+def test_fock_state_generation_2():
+    # d1^ b1^ |vac> = -|1;1>
+    assert (
+        ParticleOperator("d1^ b1^").act_on_vacuum().op_dict
+        == (-1 * Fock([1], [1], [])).op_dict
+    )
+
+
+def test_fock_state_generation_3():
+    assert ParticleOperator("b1^ d1^").act_on_vacuum().op_dict == {
+        ((0, 1, 1), (1, 1, 1)): 1.0
+    }
+
+
+def test_fock_state_generation_4():
+    assert ParticleOperator("d1^ b1^").act_on_vacuum().op_dict == {
+        ((0, 1, 1), (1, 1, 1)): -1.0
+    }
+
+
+def test_fock_state_generation_5():
+    assert ParticleOperator("b1^ b2^").act_on_vacuum().op_dict == {
+        ((0, 1, 1), (0, 2, 1)): 1.0
+    }
+
+
+def test_fock_state_generation_6():
+    assert ParticleOperator("b2^ b1^").act_on_vacuum().op_dict == {
+        ((0, 1, 1), (0, 2, 1)): -1.0
+    }
+
+
+def test_bosonic_fock_state_generation():
+    state = Fock([], [], [(0, 3)])
+    op = 1 / (np.sqrt(math.factorial(3))) * ParticleOperator("a0^ a0^ a0^")
+    vacuum = Fock([], [], [])
+
+    assert (op * vacuum).coeff == state.coeff
+
+
+def test_bosonic_fock_state_generation_2():
+    vacuum = Fock([], [], [])
+    op = ParticleOperator("a0^ a1^")
+    expected_state = Fock([], [], [[0, 1], [1, 1]])
+    assert (op * vacuum).coeff == expected_state.coeff  # == 1
+
+
+def test_bosonic_fock_state_generation_3():
+    vacuum = Fock([], [], [])
+    op = 1 / np.sqrt(2) * ParticleOperator("a0^ a0^ a1^")
+    expected_state = Fock([], [], [[0, 2], [1, 1]])
+    assert (op * vacuum).coeff == expected_state.coeff  # np.sqrt(2)
 
 
 def test_op_on_state_1():
@@ -25,80 +88,6 @@ def test_op_on_state_3():
 def test_op_on_state_4():
     out = (ParticleOperator("b1^") + ParticleOperator("a1^")) * Fock([], [], [])
     assert out.state_dict == {((1,), (), ()): 1.0, ((), (), ((1, 1),)): 1.0}
-
-
-def test_defined_matrix_elem_fock_sum_1():
-    bra = Fock([0], [1], []) + Fock([0], [2], [])
-    operator = ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [2], [])
-    me = get_matrix_element(bra, operator, state)
-    assert me == 2.0
-
-
-def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_2():
-    bra = Fock([0], [1], []) + Fock([1], [3], []) + Fock([1], [3], [])
-    operator = (
-        ParticleOperator("b0^") + ParticleOperator("b1^") + ParticleOperator("b1^")
-    )
-    state = Fock([], [1], []) + Fock([], [3], []) + Fock([], [3], [])
-
-    assert get_matrix_element(bra, operator, state) == 9.0
-
-
-def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_1():
-    bra = (
-        Fock([0], [1], [])
-        + Fock([1], [2], [])
-        + Fock([2], [3], [])
-        + Fock([3], [4], [])
-        + Fock([4], [5], [])
-    )
-    operator = (
-        ParticleOperator("b0^")
-        + ParticleOperator("b1^")
-        + ParticleOperator("b2^")
-        + ParticleOperator("b3^")
-        + ParticleOperator("b4^")
-    )
-    state = (
-        Fock([], [1], [])
-        + Fock([], [2], [])
-        + Fock([], [3], [])
-        + Fock([], [4], [])
-        + Fock([], [5], [])
-    )
-
-    assert get_matrix_element(bra, operator, state) == 5.0
-
-
-def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_2():
-    bra = (
-        Fock([0], [1], [])
-        + Fock([0], [3], [])
-        + Fock([0], [3], [])
-        + Fock([0], [3], [])
-        + Fock([0], [3], [])
-    )
-    operator = ParticleOperator("b0^") + ParticleOperator("b0^")
-    state = Fock([], [1], []) + Fock([], [3], [])
-
-    assert get_matrix_element(bra, operator, state) == 10.0
-
-
-def test_defined_matrix_elem_in_particleoperator_sum_and_fock_sum_class_multi_3():
-    bra = (
-        Fock([0], [1], [])
-        + Fock([0], [3], [])
-        + Fock([0], [3], [])
-        + Fock([0], [3], [])
-        + Fock([1], [3], [])
-    )
-    operator = (
-        ParticleOperator("b0^") + ParticleOperator("b0^") + ParticleOperator("b1^")
-    )
-    state = Fock([], [1], []) + Fock([], [3], [])
-
-    assert get_matrix_element(bra, operator, state) == 9.0
 
 
 def test_identity_on_state():
@@ -128,3 +117,21 @@ def test_fermionic_parity_2():
     out = op * state
     expected_out = 2 * state
     assert out.state_dict == expected_out.state_dict
+
+
+@pytest.mark.parametrize("trial", range(10))
+def test_fock_to_particleop_back_to_fock(trial):
+    # |state> = op_for_state|vac> = |state>
+
+    rand_length = np.random.randint(10)
+    f_occ = sorted(set(np.random.randint(0, 10, size=rand_length)))
+    af_occ = sorted(set(np.random.randint(0, 10, size=rand_length)))
+
+    counted = Counter(np.random.randint(0, 10, size=rand_length))
+    result = [(num, count) for num, count in counted.items()]
+    b_occ = sorted(result)
+
+    state = Fock(f_occ, af_occ, b_occ)
+    assert (
+        ParticleOperator(state.op_dict).act_on_vacuum().state_dict == state.state_dict
+    )

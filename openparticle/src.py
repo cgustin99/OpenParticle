@@ -519,8 +519,8 @@ class ParticleOperator:
         if not ops or coeff == 0:
             return {}
 
-        if not ops[0][0] == "a" and self.has_duplicates(ops):
-            return {}
+        # if not ops[0][0] == "a" and self.has_duplicates(ops):
+        #     return {}
 
         result_dict = {}
 
@@ -748,17 +748,26 @@ class ParticleOperator:
         return dict(grouped_ops)
 
     def act_on_vacuum(self):
-        state_dict = {}
 
-        for key, val in self.op_dict.items():
+        if self.op_dict == {}:  # empty op
+            return 0
+        elif self.op_dict == {(): 1.0}:  # Identity|v⟩ = |v⟩
+            return Fock.vacuum()
+
+        state_dict = {}
+        for key, val in self.normal_order().op_dict.items():
             split_key = ParticleOperator.partition_term(key)
             if 0 in split_key:
                 f_occ, f_parity = ParticleOperator.fermionic_parity(split_key[0])
+                if len(f_occ) != len(set(f_occ)):  # i.e. there are duplicate modes
+                    continue
             else:
                 f_occ = []
                 f_parity = 1
             if 1 in split_key:
                 af_occ, af_parity = ParticleOperator.fermionic_parity(split_key[1])
+                if len(af_occ) != len(set(af_occ)):  # i.e. there are duplicate modes
+                    continue
             else:
                 af_occ = []
                 af_parity = 1
@@ -774,14 +783,14 @@ class ParticleOperator:
             coeff = val * f_parity * af_parity * b_coeff
             state_dict_key = (tuple(f_occ), tuple(af_occ), tuple(b_occ))
             state_dict[state_dict_key] = coeff + state_dict.get(state_dict_key, 0)
-
         return Fock(state_dict=state_dict)
 
     def all_creation(self):
-        # Takes in the tuple key of one ParticleOperator term and returns True if all ops are creation
-        assert len(self.op_dict) == 1
-        tup = next(iter(self.op_dict))
-        creation = [t[-1] for t in tup]
+        # Return true if all operators in a ParticleOperator are creation operators
+        tup = []
+        for op in self.op_dict:
+            tup += op
+            creation = [t[-1] for t in tup]
         return all(x == 1 for x in creation)
 
     def all_annihilation(self):
@@ -798,6 +807,12 @@ class ParticleOperator:
           and taking the coefficient of the identity term (if no identity term, return 0)
         """
         return self.normal_order().op_dict.get((), 0)
+
+    def is_hermitian(self):
+        return self.op_dict == self.dagger().op_dict
+
+    def has_identity(self):
+        return () in self.op_dict.keys()
 
 
 class Fock(ParticleOperator):
@@ -875,13 +890,25 @@ class Fock(ParticleOperator):
 
     def __rmul__(self, other):
         if isinstance(other, ParticleOperator):
-            output = ParticleOperator({})
-            new_op = other * ParticleOperator(self.op_dict)
+            # TODO: pop term then add back into other (for now just copying)
+            op_dict_copy = deepcopy(other.op_dict)
+            const = op_dict_copy.pop((), Fock([], [], [], coeff=0))  # Identity
 
-            for term in new_op.normal_order().to_list():
-                if term.all_creation():
-                    output += term
-            return output.act_on_vacuum()
+            output = ParticleOperator({})
+
+            new_op = ParticleOperator(op_dict_copy) * ParticleOperator(self.op_dict)
+            if new_op.op_dict != {}:  # i.e. has more than just the identity
+                for term in new_op.normal_order().to_list():
+                    if term.all_creation():
+                        output += term
+            else:
+                return const * self
+            identity_term = const * self  # Already a Fock state
+            other = output.act_on_vacuum()  # Turn PO -> Fock
+            if identity_term.coeff != 0:
+                return identity_term + other
+            else:
+                return other
 
         elif isinstance(other, (float, int, complex)):
             if other == 0:
