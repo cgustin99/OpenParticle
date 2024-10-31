@@ -756,6 +756,10 @@ class ParticleOperator:
 
         state_dict = {}
         for key, val in self.normal_order().op_dict.items():
+            if not ParticleOperator(
+                {key: val}
+            ).all_creation():  # If we normal order the key and there is an annihilation operator, its action on |v⟩ will return 0
+                continue
             split_key = ParticleOperator.partition_term(key)
             if 0 in split_key:
                 f_occ, f_parity = ParticleOperator.fermionic_parity(split_key[0])
@@ -783,7 +787,10 @@ class ParticleOperator:
             coeff = val * f_parity * af_parity * b_coeff
             state_dict_key = (tuple(f_occ), tuple(af_occ), tuple(b_occ))
             state_dict[state_dict_key] = coeff + state_dict.get(state_dict_key, 0)
-        return Fock(state_dict=state_dict)
+        if state_dict == {}:
+            return 0
+        else:
+            return Fock(state_dict=state_dict)
 
     def all_creation(self):
         # Return true if all operators in a ParticleOperator are creation operators
