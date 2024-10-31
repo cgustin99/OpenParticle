@@ -260,6 +260,26 @@ def test_split():
     assert split_op[1].op_dict == BosonOperator("0").op_dict
 
 
+def test_state_annihilation_1():
+    assert ParticleOperator("b0^ b0^").act_on_vacuum() == 0
+
+
+def test_state_annihilation_2():
+    assert ParticleOperator("d0").act_on_vacuum() == 0
+
+
+def test_state_annihilation_3():
+    assert ParticleOperator("d0 d0 b0^").act_on_vacuum() == 0
+
+
+def test_state_annihilation_4():
+    assert ParticleOperator("b0").act_on_vacuum() == 0
+
+
+def test_state_annihilation_5():
+    assert ParticleOperator("a0").act_on_vacuum() == 0
+
+
 # def test_random_particleoperator_generation():
 #     for _ in range(1000):
 #         possible_types = [
