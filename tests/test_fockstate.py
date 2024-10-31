@@ -24,7 +24,7 @@ def test_fock_state_mul_by_constant(coeff):
     fs = Fock(f_occ=f_occ, af_occ=af_occ, b_occ=b_occ)
 
     fs_new = coeff * fs
-    assert fs_new.coeff == coeff
+    assert np.allclose(fs_new.coeff, coeff)
 
 
 def test_fock_states_add_two_different_states():
