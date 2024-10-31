@@ -135,3 +135,27 @@ def test_fock_to_particleop_back_to_fock(trial):
     assert (
         ParticleOperator(state.op_dict).act_on_vacuum().state_dict == state.state_dict
     )
+
+
+def test_state_annihilation_1():
+    assert ParticleOperator("b0^ b0^").act_on_vacuum() == 0
+
+
+def test_state_annihilation_2():
+    assert ParticleOperator("d0").act_on_vacuum() == 0
+
+
+def test_state_annihilation_3():
+    assert ParticleOperator("d0 d0 b0^").act_on_vacuum() == 0
+
+
+def test_state_annihilation_4():
+    assert ParticleOperator("b0").act_on_vacuum() == 0
+
+
+def test_state_annihilation_5():
+    assert ParticleOperator("a0").act_on_vacuum() == 0
+
+
+def test_state_annihilation_6():
+    assert ParticleOperator("a0 a0") * Fock([], [], [(0, 1)]) == 0
