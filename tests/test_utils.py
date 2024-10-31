@@ -25,6 +25,14 @@ def test_overlap_3():
     assert overlap(bra_state, ket_state) == 0
 
 
+def test_overlap_4():
+    assert np.allclose(overlap(Fock([], [], [[0, 2]]), Fock([], [], [[0, 2]])), 1.0)
+
+
+def test_VEV_1():
+    assert ParticleOperator("a0 a0 a0^ a0^").VEV() == 2.0
+
+
 def test_defined_matrix_elem_fock_sum_1():
     bra = Fock([0], [1], []) + Fock([0], [2], [])
     operator = ParticleOperator("b0^")
@@ -266,4 +274,44 @@ def test_matrix_generation_4():
         ]
     )
 
+    assert np.allclose(generate_matrix(op, basis), expected)
+
+
+def test_matrix_generation_5():
+    op = ParticleOperator("a0")
+    basis = [
+        Fock.vacuum(),
+        Fock([], [], [[0, 1]]),
+        Fock([], [], [[0, 2]]),
+        Fock([], [], [[0, 3]]),
+    ]
+
+    expected = np.array(
+        [
+            [
+                0.00000000e00 + 0.0j,
+                1.00000000e00 + 0.0j,
+                0.00000000e00 + 0.0j,
+                0.00000000e00 + 0.0j,
+            ],
+            [
+                0.00000000e00 + 0.0j,
+                0.00000000e00 + 0.0j,
+                1.41421356e00 + 0.0j,
+                0.00000000e00 + 0.0j,
+            ],
+            [
+                0.00000000e00 + 0.0j,
+                0.00000000e00 + 0.0j,
+                0.00000000e00 + 0.0j,
+                1.73205081e00 + 0.0j,
+            ],
+            [
+                -1.57009246e-16 + 0.0j,
+                0.00000000e00 + 0.0j,
+                0.00000000e00 + 0.0j,
+                0.00000000e00 + 0.0j,
+            ],
+        ]
+    )
     assert np.allclose(generate_matrix(op, basis), expected)
