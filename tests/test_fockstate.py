@@ -15,6 +15,20 @@ def test_fock_state_stores_correct_occupancies():
     assert list(next(iter(fs.state_dict)))[2] == tuple(b_occ)
 
 
+def test_fock_state_doesnt_store_incorrect_occupancies_1():
+    f_occ = [2]
+    af_occ = [1, 3]
+    b_occ = [(0, 3), (0, 2)]
+    out = Fock(f_occ, af_occ, b_occ).state_dict
+    expected = {((2,), (1, 3), ((0, 2), (0, 3))): 1.0}
+    assert out != expected
+
+
+def test_fermion_occ_assertion():
+    with pytest.raises(AssertionError):
+        assert Fock([2, 2], [], []), "Expected failure"
+
+
 @pytest.mark.parametrize("coeff", np.random.uniform(-100, 100, size=3))
 def test_fock_state_mul_by_constant(coeff):
     f_occ = [2]  # One fermion in mode 2

@@ -159,3 +159,7 @@ def test_state_annihilation_5():
 
 def test_state_annihilation_6():
     assert ParticleOperator("a0 a0") * Fock([], [], [(0, 1)]) == 0
+
+
+def test_state_annihilation_7():
+    assert ParticleOperator("d1^ d0^ d2 d1") * Fock([1], [0, 1, 2], []) == 0

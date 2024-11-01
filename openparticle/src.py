@@ -405,6 +405,11 @@ class ParticleOperator:
         if list(self.op_dict.keys())[0] == ():
             return self.op_dict
 
+        if ParticleOperator.has_duplicates(
+            ParticleOperator.key_to_op_string(next(iter(self.op_dict)))
+        ):
+            return {}
+
         # parse the op_str into bs, ds, and as and normal ordering them separately
         fermion_list, antifermion_list, boson_list, swap_bd = self.split_to_string()
 
@@ -464,7 +469,7 @@ class ParticleOperator:
         return output_dict
 
     @staticmethod
-    def has_duplicates(ops):
+    def has_duplicates(op):
         """
         used for fermions/antifermions
         checks if there are two identical particle operators acting on the same
@@ -473,27 +478,35 @@ class ParticleOperator:
         i.e. b0 b1 b2 b0 -> True == has duplicates -> kill the state
              b0 b0^ b0 -> False == not has duplicates
         """
-        freq = {}
-        for op in ops:
-            is_creation = op[-1] == "^"
-            if op in freq:
-                # case for two creation ops in a row
-                if freq[op] == 1 and is_creation:
-                    if op[:-1] in freq and freq[op[:-1]] == 0 or op[:-1] not in freq:
-                        return True
-                # two annihilation ops in a row
-                elif freq[op] == 1 and not is_creation:
-                    if (
-                        (op + "^") in freq
-                        and freq[op + "^"] == 0
-                        or (op + "^") not in freq
-                    ):
-                        return True
-            freq[op] = 1
-            if is_creation and op[:-1] in freq and freq[op[:-1]] == 1:
-                freq[op[:-1]] = 0
-            elif not is_creation and (op + "^") in freq and freq[op + "^"] == 1:
-                freq[op + "^"] = 0
+        # Split the expression into individual terms
+        terms = op.split()
+
+        # Dictionary to store the terms we've seen
+        seen_terms = {}
+
+        for term in terms:
+            # Extract the letter, mode, and check for '^'
+            match = re.match(r"([a-zA-Z])(\d+)(\^?)", term)
+
+            if match:
+                letter = match.group(1)
+                mode = match.group(2)
+                create_or_annihilate = bool(match.group(3))
+
+                if letter == "a":
+                    continue
+
+                # Create a key using letter and mode to check duplicates
+                key = (letter, mode)
+
+                # If we've seen this key before and both have '^', return 0
+                if key in seen_terms and seen_terms[key] == create_or_annihilate:
+                    return True
+
+                # Store the presence or absence of '^' for this term
+                seen_terms[key] = create_or_annihilate
+
+        # If no consecutive terms found with same letter, mode, and '^', return 1
         return False
 
     def is_normal_ordered(self, ops):
@@ -518,9 +531,6 @@ class ParticleOperator:
         # base case(s)
         if not ops or coeff == 0:
             return {}
-
-        # if not ops[0][0] == "a" and self.has_duplicates(ops):
-        #     return {}
 
         result_dict = {}
 
@@ -785,7 +795,6 @@ class ParticleOperator:
                 b_coeff = 1
 
             coeff = val * f_parity * af_parity * b_coeff
-            print(coeff)
             state_dict_key = (tuple(f_occ), tuple(af_occ), tuple(b_occ))
             state_dict[state_dict_key] = coeff + state_dict.get(state_dict_key, 0)
         if state_dict == {}:
@@ -863,6 +872,18 @@ class Fock(ParticleOperator):
             )
 
         else:
+            # Ensure Pauli exclusion and clean up b_occ:
+            b_modes = [x[0] for x in b_occ]
+            if len(b_modes) != len(set(b_modes)):
+                combined = defaultdict(int)
+                for key, value in b_occ:
+                    combined[key] += value
+                b_occ = list(combined.items())
+
+            assert len(f_occ) == len(set(f_occ)) and len(af_occ) == len(
+                set(af_occ)
+            ), "This state violates the Pauli exclusion principle"
+
             self.state_dict = {
                 (
                     tuple(sorted(f_occ)),
