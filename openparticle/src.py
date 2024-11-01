@@ -862,6 +862,18 @@ class Fock(ParticleOperator):
             )
 
         else:
+            # Ensure Pauli exclusion and clean up b_occ:
+            b_modes = [x[0] for x in b_occ]
+            if len(b_modes) != len(set(b_modes)):
+                combined = defaultdict(int)
+                for key, value in b_occ:
+                    combined[key] += value
+                b_occ = list(combined.items())
+
+            assert len(f_occ) == len(set(f_occ)) and len(af_occ) == len(
+                set(af_occ)
+            ), "This state violates the Pauli exclusion principle"
+
             self.state_dict = {
                 (
                     tuple(sorted(f_occ)),
