@@ -795,8 +795,13 @@ class ParticleOperator:
                 b_coeff = 1
 
             coeff = val * f_parity * af_parity * b_coeff
-            state_dict_key = (tuple(f_occ), tuple(af_occ), tuple(b_occ))
+            state_dict_key = (
+                tuple(sorted(f_occ)),
+                tuple(sorted(af_occ)),
+                tuple(sorted(b_occ)),
+            )
             state_dict[state_dict_key] = coeff + state_dict.get(state_dict_key, 0)
+
         if state_dict == {}:
             return 0
         else:
@@ -977,14 +982,6 @@ class Fock(ParticleOperator):
     @staticmethod
     def vacuum():
         return Fock([], [], [])
-
-    # def dagger(self):
-    #     for state, coeff in self.state_dict.items():
-    #         operator_structure = ParticleOperator(
-    #             Fock(state_dict={state: coeff}).op_dict
-    #         )
-    #         dagger_operator_structure = operator_structure.dagger()
-    #         return coeff * dagger_operator_structure
 
 
 class FermionOperator(ParticleOperator):

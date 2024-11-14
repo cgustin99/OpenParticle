@@ -97,32 +97,32 @@ def generate_matrix(op, basis):
     for j, state_j in enumerate(basis):
         rhs = op * state_j
         for i, state_i in enumerate(basis):
-            if rhs == 0:
-                matrix[i][j] = 0
+            if op.is_hermitian():
+                if i <= j:
+                    mval = overlap(state_i, rhs)
+                    matrix[i][j] = matrix[j][i] = mval
             else:
-                if op.is_hermitian():
-                    if i <= j:  # Only calculate lower triangular matrix
-                        if rhs.op_dict == {}:
-                            matrix[i][j] = 0
-                        else:
-                            val = (
-                                state_i.dagger() * ParticleOperator(rhs.op_dict)
-                            ).VEV()
-                            matrix[i][j] = val
-                            matrix[j][i] = val.conjugate()
-                else:
-                    if rhs.op_dict == {}:
-                        matrix[i][j] = 0
-                    else:
-                        # val = (state_i.dagger() * ParticleOperator(rhs.op_dict)).VEV()
-                        val = get_matrix_element(
-                            state_i,
-                            ParticleOperator(" "),
-                            ParticleOperator(rhs.op_dict),
-                        )
-                        matrix[i][j] = val
+                matrix[i][j] = overlap(state_i, rhs)
 
     return matrix
+
+
+def overlap(bra, ket):
+    # Calculate ⟨bra|ket⟩
+    assert isinstance(bra, Fock)
+    assert isinstance(ket, (Fock, int))
+
+    if isinstance(ket, int):
+        return 0
+    key_overlap = bra.state_dict.keys() & ket.state_dict.keys()
+    if key_overlap == {}:
+        return 0
+    else:
+        overlap = 0
+        for key in key_overlap:
+            overlap += bra.state_dict[key] * ket.state_dict[key]
+
+        return overlap
 
 
 def remove_symmetry_terms(operator, proper_length: int):
@@ -132,8 +132,3 @@ def remove_symmetry_terms(operator, proper_length: int):
             cleaned_up_op += terms
 
     return cleaned_up_op
-
-
-def overlap(bra, ket):
-    # Calculates overlap between two states ⟨bra|ket⟩
-    return (bra.dagger() * ParticleOperator(ket.op_dict)).VEV()
