@@ -1,6 +1,7 @@
 import numpy as np
 from itertools import combinations
 from openparticle import Fock, ParticleOperator
+from openparticle.utils import get_matrix_element
 
 
 # gamma matrices
@@ -11,51 +12,84 @@ gammam = gamma0 - gamma1
 Lambdap = 0.5 * gamma0.dot(gammap)
 
 
+def gamma_slash_minus_m(q, m):
+    return gammap * (m**2 / q) + gammam * q - m * np.eye(2)
+
+
 # discretized lightfront momentum
-def p(k, L=1):
+def p(k, L):
     return 2 * np.pi * k / L
 
 
 # 1 + 1D lightcone spinors
-def u(k, m=1, L=1):
-    return 1 / np.sqrt(np.abs(p(k, L))) * np.array([p(k, L), m]).reshape([-1, 1])
+def u(pk, m):
+    return 1 / np.sqrt(np.abs(pk)) * np.array([pk, m]).reshape([-1, 1])
 
 
-def v(k, m=1, L=1):
-    return 1 / np.sqrt(np.abs(p(k, L))) * np.array([-p(k, L), m]).reshape([-1, 1])
+def v(pk, m):
+    return 1 / np.sqrt(np.abs(pk)) * np.array([-pk, m]).reshape([-1, 1])
 
 
-def ubar(k, m=1, L=1):
-    return (u(k, m, L).reshape([1, -1])).dot(
+def ubar(pk, m):
+    return (u(pk, m).reshape([1, -1])).dot(
         gamma0
     )  # u(p) is real so dagger -> transpose
 
 
-def vbar(k, m=1, L=1):
-    return (
-        v(k, m, L).reshape([1, -1]).dot(gamma0)
-    )  # v(p) is real so dagger -> transpose
+def vbar(pk, m):
+    return v(pk, m).reshape([1, -1]).dot(gamma0)  # v(p) is real so dagger -> transpose
+
+
+def pminus(pplus, m):
+    return m**2 / pplus
+
+
+def pminuses(ppluses, ms):
+    return [ms[i] ** 2 / ppluses[i] for i in range(len(ms))]
 
 
 # Pplus operator
-def Pplus(pp_cutoff):
+def Pplus(res):
     pp = ParticleOperator({})
 
-    for n in range(1, pp_cutoff):
-        pp += (n - 1 / 2) * (
-            ParticleOperator("b" + str(n - 1) + "^")
-            * ParticleOperator("b" + str(n - 1))
-            + ParticleOperator("d" + str(n - 1) + "^")
-            * ParticleOperator("d" + str(n - 1))
+    for n in np.arange(1 / 2, res + 1 / 2, 1):
+        pp += n * (
+            ParticleOperator("b" + str(int(n - 1 / 2)) + "^ ")
+            * ParticleOperator("b" + str(int(n - 1 / 2)))
+            + ParticleOperator("d" + str(int(n - 1 / 2)) + "^ ")
+            * ParticleOperator("d" + str(int(n - 1 / 2)))
         )
 
-    for m in range(1, pp_cutoff):
+    for m in range(1, res + 1):
         pp += m * (
-            ParticleOperator("a" + str(m - 1) + "^")
+            ParticleOperator("a" + str(m - 1) + "^ ")
             * ParticleOperator("a" + str(m - 1))
         )
 
     return pp
+
+
+def Q(res):
+    # Baryon number (Charge) operator
+
+    B_op = ParticleOperator({})
+
+    for n in range(0, res + 1, 1):
+        B_op += ParticleOperator("b" + str(n) + "^ " + "b" + str(n)) - ParticleOperator(
+            "d" + str(n) + "^ " + "d" + str(n)
+        )
+
+    return B_op
+
+
+def impose_baryon_number(res, basis, baryon_number):
+
+    baryon_number_basis = []
+    for state in basis:
+        if get_matrix_element(state, Q(res), state) == baryon_number:
+            baryon_number_basis.append(state)
+
+    return baryon_number_basis
 
 
 # Partitioning Functions
@@ -118,7 +152,7 @@ def fermion_partition_to_f_occ(f_tuple):
     return list(int(np.floor(i)) for i in f_tuple)
 
 
-def Pplus_states_partition(K):
+def momentum_states_partition(K):
     partitions = find_exact_partitions(K)
     states = []
     for p in partitions:
