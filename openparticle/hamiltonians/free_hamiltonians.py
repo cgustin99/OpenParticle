@@ -13,10 +13,8 @@ def free_boson_Hamiltonian(res, mb):
     H_free_scalar = ParticleOperator({})
     for k in [i for i in range(-res, res + 1) if i != 0]:
         H_free_scalar += (
-            1
-            / p(k, L)
-            * (ScalarField(-k, L, mb).phi * ScalarField(k, L, mb).phi).normal_order()
-        )
+            ScalarField(-k, L, mb).phi * ScalarField(k, L, mb).phi
+        ).normal_order()
     H_free_scalar.remove_identity()
     return (2 * L) * mb**2 / (2 * L) ** 2 * H_free_scalar
 

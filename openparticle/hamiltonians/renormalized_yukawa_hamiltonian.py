@@ -45,14 +45,16 @@ def renormalized_Yukawa_second_order_form_factor(res, t, treg, g, mf, mb):
         exp_factor = 0
         for op in term.split():
             exp_factor += (
-                _get_sign(op) * _get_mass(op, mf, mb) ** 2 * _get_pminus(op, mf, mb)
+                _get_sign(op)
+                * _get_mass(op, mf, mb) ** 2
+                * _get_pminus(op, mf, mb, res)
             )
         ren_H1inst += np.exp(-(exp_factor**2) * (t + treg)) * term
 
     return ren_H1inst
 
 
-def tree_diagram_boson_exchange(t, g, res, mf, mb):
+def boson_exchange(t, g, res, mf, mb):
 
     fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
     bosonic_range = [i for i in range(-res, res + 1) if i != 0]
@@ -100,7 +102,7 @@ def tree_diagram_boson_exchange(t, g, res, mf, mb):
     return g**2 / (2 * L) ** 5 * h_tree
 
 
-def tree_diagram_fermion_exchange(t, g, res, mf, mb):
+def fermion_exchange(t, g, res, mf, mb):
 
     fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
     bosonic_range = [i for i in range(-res, res + 1) if i != 0]
@@ -131,7 +133,7 @@ def tree_diagram_fermion_exchange(t, g, res, mf, mb):
                                 * f1356
                             )
 
-                            field_contractions = FermionField(
+                            fermion_field_contractions = FermionField(
                                 -q1, L, mf
                             ).psi_dagger.dot(
                                 gamma0.dot(
@@ -139,17 +141,22 @@ def tree_diagram_fermion_exchange(t, g, res, mf, mb):
                                         FermionField(q5, L, mf).psi
                                     )
                                 )
-                                * (
-                                    ScalarField(q3, L, mb).phi
-                                    * ScalarField(q6, L, mb).phi
-                                ).normal_order()
                             )[
                                 0
                             ][
                                 0
                             ]
+                            boson_field_contractions = (
+                                ScalarField(q3, L, mb).phi * ScalarField(q6, L, mb).phi
+                            )
 
-                            h_tree += B / (q2) * (field_contractions)
+                            if fermion_field_contractions.op_dict != {}:
+                                field_contractions = (
+                                    fermion_field_contractions
+                                    * boson_field_contractions
+                                )
+
+                            h_tree += B / (q2) * (field_contractions.normal_order())
 
     h_tree = remove_symmetry_terms(h_tree, 4)
     return g**2 / (2 * L) ** 5 * h_tree
@@ -176,7 +183,7 @@ def fermion_self_energy(t, g, res, mf, mb):
 
                     field_contractions = FermionField(q1, L, mf).psi_dagger.dot(
                         gamma0.dot(
-                            gamma_slash_minus_m(q2, mf).dot(FermionField(q1, mf).psi)
+                            gamma_slash_minus_m(q2, mf).dot(FermionField(q1, L, mf).psi)
                         )
                     )[0][0]
                     fermion_loop += B / (q2 * q3) * (field_contractions)
@@ -206,7 +213,9 @@ def antifermion_self_energy(t, g, res, mf, mb):
 
                     field_contractions = FermionField(-q1, L, mf).psi_dagger.dot(
                         gamma0.dot(
-                            gamma_slash_minus_m(-q2, mf).dot(FermionField(-q1, mf).psi)
+                            gamma_slash_minus_m(-q2, mf).dot(
+                                FermionField(-q1, L, mf).psi
+                            )
                         )
                     )[0][0]
                     fermion_loop += B / (q2 * q3) * (field_contractions).normal_order()
@@ -256,8 +265,8 @@ def fermion_mass_counterterm(res, treg, g, mf):
 
     H_free_fermion = ParticleOperator({})
     for k in np.arange(-res + 1 / 2, res + 1 / 2, 1):
-        H_free_fermion += (
-            1
+        H_free_fermion += 0.5 * (
+            (-np.euler_gamma + np.log((2 * np.pi * k / L) ** 2 / (2 * mf**4 * treg)))
             / p(k, L)
             * (
                 FermionField(k, L, mf).psi_dagger.dot(
@@ -266,46 +275,32 @@ def fermion_mass_counterterm(res, treg, g, mf):
             )[0][0].normal_order()
         )
     H_free_fermion.remove_identity()
-    return (
-        (2 * L)
-        * mf**2
-        / (2 * L) ** 2
-        * g**2
-        * (np.euler_gamma - np.ln((2 * np.pi * res / L) ** 2 / (2 * mf**4 * treg)))
-        * H_free_fermion
-    )
+    return 1 / (2 * L) ** 2 * g**2 * H_free_fermion
 
 
-def boson_mass_counterterm(res, treg, g, mb):
+def boson_mass_counterterm(res, treg, g, mf, mb):
     L = 2 * np.pi * res
 
     H_free_scalar = ParticleOperator({})
     for k in [i for i in range(-res, res + 1) if i != 0]:
-        H_free_scalar += (
-            1
+        H_free_scalar += 0.5 * (
+            (-np.euler_gamma + np.log((2 * np.pi * k / L) ** 2 / (2 * mf**4 * treg)))
             / p(k, L)
             * (ScalarField(-k, L, mb).phi * ScalarField(k, L, mb).phi).normal_order()
         )
     H_free_scalar.remove_identity()
-    return (
-        (2 * L)
-        * mb**2
-        / (2 * L) ** 2
-        * g**2
-        * (np.euler_gamma - np.ln((2 * np.pi * res / L) ** 2 / (2 * mb**4 * treg)))
-        * H_free_scalar
-    )
+    return 1 / (2 * L) ** 2 * g**2 * H_free_scalar
 
 
 def renormalized_Yukawa_second_order_contractions(res, t, treg, g, mf, mb):
     second_order = (
-        tree_diagram_boson_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb)
-        + tree_diagram_fermion_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb)
+        boson_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb)
+        + fermion_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb)
         + fermion_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb)
         + antifermion_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb)
         + boson_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb)
         + fermion_mass_counterterm(res=res, treg=treg, g=g, mf=mf)
-        + boson_mass_counterterm(res=res, treg=treg, g=g, mb=mb)
+        + boson_mass_counterterm(res=res, treg=treg, g=g, mf=mf, mb=mb)
     )
 
     return second_order

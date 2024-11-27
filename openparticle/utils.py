@@ -169,5 +169,5 @@ def numpy_to_fock(np_state, fock_basis):
 
 
 def max_fock_weight(state):
-    max_pair = max(state.state_dict.items(), key=lambda item: item[1].real)
+    max_pair = max(state.state_dict.items(), key=lambda item: np.abs(item[1].real))
     return max_pair[1], Fock(state_dict={max_pair[0]: 1})

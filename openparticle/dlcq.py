@@ -96,7 +96,10 @@ def impose_baryon_number(res, basis, baryon_number):
 
 
 def generate_fermion_antifermion_partitions(K):
-    half_integers = [n / 2 for n in range(1, 2 * K + 1, 2)]  # [1/2, 3/2, 5/2, ...]
+    if K % 1 == 0:
+        half_integers = [n / 2 for n in range(1, 2 * K + 1, 2)]  # [1/2, 3/2, 5/2, ...]
+    else:
+        half_integers = [n for n in np.arange(1 / 2, K + 1, 1)]
     valid_partitions = []
 
     for num_particles in range(0, len(half_integers) + 1):
