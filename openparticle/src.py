@@ -106,7 +106,7 @@ class ParticleOperator:
             return self
         else:
             keys, coeffs = zip(*self.op_dict.items())
-            mask = np.where(abs(np.array(coeffs)) > 1e-15)[0]
+            mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
 
             new_keys = np.array(keys, dtype=object)
             if len(new_keys.shape) == 1:
@@ -941,6 +941,7 @@ class Fock(ParticleOperator):
             output = ParticleOperator({})
 
             new_op = ParticleOperator(op_dict_copy) * ParticleOperator(self.op_dict)
+
             if new_op.op_dict != {}:  # i.e. has more than just the identity
                 for term in new_op.normal_order().to_list():
                     if term.all_creation():
