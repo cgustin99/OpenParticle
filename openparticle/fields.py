@@ -5,9 +5,9 @@ from openparticle.dlcq import *
 
 class ScalarField:
 
-    def __init__(self, k, m_B=1, L=1):
+    def __init__(self, k, L, mb):
         self.k = k
-        self.m_B = m_B
+        self.mb = mb
         self.L = L
         self.phi = (
             (2 * L)
@@ -21,19 +21,19 @@ class ScalarField:
 
 class FermionField:
 
-    def __init__(self, k, m_F=1, L=1):
+    def __init__(self, k, L, mf):
         self.k = k
-        self.m_F = m_F
+        self.mf = mf
         self.L = L
         self.psi = (
             (2 * L)
             / np.sqrt(4 * np.pi * np.abs(k))
             * (
                 np.heaviside(k, 0)
-                * u(p(k))
+                * u(p(k, L), mf)
                 * ParticleOperator("b" + str(int(k - 1 / 2)))
                 + np.heaviside(-k, 0)
-                * v(p(-k))
+                * v(p(-k, L), mf)
                 * ParticleOperator("d" + str(-int(k + 1 / 2)) + "^")
             )
         )
@@ -43,10 +43,10 @@ class FermionField:
             / np.sqrt(4 * np.pi * np.abs(k))
             * (
                 np.heaviside(k, 0)
-                * (u(p(k)).reshape([1, -1]))
+                * (u(p(k, L), mf).reshape([1, -1]))
                 * ParticleOperator("b" + str(int(k - 1 / 2)) + "^")
                 + np.heaviside(-k, 0)
-                * (v(p(-k)).reshape([1, -1]))
+                * (v(p(-k, L), mf).reshape([1, -1]))
                 * ParticleOperator("d" + str(-int(k + 1 / 2)))
             )
         )

@@ -84,13 +84,14 @@ def get_fock_basis(operator: ParticleOperator, max_bose_occ: int = 1):
 
 
 def get_matrix_element(left_state, operator, right_state):
-    # A_{ij} = ⟨bra|operator|ket⟩
+    # Calculate A_{ij} = ⟨bra|operator|ket⟩
     return (
         left_state.dagger() * operator * ParticleOperator(right_state.op_dict)
     ).VEV()
 
 
 def generate_matrix(op, basis):
+    # Calculates the matrix representation of an operator in a given basis
     size = (len(basis), len(basis))
     matrix = np.zeros(size, dtype=complex)
 
@@ -132,3 +133,41 @@ def remove_symmetry_terms(operator, proper_length: int):
             cleaned_up_op += terms
 
     return cleaned_up_op
+
+
+def _get_sign(op):
+    return 1 if op.creation else -1
+
+
+def _get_mass(op, m_F, m_B):
+    if op.particle_type == "fermion":
+        return m_F
+    elif op.particle_type == "antifermion":
+        return m_F
+    elif op.particle_type == "boson":
+        return m_B
+
+
+def _get_pminus(op, mf, mb, res):
+    if op.particle_type == "fermion" or op.particle_type == "antifermion":
+        p = 2 * np.pi * (op.mode + 1 / 2) / (2 * np.pi * res)
+        return mf**2 / p
+    elif op.particle_type == "boson":
+        p = 2 * np.pi * (op.mode + 1) / (2 * np.pi * res)
+        return mb**2 / p
+
+
+def numpy_to_fock(np_state, fock_basis):
+    output_state = Fock([], [], [])
+
+    for state_index in range(len(np_state)):
+        if np_state[state_index] != 0 and fock_basis[state_index] != 0:
+            output_state += np_state[state_index] * fock_basis[state_index]
+
+    output_state += -1 * Fock.vacuum()
+    return output_state
+
+
+def max_fock_weight(state):
+    max_pair = max(state.state_dict.items(), key=lambda item: np.abs(item[1].real))
+    return max_pair[1], Fock(state_dict={max_pair[0]: 1})
