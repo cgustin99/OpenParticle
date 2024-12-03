@@ -768,7 +768,7 @@ class ParticleOperator:
         for key, val in self.normal_order().op_dict.items():
             if not ParticleOperator(
                 {key: val}
-            ).all_creation():  # If we normal order the key and there is an annihilation operator, its action on |v⟩ will return 0
+            ).all_creation:  # If we normal order the key and there is an annihilation operator, its action on |v⟩ will return 0
                 continue
             split_key = ParticleOperator.partition_term(key)
             if 0 in split_key:
@@ -807,6 +807,7 @@ class ParticleOperator:
         else:
             return Fock(state_dict=state_dict)
 
+    @property
     def all_creation(self):
         # Return true if all operators in a ParticleOperator are creation operators
         tup = []
@@ -877,6 +878,9 @@ class Fock(ParticleOperator):
             )
 
         else:
+            self.f_occ = f_occ
+            self.af_occ = af_occ
+            self.b_occ = b_occ
             # Ensure Pauli exclusion and clean up b_occ:
             b_modes = [x[0] for x in b_occ]
             if len(b_modes) != len(set(b_modes)):
@@ -943,7 +947,7 @@ class Fock(ParticleOperator):
             new_op = ParticleOperator(op_dict_copy) * ParticleOperator(self.op_dict)
             if new_op.op_dict != {}:  # i.e. has more than just the identity
                 for term in new_op.normal_order().to_list():
-                    if term.all_creation():
+                    if term.all_creation:
                         output += term
             else:
                 return const * self
