@@ -49,9 +49,7 @@ def jordan_wigner(operator: Union[FermionOperator, AntifermionOperator]):
         return PauliwordOp.from_list(["X", "Y"], [1 / 2, 1j / 2])
 
 
-def op_qubit_map(operator, max_bose_occ):
-
-    n_boson_qubits_one_mode = int(np.log2(max_bose_occ + 1))
+def op_qubit_map(operator, max_bose_occ: int = None):
 
     if operator.has_fermions:
         n_fermionic_qubits = operator.max_fermionic_mode + 1
@@ -64,8 +62,10 @@ def op_qubit_map(operator, max_bose_occ):
         n_antifermionic_qubits = 0
 
     if operator.has_bosons:
+        n_boson_qubits_one_mode = int(np.log2(max_bose_occ + 1))
         n_bosonic_qubits = (operator.max_bosonic_mode + 1) * n_boson_qubits_one_mode
     else:
+        n_boson_qubits_one_mode = 1
         n_bosonic_qubits = 0
 
     empty = PauliwordOp.empty(
