@@ -260,6 +260,36 @@ def test_split():
     assert split_op[1].op_dict == BosonOperator("0").op_dict
 
 
+def test_equality1():
+    op1 = ParticleOperator("b0^ d1")
+    op2 = ParticleOperator("b0^ d1")
+    return op1 == op2
+
+
+def test_equality2():
+    op1 = ParticleOperator("b1^ d1")
+    op2 = ParticleOperator("b0^ d1")
+    return op1 != op2
+
+
+def test_equality3():
+    op1 = ParticleOperator("b10^ d1") + ParticleOperator("a0^")
+    op2 = ParticleOperator("b0^ d1")
+    return op1 != op2
+
+
+def test_equality4():
+    op1 = ParticleOperator("b10^ d1") + ParticleOperator("a0^")
+    op2 = ParticleOperator("b10^ d1") + ParticleOperator("a0^")
+    return op1 == op2
+
+
+def test_equality4():
+    op1 = ParticleOperator("b10^ d1") + ParticleOperator("a0^")
+    op2 = ParticleOperator("a0^") + ParticleOperator("b10^ d1")
+    return op1 == op2
+
+
 # def test_random_particleoperator_generation():
 #     for _ in range(1000):
 #         possible_types = [

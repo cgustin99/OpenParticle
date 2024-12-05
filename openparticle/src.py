@@ -294,6 +294,12 @@ class ParticleOperator:
     def __len__(self):
         return len(self.op_dict)
 
+    def __eq__(self, other):
+        return self.op_dict == other.op_dict
+
+    def __neq__(self, other):
+        return self.op_dict != other.op_dict
+
     @property
     def coeff(self):
         assert (
