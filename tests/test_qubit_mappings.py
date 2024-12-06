@@ -1,5 +1,6 @@
 from openparticle.qubit_mappings import *
-from symmer import PauliwordOp
+from openparticle import ParticleOperator, Fock
+from symmer import PauliwordOp, QuantumState
 
 
 def test_JW_dagger():
@@ -49,3 +50,27 @@ def test_SB_higher_max_occ():
         }
     )
     assert op_qubit_map(op, 3) == SB_op
+
+
+def test_fock_qubit_map():
+    f_occ = [4, 2, 1]
+    af_occ = [0]
+    b_occ = [(0, 3), (2, 1)]
+
+    max_f_mode = 5
+    max_af_mode = 0
+    max_b_mode = 2
+    max_occ = 3
+
+    mapped_bitstring = "010110" + "1" + "01" + "00" + "11"
+    expected_quantum_state = QuantumState.from_dictionary({mapped_bitstring: 1.0})
+    state = Fock(f_occ, af_occ, b_occ)
+    obtained_quantum_state = fock_qubit_state_mapping(
+        state=state,
+        max_occ=max_occ,
+        max_fermion_mode=max_f_mode,
+        max_antifermion_mode=max_af_mode,
+        max_boson_mode=max_b_mode,
+    )
+
+    assert expected_quantum_state == obtained_quantum_state

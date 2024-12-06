@@ -138,14 +138,25 @@ def boson_fock_to_qubit(b_occ, max_occ, max_mode: int = None):
 
 def fock_qubit_state_mapping(
     state,
-    max_occ: int,
+    max_occ: int = None,
     max_fermion_mode: int = None,
     max_antifermion_mode: int = None,
     max_boson_mode: int = None,
 ):
-    qubit_state = (
-        fermion_fock_to_qubit(state.f_occ, max_mode=max_fermion_mode)
-        + fermion_fock_to_qubit(state.af_occ, max_mode=max_antifermion_mode)
-        + boson_fock_to_qubit(state.b_occ, max_occ=max_occ, max_mode=max_boson_mode)
-    )
+    qubit_f_occ = []
+    qubit_af_occ = []
+    qubit_b_occ = []
+
+    if state.has_fermions:
+        qubit_f_occ = fermion_fock_to_qubit(state.f_occ, max_mode=max_fermion_mode)
+    if state.has_antifermions:
+        qubit_af_occ = fermion_fock_to_qubit(
+            state.af_occ, max_mode=max_antifermion_mode
+        )
+    if state.has_bosons:
+        qubit_b_occ = boson_fock_to_qubit(
+            state.b_occ, max_occ=max_occ, max_mode=max_boson_mode
+        )
+
+    qubit_state = qubit_f_occ + qubit_af_occ + qubit_b_occ
     return QuantumState(qubit_state)
