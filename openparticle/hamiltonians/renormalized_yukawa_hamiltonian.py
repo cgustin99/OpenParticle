@@ -1,5 +1,6 @@
 from openparticle.hamiltonians.yukawa_hamiltonians import *
 from openparticle.utils import _get_sign, _get_mass, _get_pminus
+from scipy.integrate import quad
 
 
 def renormalized_Yukawa_hamiltonian(res, t, treg, g, mf, mb):
@@ -162,102 +163,85 @@ def fermion_exchange(t, g, res, mf, mb):
     return g**2 / (2 * L) ** 5 * h_tree
 
 
+def fermion_loop(t, p, mf, mb):
+    def integrand(x, t, p, mf, mb):
+        return (
+            1
+            / (x**2 * (1 - x) ** 2)
+            * (mf * (2 - x)) ** 2
+            / (mf**2 / x + mb**2 / (1 - x) - mf**2)
+            * np.exp(-2 * t / p**2 * (mf**2 / x + mb**2 / (1 - x) - mf**2))
+        )
+
+    return quad(integrand, 0, 1, args=(t, p, mf, mb))[0]
+
+
 def fermion_self_energy(t, g, res, mf, mb):
 
-    fermion_loop = ParticleOperator({})
+    _fermion_loop = ParticleOperator({})
 
-    fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
-    bosonic_range = np.array([i for i in range(-res, res + 1) if i != 0])
+    fermionic_range = np.arange(1 / 2, res + 1, 1)
 
     L = 2 * np.pi * res
 
-    for q1 in fermionic_range:
-        for q2 in fermionic_range[fermionic_range > 0]:
-            for q3 in bosonic_range[bosonic_range > 0]:
-                if q2 + q3 == q1:
-                    q1_, q2_, q3_ = pminuses([q1, q2, q3], [mf, mf, mb])
+    for k in fermionic_range:
+        p1 = p(k, L)
+        _fermion_loop += (
+            (1 / p1)
+            * fermion_loop(t=t, p=p1, mf=mf, mb=mb)
+            * ParticleOperator("b" + str(int(k - 1 / 2)) + "^ b" + str(int(k - 1 / 2)))
+        )
 
-                    f231_ = np.exp(-t * (q2_ + q3_ - q1_) ** 2)
-
-                    B = (f231_**2 - 1) / (q2_ + q3_ - q1_)
-
-                    field_contractions = FermionField(q1, L, mf).psi_dagger.dot(
-                        gamma0.dot(
-                            gamma_slash_minus_m(q2, mf).dot(FermionField(q1, L, mf).psi)
-                        )
-                    )[0][0]
-                    fermion_loop += B / (q2 * q3) * (field_contractions)
-
-    fermion_loop = remove_symmetry_terms(fermion_loop, 2)
-    return g**2 / (2 * L) ** 3 * fermion_loop
+    return g**2 / (2 * L) * _fermion_loop
 
 
 def antifermion_self_energy(t, g, res, mf, mb):
+    _antifermion_loop = ParticleOperator({})
 
-    fermion_loop = ParticleOperator({})
-
-    fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
-    bosonic_range = np.array([i for i in range(-res, res + 1) if i != 0])
+    fermionic_range = np.arange(1 / 2, res + 1, 1)
 
     L = 2 * np.pi * res
 
-    for q1 in fermionic_range:
-        for q2 in fermionic_range[fermionic_range > 0]:
-            for q3 in bosonic_range[bosonic_range > 0]:
-                if q2 + q3 == q1:
-                    q1_, q2_, q3_ = pminuses([q1, q2, q3], [mf, mf, mb])
+    for k in fermionic_range:
+        p1 = p(k, L)
+        _antifermion_loop += (
+            (1 / p1)
+            * fermion_loop(t=t, p=p1, mf=mf, mb=mb)
+            * ParticleOperator("d" + str(int(k - 1 / 2)) + "^ d" + str(int(k - 1 / 2)))
+        )
 
-                    f231_ = np.exp(-t * (q2_ + q3_ - q1_) ** 2)
+    return g**2 / (2 * L) * _antifermion_loop
 
-                    B = (f231_**2 - 1) / (q2_ + q3_ - q1_)
 
-                    field_contractions = FermionField(-q1, L, mf).psi_dagger.dot(
-                        gamma0.dot(
-                            gamma_slash_minus_m(-q2, mf).dot(
-                                FermionField(-q1, L, mf).psi
-                            )
-                        )
-                    )[0][0]
-                    fermion_loop += B / (q2 * q3) * (field_contractions).normal_order()
-    fermion_loop = remove_symmetry_terms(fermion_loop, 2)
-    return g**2 / (2 * L) ** 3 * fermion_loop
+def boson_loop(t, p, mf, mb):
+    def integrand(x, t, p, mf, mb):
+        return (
+            1
+            / (x**2 * (1 - x) ** 2)
+            * (mf * (2 * x - 1)) ** 2
+            / (mf**2 / x + mf**2 / (1 - x) - mb**2)
+            * np.exp(-2 * t / p**2 * (mf**2 / x + mf**2 / (1 - x) - mb**2))
+        )
+
+    return quad(integrand, 0, 1, args=(t, p, mf, mb))[0]
 
 
 def boson_self_energy(t, g, res, mf, mb):
+    _boson_loop = ParticleOperator({})
 
-    boson_loop = ParticleOperator({})
-
-    fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
-    bosonic_range = np.array([i for i in range(-res, res + 1) if i != 0])
+    bosonic_range = np.arange(1, res + 1, 1)
 
     L = 2 * np.pi * res
 
-    for q1 in fermionic_range[fermionic_range > 0]:
-        for q2 in fermionic_range[fermionic_range > 0]:
-            for q3 in bosonic_range:
-                if q1 + q2 == q3:
-                    q1_, q2_, q3_ = pminuses([q1, q2, q3], [mf, mf, mb])
+    for k in bosonic_range:
+        p3 = p(k, L)
+        _boson_loop += (
+            (1 / p3)
+            * boson_loop(t=t, p=p3, mf=mf, mb=mb)
+            * ParticleOperator("a" + str(int(k - 1)) + "^ a" + str(int(k - 1)))
+        )
 
-                    f123_ = np.exp(-t * (q1_ + q2_ - q3_) ** 2)
-
-                    B = (f123_**2 - 1) / (q1_ + q2_ - q3_)
-
-                    prop_1 = gamma_slash_minus_m(q1, mf)
-                    prop_2 = gamma_slash_minus_m(q2, mf)
-
-                    field_contractions = (
-                        ScalarField(-q3, L, mb).phi * ScalarField(q3, L, mb).phi
-                    ).normal_order()
-
-                    boson_loop += (
-                        B
-                        / (q1 * q2)
-                        * (np.trace(prop_1.dot(prop_2)))
-                        * field_contractions
-                    )
-
-    boson_loop = remove_symmetry_terms(boson_loop, 2)
-    return g**2 / (2 * L) ** 3 * boson_loop
+    return g**2 / (2 * L) * _boson_loop
 
 
 def fermion_mass_counterterm(res, treg, g, mf):
@@ -299,8 +283,6 @@ def renormalized_Yukawa_second_order_contractions(res, t, treg, g, mf, mb):
         + fermion_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb)
         + antifermion_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb)
         + boson_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb)
-        + fermion_mass_counterterm(res=res, treg=treg, g=g, mf=mf)
-        + boson_mass_counterterm(res=res, treg=treg, g=g, mf=mf, mb=mb)
     )
 
     return second_order

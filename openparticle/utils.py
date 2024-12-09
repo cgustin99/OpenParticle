@@ -161,7 +161,7 @@ def numpy_to_fock(np_state, fock_basis):
     output_state = Fock([], [], [])
 
     for state_index in range(len(np_state)):
-        if np_state[state_index] != 0 and fock_basis[state_index] != 0:
+        if np_state[state_index] != 0:
             output_state += np_state[state_index] * fock_basis[state_index]
 
     output_state += -1 * Fock.vacuum()
