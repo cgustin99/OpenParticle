@@ -340,6 +340,22 @@ class ParticleOperator:
             else:
                 return 0
 
+    @property
+    def n_fermions(self):
+        for key in self.op_dict.keys():
+            if "b" in ParticleOperator.key_to_op_string(key):
+                return ParticleOperator.key_to_op_string(key).count("b")
+            else:
+                return 0
+
+    @property
+    def n_antifermions(self):
+        for key in self.op_dict.keys():
+            if "d" in ParticleOperator.key_to_op_string(key):
+                return ParticleOperator.key_to_op_string(key).count("d")
+            else:
+                return 0
+
     def normal_order(self) -> "ParticleOperator":
         """
         # Returns a new ParticleOperator object with a normal ordered hash table

@@ -83,6 +83,16 @@ def get_fock_basis(operator: ParticleOperator, max_bose_occ: int = 1):
     return basis
 
 
+def impose_fock_sector_cutoff(fock_states, n_particles):
+    output_states = []
+
+    for state in fock_states:
+        if state.n_fermions + state.n_antifermions + state.n_bosons <= n_particles:
+            output_states.append(state)
+
+    return output_states
+
+
 def get_matrix_element(left_state, operator, right_state):
     # Calculate A_{ij} = ⟨bra|operator|ket⟩
     return (
