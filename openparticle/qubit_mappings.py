@@ -52,7 +52,7 @@ def _jordan_wigner(operator: Union[FermionOperator, AntifermionOperator]):
 def jordan_wigner(operator: ParticleOperator):
     assert not operator.has_bosons, "Must be a fermionic operator only"
 
-    n_modes = operator.max_mode() + 1
+    n_modes = operator.max_mode + 1
     jw = PauliwordOp.from_dictionary({"I" * (n_modes): 1.0})
 
     for term in operator.to_list():
