@@ -1,4 +1,3 @@
-from openparticle.qubit_mappings import *
 from openparticle import ParticleOperator, Fock
 from symmer import PauliwordOp, QuantumState
 

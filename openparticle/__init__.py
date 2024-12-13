@@ -9,7 +9,6 @@ from .src import (
 )
 
 from .utils import generate_matrix, get_fock_basis, remove_symmetry_terms
-from .qubit_mappings import *
 
 from .fields import ScalarField, FermionField
 
