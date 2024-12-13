@@ -41,7 +41,7 @@ def SB(operator: BosonOperator, max_occ: int):
     return output
 
 
-def jordan_wigner(operator: Union[FermionOperator, AntifermionOperator]):
+def _jordan_wigner(operator: Union[FermionOperator, AntifermionOperator]):
 
     if operator.all_creation:
         return PauliwordOp.from_list(["X", "Y"], [1 / 2, -1j / 2])
@@ -49,52 +49,45 @@ def jordan_wigner(operator: Union[FermionOperator, AntifermionOperator]):
         return PauliwordOp.from_list(["X", "Y"], [1 / 2, 1j / 2])
 
 
+def jordan_wigner(operator: ParticleOperator):
+    assert not operator.has_bosons, "Must be a fermionic operator only"
+
+    n_modes = operator.max_mode() + 1
+    jw = PauliwordOp.from_dictionary({"I" * (n_modes): 1.0})
+
+    for term in operator.to_list():
+        _jw = PauliwordOp.from_dictionary({"I" * (n_modes): 1.0})
+        for op in term.split():
+            mode = op.mode
+            n_higher_modes = n_modes - (mode + 1)
+            n_lower_modes = mode
+            current_jw = tensor_list(
+                [PauliwordOp.from_list(["I"], [1])] * n_higher_modes
+                + [_jordan_wigner(op)]
+                + [PauliwordOp.from_list(["Z"], [1])] * n_lower_modes
+            )
+            _jw *= current_jw
+
+    jw *= _jw
+    return jw
+
+
 def op_qubit_map(operator, max_bose_occ: int = None):
 
-    if operator.has_fermions:
-        n_fermionic_qubits = operator.max_fermionic_mode + 1
-    else:
-        n_fermionic_qubits = 0
+    for term in operator.to_list():
+        mapped_fermions = []
+        mapped_antifermions = []
+        mapped_bosons = []
+        for op in term.partition():
 
-    if operator.has_antifermions:
-        n_antifermionic_qubits = operator.max_antifermionic_mode + 1
-    else:
-        n_antifermionic_qubits = 0
+            if op.has_fermions:
+                mapped_fermions.append(jordan_wigner(op))
+            elif op.has_antifermions:
+                mapped_antifermions.append(jordan_wigner(op))
+            elif op.has_bosons:
+                mapped_bosons.append(SB(op, max_occ=max_bose_occ))
 
-    if operator.has_bosons:
-        n_boson_qubits_one_mode = int(np.log2(max_bose_occ + 1))
-        n_bosonic_qubits = (operator.max_bosonic_mode + 1) * n_boson_qubits_one_mode
-    else:
-        n_boson_qubits_one_mode = 1
-        n_bosonic_qubits = 0
-
-    empty = PauliwordOp.empty(
-        n_qubits=n_fermionic_qubits + n_antifermionic_qubits + n_bosonic_qubits
-    )
-
-    for op in operator.to_list():
-        fermion_op_list = [PauliwordOp.from_list(["I"], [1])] * n_fermionic_qubits
-        antifermion_op_list = [
-            PauliwordOp.from_list(["I"], [1])
-        ] * n_antifermionic_qubits
-        boson_op_list = [
-            PauliwordOp.from_list(["I" * n_boson_qubits_one_mode], [1])
-        ] * int(n_bosonic_qubits / n_boson_qubits_one_mode)
-        for spilt_op in op.split():
-            if isinstance(spilt_op, FermionOperator):
-                fermion_op_list[
-                    n_fermionic_qubits - 1 - spilt_op.mode
-                ] *= jordan_wigner(spilt_op)
-            elif isinstance(spilt_op, AntifermionOperator):
-                antifermion_op_list[
-                    n_antifermionic_qubits - 1 - spilt_op.mode
-                ] *= jordan_wigner(spilt_op)
-            elif isinstance(spilt_op, BosonOperator):
-                boson_op_list[spilt_op.mode] *= SB(spilt_op, max_bose_occ)
-
-        empty += tensor_list(fermion_op_list + antifermion_op_list + boson_op_list)
-
-    return empty
+    return tensor_list(mapped_fermions + mapped_antifermions + mapped_bosons)
 
 
 def fermion_fock_to_qubit(f_occ, max_mode: int = None):
