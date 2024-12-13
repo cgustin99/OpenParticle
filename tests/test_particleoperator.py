@@ -191,7 +191,7 @@ def test_max_mode():
         "b" + str(modes[0]) + "^ " + "d" + str(modes[1]) + "^ " + "a" + str(modes[2])
     )
 
-    assert ParticleOperator(op_str).max_mode() == max(modes)
+    assert ParticleOperator(op_str).max_mode == max(modes)
 
 
 def test_max_mode_2():
@@ -199,7 +199,7 @@ def test_max_mode_2():
     op = ParticleOperator(
         "b" + str(modes[0]) + "^ " + "d" + str(modes[1])
     ) + ParticleOperator("a" + str(modes[2]) + "^ " + "a" + str(modes[3]))
-    assert op.max_mode() == max(modes)
+    assert op.max_mode == max(modes)
 
 
 def test_parse_fermions():
