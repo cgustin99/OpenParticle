@@ -16,7 +16,7 @@ def free_boson_Hamiltonian(res, mb):
             ScalarField(-k, L, mb).phi * ScalarField(k, L, mb).phi
         ).normal_order()
     H_free_scalar.remove_identity()
-    return (2 * L) * mb**2 / (2 * L) ** 2 * H_free_scalar
+    return L * mb**2 / (2 * L) ** 2 * H_free_scalar
 
 
 def free_fermion_Hamiltonian(res, mf):
