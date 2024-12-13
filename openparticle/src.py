@@ -155,6 +155,23 @@ class ParticleOperator:
         else:
             return NotImplemented
 
+    def partition(self) -> List:
+        """Splits a ParticleOperator into a list of three terms: [fermionOps, antifermionOps, bosonOps]"""
+        partitioned_list = [
+            ParticleOperator(""),
+            ParticleOperator(""),
+            ParticleOperator(""),
+        ]
+
+        for op in self.split():
+            if isinstance(op, FermionOperator):
+                partitioned_list[0] *= op
+            elif isinstance(op, AntifermionOperator):
+                partitioned_list[1] *= op
+            elif isinstance(op, BosonOperator):
+                partitioned_list[2] *= op
+        return partitioned_list
+
     def to_list(self) -> List:
         particle_op_list = []
         for oper, coeff in self.op_dict.items():
@@ -647,6 +664,7 @@ class ParticleOperator:
             # return result_op
             return result_dict
 
+    @property
     def max_mode(self):
         maximum_mode = None
         for outer_tuple in self.op_dict.keys():
