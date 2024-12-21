@@ -124,7 +124,16 @@ def generate_boson_partitions(K):
     return boson_partitions
 
 
-def find_exact_partitions(K):
+def filter_partitions_by_n_particles(partitions, n_particles):
+    for tup in partitions:
+        total_count = sum(
+            len(inner_tuple) for inner_tuple in tup
+        )  # count n_particles in each partition
+        if total_count <= n_particles:
+            yield tup
+
+
+def find_exact_partitions(K, n_particles: int = None):
     fermion_partitions = generate_fermion_antifermion_partitions(K)
     antifermion_partitions = generate_fermion_antifermion_partitions(K)
     all_partitions = []
@@ -144,7 +153,13 @@ def find_exact_partitions(K):
                     if total_momentum == K:
                         all_partitions.append((fermions, antifermions, bosons))
 
-    return all_partitions
+    if n_particles is not None:
+        filtered_partitions = filter_partitions_by_n_particles(
+            all_partitions, n_particles=n_particles
+        )
+        return filtered_partitions
+    else:
+        return all_partitions
 
 
 def boson_partition_to_b_occ(b_partition):
@@ -155,8 +170,8 @@ def fermion_partition_to_f_occ(f_tuple):
     return list(int(np.floor(i)) for i in f_tuple)
 
 
-def momentum_states_partition(K):
-    partitions = find_exact_partitions(K)
+def momentum_states_partition(K, n_particles: int = None):
+    partitions = find_exact_partitions(K, n_particles=n_particles)
     states = []
     for p in partitions:
         states.append(
@@ -168,3 +183,37 @@ def momentum_states_partition(K):
         )
 
     return states
+
+
+def pdf(res, state, particle_type):
+    # Calculates the parton distribution function for a given hadronic state
+
+    particle_type_to_label = {"fermion": "b", "antifermion": "d", "boson": "a"}
+
+    f = []
+    x_fermion_arr = np.array([k / res for k in np.arange(1 / 2, res, 1)])
+    x_boson_arr = np.array([k / res for k in np.arange(1, res + 1, 1)])
+
+    if particle_type == "fermion" or "antifermion":
+        for x in x_fermion_arr:
+            pdf_op = ParticleOperator(
+                particle_type_to_label[particle_type]
+                + str(int(x * res - 1 / 2))
+                + "^ "
+                + particle_type_to_label[particle_type]
+                + str(int(x * res - 1 / 2))
+            )
+            f.append(get_matrix_element(state, pdf_op, state))
+
+    elif particle_type == "boson":
+        for x in x_boson_arr:
+            pdf_op = ParticleOperator(
+                particle_type_to_label[particle_type]
+                + str(int(x * res - 1))
+                + "^ "
+                + particle_type_to_label[particle_type]
+                + str(int(x * res - 1))
+            )
+            f.append(get_matrix_element(state, pdf_op, state))
+
+    return np.array(f)
