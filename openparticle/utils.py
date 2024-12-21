@@ -137,12 +137,13 @@ def overlap(bra, ket):
 
 
 def remove_symmetry_terms(operator, proper_length: int):
-    cleaned_up_op = ParticleOperator({})
-    for terms in operator.to_list():
-        if len(next(iter(terms.op_dict))) == proper_length:
-            cleaned_up_op += terms
+    cleaned_up = {}
 
-    return cleaned_up_op
+    for term, coeff in operator.op_dict.items():
+        if len(term) == proper_length:
+            cleaned_up[term] = coeff
+
+    return ParticleOperator(cleaned_up)
 
 
 def _get_sign(op):
