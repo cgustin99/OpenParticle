@@ -1,7 +1,8 @@
 from openparticle import *
 import numpy as np
 from typing import List
-import itertools
+from itertools import product, combinations
+from multiprocessing import Pool
 
 
 def _fermion_combinations(n):
@@ -11,7 +12,7 @@ def _fermion_combinations(n):
         elements = list(range(n + 1))
         result = []
         for r in range(1, n + 2):  # Extend range to include the full list
-            result.extend(itertools.combinations(elements, r))
+            result.extend(combinations(elements, r))
         return [list(combo) for combo in result]
 
 
@@ -40,7 +41,7 @@ def _boson_combinations(occupancy_cutoff, mode_cutoff):
 
 
 def _all_combinations_of_lists(*lists):
-    combinations = list(itertools.product(*lists))
+    combinations = list(product(*lists))
     return [list(combo) for combo in combinations]
 
 
@@ -100,19 +101,39 @@ def get_matrix_element(left_state, operator, right_state):
     ).VEV()
 
 
-def generate_matrix(op, basis):
-    # Calculates the matrix representation of an operator in a given basis
+def generate_matrix_hermitian(op, basis, processes: int = 8):
+    # Calculates the matrix representation of a Hermitian operator in a given basis
     size = (len(basis), len(basis))
     matrix = np.zeros(size, dtype=complex)
 
     for j, state_j in enumerate(basis):
         rhs = op * state_j
+        # with Pool(processes=processes) as pool:
+        #     matrix[j] = pool.starmap(overlap, product([rhs], [0] * j + basis[j:]))
         for i, state_i in enumerate(basis):
-            if op.is_hermitian():
-                if i <= j:
-                    mval = overlap(state_i, rhs)
-                    matrix[i][j] = matrix[j][i] = mval
-            else:
+            if i <= j:
+                matrix[i][j] = matrix[j][i] = overlap(state_i, rhs)
+    return matrix
+    # return (
+    #     matrix + np.conjugate(matrix.T) - np.diag(np.diag(matrix))
+    # )  # Return Hermitian matrix from upper diagonal matrix
+
+
+# pass into Pool [rhs] and basis[j:]
+
+
+def generate_matrix(op, basis):
+    # Calculates the matrix representation of an operator in a given basis
+
+    if op.is_hermitian:
+        return generate_matrix_hermitian(op, basis)
+    else:
+        size = (len(basis), len(basis))
+        matrix = np.zeros(size, dtype=complex)
+
+        for j, state_j in enumerate(basis):
+            rhs = op * state_j
+            for i, state_i in enumerate(basis):
                 matrix[i][j] = overlap(state_i, rhs)
 
     return matrix
@@ -120,10 +141,9 @@ def generate_matrix(op, basis):
 
 def overlap(bra, ket):
     # Calculate ⟨bra|ket⟩
-    assert isinstance(bra, Fock)
     assert isinstance(ket, (Fock, int))
 
-    if isinstance(ket, int):
+    if isinstance(ket, int) or isinstance(bra, int):
         return 0
     key_overlap = bra.state_dict.keys() & ket.state_dict.keys()
     if key_overlap == {}:
@@ -137,12 +157,13 @@ def overlap(bra, ket):
 
 
 def remove_symmetry_terms(operator, proper_length: int):
-    cleaned_up_op = ParticleOperator({})
-    for terms in operator.to_list():
-        if len(next(iter(terms.op_dict))) == proper_length:
-            cleaned_up_op += terms
+    cleaned_up = {}
 
-    return cleaned_up_op
+    for term, coeff in operator.op_dict.items():
+        if len(term) == proper_length:
+            cleaned_up[term] = coeff
+
+    return ParticleOperator(cleaned_up)
 
 
 def _get_sign(op):

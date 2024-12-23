@@ -7,6 +7,7 @@ from copy import deepcopy
 from itertools import product
 import math
 import scipy
+
 from symmer import PauliwordOp, QuantumState
 from symmer.utils import tensor_list
 
@@ -957,6 +958,7 @@ class ParticleOperator:
         """
         return self.normal_order().op_dict.get((), 0)
 
+    @property
     def is_hermitian(self):
         return self.op_dict == self.dagger().op_dict
 
