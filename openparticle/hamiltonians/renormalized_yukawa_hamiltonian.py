@@ -63,41 +63,43 @@ def boson_exchange(t, g, res, mf, mb):
     L = 2 * np.pi * res
 
     h_tree = ParticleOperator()
-    for q1 in fermionic_range:
-        for q2 in fermionic_range:
-            for q4 in fermionic_range:
-                for q5 in fermionic_range:
-                    for q3 in bosonic_range:
-                        if q1 + q2 + q4 + q5 == 0 and q4 + q5 - q3 == 0 and q3 > 0:
-                            q1_, q2_, q3_, q4_, q5_ = pminuses(
-                                [q1, q2, q3, q4, q5], [mf, mf, mb, mf, mf]
-                            )
+    for q1, q2, q4, q5, q3 in product(
+        fermionic_range,
+        fermionic_range,
+        fermionic_range,
+        fermionic_range,
+        bosonic_range,
+    ):
+        if q1 + q2 + q4 + q5 == 0 and q4 + q5 - q3 == 0 and q3 > 0:
+            q1_, q2_, q3_, q4_, q5_ = pminuses(
+                [q1, q2, q3, q4, q5], [mf, mf, mb, mf, mf]
+            )
 
-                            f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
-                            f453_ = np.exp(-t * (q4_ + q5_ - q3_) ** 2)
-                            f124_5_ = np.exp(-t * (q1_ + q2_ - q4_ - q5_) ** 2)
-                            f1245 = np.exp(-t * (q1_ + q2_ + q4_ + q5_) ** 2)
+            f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
+            f453_ = np.exp(-t * (q4_ + q5_ - q3_) ** 2)
+            f124_5_ = np.exp(-t * (q1_ + q2_ - q4_ - q5_) ** 2)
+            f1245 = np.exp(-t * (q1_ + q2_ + q4_ + q5_) ** 2)
 
-                            B = (
-                                0.5
-                                * (1 / (q1_ + q2_ + q3_) - 1 / (q4_ + q5_ - q3_))
-                                * (f123 * f453_ / f124_5_ - 1)
-                                * f1245
-                            )
+            B = (
+                0.5
+                * (1 / (q1_ + q2_ + q3_) - 1 / (q4_ + q5_ - q3_))
+                * (f123 * f453_ / f124_5_ - 1)
+                * f1245
+            )
 
-                            h_tree += (
-                                B
-                                / np.abs(q3)
-                                * (
-                                    FermionField(-q1, L, mf).psi_dagger.dot(
-                                        FermionField(q2, L, mf).psi.dot(
-                                            FermionField(-q4, L, mf).psi_dagger.dot(
-                                                FermionField(q5, L, mf).psi
-                                            )
-                                        )
-                                    )
-                                )[0][0].normal_order()
+            h_tree += (
+                B
+                / np.abs(q3)
+                * (
+                    FermionField(-q1, L, mf).psi_dagger.dot(
+                        FermionField(q2, L, mf).psi.dot(
+                            FermionField(-q4, L, mf).psi_dagger.dot(
+                                FermionField(q5, L, mf).psi
                             )
+                        )
+                    )
+                )[0][0].normal_order()
+            )
 
     h_tree = remove_symmetry_terms(h_tree, 4)
     return g**2 / (2 * L) ** 5 * h_tree
@@ -112,52 +114,43 @@ def fermion_exchange(t, g, res, mf, mb):
 
     h_tree = ParticleOperator()
 
-    for q1 in fermionic_range:
-        for q2 in fermionic_range:
-            for q3 in bosonic_range:
-                for q5 in fermionic_range:
-                    for q6 in bosonic_range:
-                        if q1 + q3 + q5 + q6 == 0 and q5 + q6 - q2 == 0:
-                            q1_, q2_, q3_, q5_, q6_ = pminuses(
-                                [q1, q2, q3, q5, q6], [mf, mf, mb, mf, mb]
-                            )
+    for q1, q2, q3, q5, q6 in product(
+        fermionic_range,
+        fermionic_range,
+        bosonic_range,
+        fermionic_range,
+        bosonic_range,
+    ):
+        if q1 + q3 + q5 + q6 == 0 and q5 + q6 - q2 == 0:
+            q1_, q2_, q3_, q5_, q6_ = pminuses(
+                [q1, q2, q3, q5, q6], [mf, mf, mb, mf, mb]
+            )
 
-                            f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
-                            f562_ = np.exp(-t * (q5_ + q6_ - q2_) ** 2)
-                            f135_6_ = np.exp(-t * (q1_ + q3_ - q5_ - q6_) ** 2)
-                            f1356 = np.exp(-t * (q1_ + q3_ + q5_ + q6_) ** 2)
+            f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
+            f562_ = np.exp(-t * (q5_ + q6_ - q2_) ** 2)
+            f135_6_ = np.exp(-t * (q1_ + q3_ - q5_ - q6_) ** 2)
+            f1356 = np.exp(-t * (q1_ + q3_ + q5_ + q6_) ** 2)
 
-                            B = (
-                                0.5
-                                * (1 / (q1_ + q2_ + q3_) - 1 / (q5_ + q6_ - q1_))
-                                * (f123 * f562_ / f135_6_ - 1)
-                                * f1356
-                            )
+            B = (
+                0.5
+                * (1 / (q1_ + q2_ + q3_) - 1 / (q5_ + q6_ - q1_))
+                * (f123 * f562_ / f135_6_ - 1)
+                * f1356
+            )
 
-                            fermion_field_contractions = FermionField(
-                                -q1, L, mf
-                            ).psi_dagger.dot(
-                                gamma0.dot(
-                                    gamma_slash_minus_m(q2, mf).dot(
-                                        FermionField(q5, L, mf).psi
-                                    )
-                                )
-                            )[
-                                0
-                            ][
-                                0
-                            ]
-                            boson_field_contractions = (
-                                ScalarField(q3, L, mb).phi * ScalarField(q6, L, mb).phi
-                            )
+            fermion_field_contractions = FermionField(-q1, L, mf).psi_dagger.dot(
+                gamma0.dot(gamma_slash_minus_m(q2, mf).dot(FermionField(q5, L, mf).psi))
+            )[0][0]
+            boson_field_contractions = (
+                ScalarField(q3, L, mb).phi * ScalarField(q6, L, mb).phi
+            )
 
-                            if fermion_field_contractions.op_dict != {}:
-                                field_contractions = (
-                                    fermion_field_contractions
-                                    * boson_field_contractions
-                                )
+            if fermion_field_contractions.op_dict != {}:
+                field_contractions = (
+                    fermion_field_contractions * boson_field_contractions
+                )
 
-                            h_tree += B / (q2) * (field_contractions.normal_order())
+            h_tree += B / (q2) * (field_contractions.normal_order())
 
     h_tree = remove_symmetry_terms(h_tree, 4)
     return g**2 / (2 * L) ** 5 * h_tree
