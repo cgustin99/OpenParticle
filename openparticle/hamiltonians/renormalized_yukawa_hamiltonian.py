@@ -60,23 +60,23 @@ def boson_exchange(t, g, res, mf, mb):
     fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
     # bosonic_range = [i for i in range(-res, res + 1) if i != 0]
 
-    range_product = product(
-        fermionic_range, fermionic_range, fermionic_range, fermionic_range
-    )
-    print("Bosonic product length:", len(list(range_product)))
+    # range_product = product(
+    #     fermionic_range, fermionic_range, fermionic_range, fermionic_range
+    # )
+    # print("Bosonic product length:", len(list(range_product)))
     L = 2 * np.pi * res
-    counter = 0
+    # counter = 0
     h_tree = ParticleOperator()
     for q1, q4, q5 in product(fermionic_range, fermionic_range, fermionic_range):
-        if counter > 1000 and counter % 1000 == 0:
-            print(counter)
+        # if counter > 1000 and counter % 1000 == 0:
+        #     print(counter)
         q3 = q4 + q5
         q2 = -q1 - q3
         if q3 > 0:
             q1_, q2_, q3_, q4_, q5_ = pminuses(
                 [q1, q2, q3, q4, q5], [mf, mf, mb, mf, mf]
             )
-            counter += 1
+            # counter += 1
             f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
             f453_ = np.exp(-t * (q4_ + q5_ - q3_) ** 2)
             f124_5_ = np.exp(-t * (q1_ + q2_ - q4_ - q5_) ** 2)
@@ -102,7 +102,7 @@ def boson_exchange(t, g, res, mf, mb):
                     )
                 )[0][0].normal_order()
             )
-    print("Boson exchange counter:", counter)
+    # print("Boson exchange counter:", counter)
     h_tree = remove_symmetry_terms(h_tree, 4)
     return g**2 / (2 * L) ** 5 * h_tree
 
@@ -113,20 +113,20 @@ def fermion_exchange(t, g, res, mf, mb):
     bosonic_range = [i for i in range(-res, res + 1) if i != 0]
 
     range_product = product(bosonic_range, fermionic_range, bosonic_range)
-    print("Fermion product length:", len(list(range_product)))
+    # print("Fermion product length:", len(list(range_product)))
 
     L = 2 * np.pi * res
 
     h_tree = ParticleOperator()
-    counter = 0
+    # counter = 0
     for q3, q5, q6 in product(
         bosonic_range,
         fermionic_range,
         bosonic_range,
     ):
-        if counter > 1000 and counter % 1000 == 0:
-            print(counter)
-        counter += 1
+        # if counter > 1000 and counter % 1000 == 0:
+        #     print(counter)
+        # counter += 1
         q1 = -q3 - q5 - q6
         q2 = q5 + q6
         q1_, q2_, q3_, q5_, q6_ = pminuses([q1, q2, q3, q5, q6], [mf, mf, mb, mf, mb])
@@ -154,7 +154,7 @@ def fermion_exchange(t, g, res, mf, mb):
             field_contractions = fermion_field_contractions * boson_field_contractions
 
         h_tree += B / (q2) * (field_contractions.normal_order())
-    print("Fermionic exchange counter:", counter)
+    # print("Fermionic exchange counter:", counter)
     h_tree = remove_symmetry_terms(h_tree, 4)
     return g**2 / (2 * L) ** 5 * h_tree
 
