@@ -182,6 +182,17 @@ class ParticleOperator:
             )
         return particle_op_list
 
+    def group(self) -> List:
+        """
+        Groups terms in a sum of ParticleOperators (hermitian) into a list of term + term.dagger()
+        """
+        assert self.is_hermitian
+
+        groups = []
+        for term in self.to_list():
+            if term not in groups:
+                groups.append(term + term.dagger())
+
     @staticmethod
     def SB(operator, max_occ: int):
 
