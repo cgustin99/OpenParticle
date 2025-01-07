@@ -183,6 +183,120 @@ class ParticleOperator:
         return particle_op_list
 
     @staticmethod
+    def swap(lists_of_indices):
+        n_swaps = 0
+        ordered_indices = []
+
+        for type, indices in enumerate(lists_of_indices):
+            for step in range(1, len(indices)):
+                key = indices[step]
+                j = step - 1
+
+                while j >= 0 and key < indices[j]:
+                    indices[j + 1] = indices[j]
+                    if type == 4 or type == 5:
+                        n_swaps += 0
+                    else:
+                        n_swaps += 1
+                    j = j - 1
+
+                indices[j + 1] = key
+            ordered_indices.append(indices)
+
+        return ordered_indices, n_swaps
+
+    def preprocess_indices(self) -> List:
+        """
+        Return
+        - indices_by_type: List[List]: [[fermionic creation indices], [fermionic annihilation indices],
+                                        [antifermionic creation indices], [antifermionic annihilation indices],
+                                        [bosonic creation indices], [bosonic annihilation indices]]
+        """
+        f_c_indices, f_a_indices = [], []
+        af_c_indices, af_a_indices = [], []
+        b_c_indices, b_a_indices = [], []
+
+        for op in self.split():
+            if op.has_fermions:
+                if op.creation:
+                    f_c_indices.append(op.mode)
+                else:
+                    f_a_indices.append(op.mode)
+            elif op.has_antifermions:
+                if op.creation:
+                    af_c_indices.append(op.mode)
+                else:
+                    af_a_indices.append(op.mode)
+            elif op.has_bosons:
+                if op.creation:
+                    b_c_indices.append(op.mode)
+                else:
+                    b_a_indices.append(op.mode)
+        indices_by_type = [
+            f_c_indices,
+            f_a_indices,
+            af_c_indices,
+            af_a_indices,
+            b_c_indices,
+            b_a_indices,
+        ]
+        return indices_by_type
+
+    def _order_indices(self):
+        split_terms = self.preprocess_indices()
+        ordered, num_swaps = self.swap(split_terms)
+        coeff = (-1) ** num_swaps
+
+        ordered_string = ""
+        for i, indices in enumerate(ordered):
+            if indices != []:
+                if i == 0:  # bi^
+                    for bi_dag_index in indices:
+                        ordered_string += "b" + str(bi_dag_index) + "^ "
+                elif i == 1:  # bi
+                    for bi_index in indices:
+                        ordered_string += "b" + str(bi_index) + " "
+                elif i == 2:  # di^
+                    for di_dag_index in indices:
+                        ordered_string += "d" + str(di_dag_index) + "^ "
+                elif i == 3:  # di
+                    for di_index in indices:
+                        ordered_string += "d" + str(di_index) + " "
+                elif i == 4:  # ai^
+                    for ai_dag_index in indices:
+                        ordered_string += "a" + str(ai_dag_index) + "^ "
+                elif i == 5:  # ai
+                    for ai_index in indices:
+                        ordered_string += "a" + str(ai_index) + " "
+        return coeff * ParticleOperator(ordered_string)
+
+    def order_indices(self) -> "ParticleOperator":
+
+        sorted_terms = ParticleOperator()
+        for term in self.to_list():
+            sorted_terms += term.coeff * term._order_indices()
+        return sorted_terms
+
+    def group(self) -> List:
+        """
+        Groups terms in a sum of ParticleOperators (hermitian) into a list of term + term.dagger()
+        """
+        # assert self.is_hermitian
+
+        groups = []
+        used = []
+        for term in self.order_indices().to_list():
+            if term not in used:
+                if term.is_hermitian:
+                    groups.append(term)
+                else:
+                    dag = term.dagger().normal_order().order_indices()
+                    groups.append(term + dag)
+                    used.append(term)
+                    used.append(dag)
+        return groups
+
+    @staticmethod
     def SB(operator, max_occ: int):
 
         assert np.log2(max_occ + 1) % 1 == 0, "Max occupancy must be given as 2^N - 1"
