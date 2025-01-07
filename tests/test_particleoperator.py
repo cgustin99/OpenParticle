@@ -290,28 +290,25 @@ def test_equality4():
     return op1 == op2
 
 
-# def test_random_particleoperator_generation():
-#     for _ in range(1000):
-#         possible_types = [
-#             ["fermion"],
-#             ["antifermion"],
-#             ["boson"],
-#             ["fermion", "antifermion"],
-#             ["fermion", "boson"],
-#             ["antifermion", "boson"],
-#             ["fermion", "antifermion", "boson"],
-#         ]
-#         types = possible_types[np.random.choice(range(7))]
-#         n_terms = np.random.choice(range(1, 17))
-#         max_mode = np.random.choice(range(1, 9))
-#         max_len_of_terms = np.random.choice(range(1, 9))
-#         operator = ParticleOperator.random(
-#             types,
-#             n_terms,
-#             max_mode=max_mode,
-#             max_len_of_terms=max_len_of_terms,
-#             complex_coeffs=False,
-#             normal_order=True,
-#         ).normal_order()
+def test_order_indices_1():
+    op = ParticleOperator("b0^ b1 b0")
+    assert -1 * ParticleOperator("b0^ b0 b1") == op.order_indices()
 
-#         assert isinstance(operator, ParticleOperator)
+
+def test_order_indices_2():
+    op = ParticleOperator("a0^ a1^")
+    assert op == op.order_indices()
+
+
+def test_order_indices_3():
+    op = ParticleOperator("a1^ a0^")
+    assert ParticleOperator("a0^ a1^") == op.order_indices()
+
+
+def test_order_indices_4():
+    op = (
+        ParticleOperator("b1^ b0^ d2 a1")
+        + ParticleOperator("a0")
+        + ParticleOperator("b0^ b1^ d2 a1")
+    )
+    assert ParticleOperator("a0") == op.order_indices()
