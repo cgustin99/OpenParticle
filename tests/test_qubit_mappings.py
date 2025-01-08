@@ -1,5 +1,8 @@
 from openparticle import ParticleOperator, Fock
+from openparticle.utils import get_fock_basis, generate_matrix
 from symmer import PauliwordOp, QuantumState
+import pytest
+import numpy as np
 
 
 def test_JW_dagger():
@@ -36,6 +39,13 @@ def test_spread_JW():
     assert op.to_paulis() == jw_op
 
 
+def test_JW_sum():
+    op = ParticleOperator("b0") + ParticleOperator("b1")
+    assert op.to_paulis() == PauliwordOp.from_dictionary(
+        {"IX": 0.5, "IY": 0.5j, "XZ": 0.5, "YZ": 0.5j}
+    )
+
+
 def test_SB():
     op = ParticleOperator("a0")
     SB_op = PauliwordOp.from_dictionary({"X": 1 / 2, "Y": 1j / 2})
@@ -57,6 +67,32 @@ def test_SB_higher_max_occ():
         }
     )
     assert op.to_paulis(max_bose_occ=3) == SB_op
+
+
+# The following do not pass:
+# ParticleOperator("b0 d0")
+@pytest.mark.parametrize(
+    "op",
+    [
+        ParticleOperator("b0"),
+        ParticleOperator("a0 a0"),
+        ParticleOperator("a0 a1"),
+        ParticleOperator("a0") + ParticleOperator("a2"),
+        ParticleOperator("a0 a0") + ParticleOperator("a0^ a0^"),
+        ParticleOperator("b0 b1"),
+        ParticleOperator("b0 d0"),
+        # ParticleOperator("b1 d1"),
+        # ParticleOperator("b0 b1 d0"),
+        # ParticleOperator("b0 b2 b3 d2"),
+    ],
+)
+def test_complicated_mapping(op):
+    max_bose_occ = 3
+    basis = get_fock_basis(op, max_bose_occ=max_bose_occ)
+    matrix = generate_matrix(op, basis)
+    matrix_from_paulis = op.to_paulis(max_bose_occ).to_sparse_matrix.toarray()
+
+    assert np.allclose(matrix, matrix_from_paulis)
 
 
 def test_mapping_product_of_different_types_ops():
