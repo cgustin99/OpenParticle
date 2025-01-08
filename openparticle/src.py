@@ -378,27 +378,19 @@ class ParticleOperator:
 
         return jw
 
-    def preprocess_to_paulis(self):
-        total_new_term = ParticleOperator()
-        for term in self.to_list():
-            new_term = ParticleOperator("")
-            max_fermi_mode_in_term = term.max_fermionic_mode
-            for op in term.split():
-                if not op.has_antifermions:
-                    new_term *= op
-                else:
-                    if op.creation:
-                        carrot = "^ "
-                    else:
-                        carrot = " "
-                    new_term *= ParticleOperator(
-                        "b" + str(max_fermi_mode_in_term + 1 + op.mode) + carrot
-                    )
-            total_new_term += new_term
-        return total_new_term
+    def get_parity_for_coeff(self):
+        op_partition = self.partition()
+        if op_partition[1] != ParticleOperator(""):  # i.e. there are antifermions
+            n_antifermions = len(op_partition[1].split())
+            if op_partition[0] != ParticleOperator(""):  # i.e. there are fermions
+                n_fermions = len(op_partition[0].split())
+            return (
+                (-1) ** n_fermions
+            ) ** n_antifermions  # Need to do this ∀ antifermions
+        else:
+            return 1
 
     def to_paulis(self, max_bose_occ: int = None) -> PauliwordOp:
-        # self = self.preprocess_to_paulis()
         n_qubits = 0
         if self.has_bosons:
             max_bose_mode = self.max_bosonic_mode
@@ -421,18 +413,14 @@ class ParticleOperator:
             mapped_fermions = []
             mapped_antifermions = []
             mapped_bosons = []
-            fermi_parity_coeff = None
-            n_fermions = 0
             for op in term.partition():
                 if op.has_fermions:
-                    n_fermions = len(op.split())
                     mapped_fermions.append(self.jordan_wigner(op, max_fermi_mode))
 
                 elif op.has_antifermions:
                     mapped_antifermions.append(
                         self.jordan_wigner(op, max_antifermi_mode)
                     )
-                    fermi_parity_coeff = (-1) ** n_fermions
                 elif op.has_bosons:
                     mapped_bosons.append(
                         self.SB(op, max_bose_mode, max_occ=max_bose_occ)
@@ -450,8 +438,10 @@ class ParticleOperator:
                     PauliwordOp.from_dictionary({"I" * n_bosonic_qubits: 1})
                 ]
             pauli_op += (
-                tensor_list(mapped_fermions + mapped_antifermions + mapped_bosons)
-            ) * term.coeff
+                (tensor_list(mapped_fermions + mapped_antifermions + mapped_bosons))
+                * term.coeff
+                * term.get_parity_for_coeff()
+            )
 
         return pauli_op
 

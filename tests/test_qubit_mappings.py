@@ -80,9 +80,9 @@ def test_SB_higher_max_occ():
         ParticleOperator("a0") + ParticleOperator("a2"),
         ParticleOperator("a0 a0") + ParticleOperator("a0^ a0^"),
         ParticleOperator("b0 b1"),
+        ParticleOperator("b0 d0"),
+        # ParticleOperator("b1 d1"),
         # ParticleOperator("b0 b1 d0"),
-        # ParticleOperator("b0 d0"),
-        # ParticleOperator("b2 d2"),
         # ParticleOperator("b0 b2 b3 d2"),
     ],
 )
