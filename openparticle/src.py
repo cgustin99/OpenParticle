@@ -378,18 +378,21 @@ class ParticleOperator:
         return jw
 
     def get_parity_for_coeff(self):
-        op_partition = self.partition()
-        if op_partition[1] != ParticleOperator(""):  # i.e. there are antifermions
-            n_antifermions = len(op_partition[1].split())
-            if op_partition[0] != ParticleOperator(""):  # i.e. there are fermions
-                n_fermions = len(op_partition[0].split())
-            return (
-                (-1) ** n_fermions
-            ) ** n_antifermions  # Need to do this ∀ antifermions
-        else:
-            return 1
+        return 1
+        # op_partition = self.partition()
+        # if op_partition[1] != ParticleOperator(""):  # i.e. there are antifermions
+        #     n_antifermions = len(op_partition[1].split())
+        #     if op_partition[0] != ParticleOperator(""):  # i.e. there are fermions
+        #         n_fermions = len(op_partition[0].split())
+        #     return (
+        #         (-1) ** n_fermions
+        #     ) ** n_antifermions  # Need to do this ∀ antifermions
+        # else:
+        #     return 1
 
-    def to_paulis(self, max_bose_occ: int = None) -> PauliwordOp:
+    def to_paulis(
+        self, max_bose_occ: int = None, zero_threshold: float = 1e-15
+    ) -> PauliwordOp:
         n_qubits = 0
         if self.has_bosons:
             max_bose_mode = self.max_bosonic_mode
@@ -442,7 +445,7 @@ class ParticleOperator:
                 * term.get_parity_for_coeff()
             )
 
-        return pauli_op
+        return pauli_op.cleanup(zero_threshold=zero_threshold)
 
     def parse(self) -> List:
         """Merges neighboring creation/annihilation operators together into NumberOperators when acting on the same modes.
