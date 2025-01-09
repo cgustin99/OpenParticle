@@ -343,7 +343,6 @@ class ParticleOperator:
             mode = op.mode
             n_higher_modes = (n_modes - (mode + 1)) * n_qubits_per_mode
             n_lower_modes = mode * n_qubits_per_mode
-            print(op)
             current_sb = tensor_list(
                 [PauliwordOp.from_list(["I"], [1])] * n_higher_modes
                 + [_SB(op, max_occ)]
