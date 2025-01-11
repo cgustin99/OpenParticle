@@ -5,6 +5,22 @@ import pytest
 import numpy as np
 
 
+def _check_cutoff(state, max_bosonic_occupancy):
+    proper_state_dict = {}
+
+    if isinstance(state, int):
+        return state
+
+    for state_dict, coeff in state.state_dict.items():
+        if state_dict[-1] == ():  # if state == vacuum
+            proper_state_dict[((), (), ())] = coeff
+        for tup in state_dict[-1]:
+            if tup[-1] <= max_bosonic_occupancy:  # n_bosons in a mode < cutoff
+                proper_state_dict[state_dict] = coeff
+
+    return Fock(state_dict=proper_state_dict)
+
+
 def _verify_mapping(
     op,
     state,
@@ -22,7 +38,8 @@ def _verify_mapping(
             max_bosonic_occupancy=max_bosonic_occupancy,
         )
     )
-    output = op * state
+    output = _check_cutoff(op * state, max_bosonic_occupancy=max_bosonic_occupancy)
+
     output_pauli = op.to_paulis(
         max_fermionic_mode=max_fermionic_mode,
         max_antifermionic_mode=max_antifermionic_mode,
@@ -45,6 +62,12 @@ def _verify_mapping(
         expected_output = QuantumState([0] * n_qubits) * 0
 
     similarity = output_pauli - expected_output
+    # print("-----")
+    # print("Initial state: ", state)
+    # print("Final state (output): ", output)
+    # print("output pauli: ", output_pauli)
+    # print("expected: ", expected_output)
+    # print("T or F: ", (list(similarity.state_op.coeff_vec) == []))
     if np.sum(similarity.state_op.coeff_vec) > threshold:
         assert list(similarity.state_op.coeff_vec) == []
 
@@ -129,10 +152,10 @@ def test_SB_higher_max_occ():
     ],
 )
 def test_mapping(op):
-    max_bosonic_occupancy = 3
     max_fermionic_mode = op.max_fermionic_mode
     max_antifermionic_mode = op.max_antifermionic_mode
     max_bosonic_mode = op.max_bosonic_mode
+    max_bosonic_occupancy = 3
 
     basis = get_fock_basis(op, max_bose_occ=max_bosonic_occupancy)
     for state in range(len(basis)):

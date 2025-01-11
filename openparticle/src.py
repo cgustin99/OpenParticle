@@ -1419,7 +1419,6 @@ class Fock(ParticleOperator):
         max_antifermionic_mode: int = None,
         max_bosonic_mode: int = None,
     ):
-        coeff = self.coeff
         qubits, nfq, nafq, nbq = self.allocate_qubits(
             max_fermionic_mode=max_fermionic_mode,
             max_antifermionic_mode=max_antifermionic_mode,
@@ -1427,23 +1426,30 @@ class Fock(ParticleOperator):
             max_bosonic_occupancy=max_bosonic_occupancy,
             return_details=True,
         )
-        state = [0] * sum(qubits)
-        state_dict_form = list(self.state_dict.keys())[0]
-        if self.has_fermions:
-            state[:(nfq)] = self.fermion_fock_to_qubit(
-                list(state_dict_form[0]), max_mode=max_fermionic_mode
-            )
-        if self.has_antifermions:
-            state[(nfq) : (nfq) + (nafq)] = self.fermion_fock_to_qubit(
-                list(state_dict_form[1]), max_mode=max_antifermionic_mode
-            )
-        if self.has_bosons:
-            state[(nfq) + (nafq) :] = self.boson_fock_to_qubit(
-                list(state_dict_form[2]),
-                max_bosonic_occupancy=max_bosonic_occupancy,
-                max_mode=max_bosonic_mode,
-            )
-        return QuantumState(state) * coeff
+
+        total_qubit_state = QuantumState([0] * sum(qubits)) * 0
+
+        for state_key, coeff in self.state_dict.items():
+            state = [0] * sum(qubits)
+            fock = Fock(state_dict={state_key: coeff})
+
+            state_dict_form = list(state_key)
+            if fock.has_fermions:
+                state[:(nfq)] = fock.fermion_fock_to_qubit(
+                    list(state_dict_form[0]), max_mode=max_fermionic_mode
+                )
+            if fock.has_antifermions:
+                state[(nfq) : (nfq) + (nafq)] = fock.fermion_fock_to_qubit(
+                    list(state_dict_form[1]), max_mode=max_antifermionic_mode
+                )
+            if fock.has_bosons:
+                state[(nfq) + (nafq) :] = fock.boson_fock_to_qubit(
+                    list(state_dict_form[2]),
+                    max_bosonic_occupancy=max_bosonic_occupancy,
+                    max_mode=max_bosonic_mode,
+                )
+            total_qubit_state += QuantumState(state) * coeff
+        return total_qubit_state
 
 
 class FermionOperator(ParticleOperator):
