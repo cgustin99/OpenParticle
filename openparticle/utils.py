@@ -120,28 +120,18 @@ def _check_cutoff(state, max_bosonic_occupancy: int = None):
         return Fock(state_dict=proper_state_dict)
 
 
-def generate_matrix_hermitian(
-    op, basis, max_bosonic_occupancy: int = None, processes: int = 8
-):
+def generate_matrix_hermitian(op, basis, max_bosonic_occupancy: int = None):
     # Calculates the matrix representation of a Hermitian operator in a given basis
     size = (len(basis), len(basis))
     matrix = np.zeros(size, dtype=complex)
     op = op.normal_order()
 
     for j, state_j in enumerate(basis):
-        rhs = _check_cutoff(op * state_j, max_bosonic_occupancy=max_bosonic_occupancy)
-        # with Pool(processes=processes) as pool:
-        #     matrix[j] = pool.starmap(overlap, product([rhs], [0] * j + basis[j:]))
+        rhs = op * state_j
         for i, state_i in enumerate(basis):
             if i <= j:
                 matrix[i][j] = matrix[j][i] = overlap(state_i, rhs)
     return matrix
-    # return (
-    #     matrix + np.conjugate(matrix.T) - np.diag(np.diag(matrix))
-    # )  # Return Hermitian matrix from upper diagonal matrix
-
-
-# pass into Pool [rhs] and basis[j:]
 
 
 def generate_matrix(op, basis, max_bosonic_occupancy: int = None):
