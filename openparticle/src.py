@@ -353,7 +353,8 @@ class ParticleOperator:
         return sb
 
     @staticmethod
-    def jordan_wigner(operator, max_fermionic_mode):
+    def jordan_wigner(operator, max_mode):
+
         def _jordan_wigner(indiv_op):
             if indiv_op.all_creation:
                 return PauliwordOp.from_list(["X", "Y"], [1 / 2, -1j / 2])
@@ -362,11 +363,11 @@ class ParticleOperator:
 
         assert not operator.has_bosons, "Must be a fermionic operator only"
 
-        jw = PauliwordOp.from_dictionary({"I" * (max_fermionic_mode + 1): 1.0})
+        jw = PauliwordOp.from_dictionary({"I" * (max_mode + 1): 1.0})
 
         for op in operator.split():
             mode = op.mode
-            n_higher_modes = max_fermionic_mode - mode
+            n_higher_modes = max_mode - mode
             n_lower_modes = mode
             current_jw = tensor_list(
                 [PauliwordOp.from_list(["I"], [1])] * n_higher_modes
@@ -377,73 +378,147 @@ class ParticleOperator:
 
         return jw
 
-    def get_parity_for_coeff(self):
-        return 1
-        # op_partition = self.partition()
-        # if op_partition[1] != ParticleOperator(""):  # i.e. there are antifermions
-        #     n_antifermions = len(op_partition[1].split())
-        #     if op_partition[0] != ParticleOperator(""):  # i.e. there are fermions
-        #         n_fermions = len(op_partition[0].split())
-        #     return (
-        #         (-1) ** n_fermions
-        #     ) ** n_antifermions  # Need to do this ∀ antifermions
-        # else:
-        #     return 1
+    # def to_paulis(
+    #     self, max_bose_occ: int = None, zero_threshold: float = 1e-15
+    # ) -> PauliwordOp:
+    #     n_qubits = 0
+    #     if self.has_bosons:
+    #         max_bose_mode = self.max_bosonic_mode
+    #         n_bosonic_qubits = (max_bose_mode + 1) * int(
+    #             np.ceil(np.log2(max_bose_occ + 1))
+    #         )
+    #         n_qubits += n_bosonic_qubits
+    #     if self.has_fermions:
+    #         max_fermi_mode = self.max_fermionic_mode
+    #         n_fermi_qubits = max_fermi_mode + 1
+    #         n_qubits += n_fermi_qubits
+    #     if self.has_antifermions:
+    #         max_antifermi_mode = self.max_antifermionic_mode
+    #         n_antifermi_qubits = max_antifermi_mode + 1
+    #         n_qubits += n_antifermi_qubits
+
+    #     pauli_op = PauliwordOp.empty(n_qubits=n_qubits)
+
+    #     for term in self.to_list():
+    #         mapped_fermions = []
+    #         mapped_antifermions = []
+    #         mapped_bosons = []
+    #         for op in term.partition():
+    #             if op.has_fermions:
+    #                 mapped_fermions.append(self.jordan_wigner(op, max_fermi_mode))
+
+    #             elif op.has_antifermions:
+    #                 mapped_antifermions.append(
+    #                     self.jordan_wigner(op, max_antifermi_mode)
+    #                 )
+    #             elif op.has_bosons:
+    #                 mapped_bosons.append(
+    #                     self.SB(op, max_bose_mode, max_occ=max_bose_occ)
+    #                 )
+    #         if mapped_fermions == [] and self.has_fermions:
+    #             mapped_fermions = [
+    #                 PauliwordOp.from_dictionary({"I" * n_fermi_qubits: 1})
+    #             ]
+    #         if mapped_antifermions == [] and self.has_antifermions:
+    #             mapped_antifermions = [
+    #                 PauliwordOp.from_dictionary({"I" * n_antifermi_qubits: 1})
+    #             ]
+    #         if mapped_bosons == [] and self.has_bosons:
+    #             mapped_bosons = [
+    #                 PauliwordOp.from_dictionary({"I" * n_bosonic_qubits: 1})
+    #             ]
+    #         pauli_op += (
+    #             (tensor_list(mapped_fermions + mapped_antifermions + mapped_bosons))
+    #             * term.coeff
+    #             * term.get_parity_for_coeff()
+    #         )
+
+    #     return pauli_op.cleanup(zero_threshold=zero_threshold)
+
+    @staticmethod
+    def allocate_qubits(
+        max_fermionic_mode: int = None,
+        max_antifermionic_mode: int = None,
+        max_bosonic_mode: int = None,
+        max_bosonic_occupancy: int = None,
+        return_details: bool = False,
+    ):
+        if return_details:
+            qubits = []
+            n_fermionic_qubits = 0
+            n_antifermionic_qubits = 0
+            n_bosonic_qubits = 0
+            if max_fermionic_mode is not None:
+                qubits.append(max_fermionic_mode + 1)
+                n_fermionic_qubits = max_fermionic_mode + 1
+            if max_antifermionic_mode is not None:
+                qubits.append(max_antifermionic_mode + 1)
+                n_antifermionic_qubits = max_antifermionic_mode + 1
+            if max_bosonic_mode is not None:
+                qubits.append(
+                    (max_bosonic_mode + 1)
+                    * int(np.ceil(np.log2(max_bosonic_occupancy + 1)))
+                )
+                n_bosonic_qubits = (max_bosonic_mode + 1) * int(
+                    np.ceil(np.log2(max_bosonic_occupancy + 1))
+                )
+            return qubits, n_fermionic_qubits, n_antifermionic_qubits, n_bosonic_qubits
+        else:
+            qubits = []
+            if max_fermionic_mode is not None:
+                qubits.append(max_fermionic_mode + 1)
+            if max_antifermionic_mode is not None:
+                qubits.append(max_antifermionic_mode + 1)
+            if max_bosonic_mode is not None:
+                qubits.append(
+                    (max_bosonic_mode + 1)
+                    * int(np.ceil(np.log2(max_bosonic_occupancy + 1)))
+                )
+
+        return qubits
 
     def to_paulis(
-        self, max_bose_occ: int = None, zero_threshold: float = 1e-15
+        self,
+        max_fermionic_mode: int = None,
+        max_antifermionic_mode: int = None,
+        max_bosonic_mode: int = None,
+        max_bosonic_occupancy: int = None,
+        zero_threshold: float = 1e-15,
     ) -> PauliwordOp:
-        n_qubits = 0
-        if self.has_bosons:
-            max_bose_mode = self.max_bosonic_mode
-            n_bosonic_qubits = (max_bose_mode + 1) * int(
-                np.ceil(np.log2(max_bose_occ + 1))
-            )
-            n_qubits += n_bosonic_qubits
-        if self.has_fermions:
-            max_fermi_mode = self.max_fermionic_mode
-            n_fermi_qubits = max_fermi_mode + 1
-            n_qubits += n_fermi_qubits
-        if self.has_antifermions:
-            max_antifermi_mode = self.max_antifermionic_mode
-            n_antifermi_qubits = max_antifermi_mode + 1
-            n_qubits += n_antifermi_qubits
 
-        pauli_op = PauliwordOp.empty(n_qubits=n_qubits)
+        qubits = self.allocate_qubits(
+            max_fermionic_mode=max_fermionic_mode,
+            max_antifermionic_mode=max_antifermionic_mode,
+            max_bosonic_mode=max_bosonic_mode,
+            max_bosonic_occupancy=max_bosonic_occupancy,
+        )
+        pauli_op = PauliwordOp.empty(n_qubits=sum(qubits))
 
         for term in self.to_list():
-            mapped_fermions = []
-            mapped_antifermions = []
-            mapped_bosons = []
-            for op in term.partition():
-                if op.has_fermions:
-                    mapped_fermions.append(self.jordan_wigner(op, max_fermi_mode))
-
-                elif op.has_antifermions:
-                    mapped_antifermions.append(
-                        self.jordan_wigner(op, max_antifermi_mode)
+            mapped_term = []
+            partitioned_op = term.partition()
+            f_op = partitioned_op[0]
+            af_op = partitioned_op[1]
+            b_op = partitioned_op[2]
+            if f_op != ParticleOperator(""):
+                mapped_term.append(
+                    self.jordan_wigner(f_op, max_mode=max_fermionic_mode)
+                )
+            if af_op != ParticleOperator(""):
+                mapped_term.append(
+                    self.jordan_wigner(af_op, max_mode=max_antifermionic_mode)
+                )
+                for _ in range(len(af_op.split())):
+                    mapped_term[0] *= PauliwordOp.from_list(
+                        ["Z" * (max_fermionic_mode + 1)], [1]
+                    )  # Multiply fermion qubits by Z for parity
+            if b_op != ParticleOperator(""):
+                mapped_term.append(
+                    self.SB(
+                        b_op, max_mode=max_bosonic_mode, max_occ=max_bosonic_occupancy
                     )
-                elif op.has_bosons:
-                    mapped_bosons.append(
-                        self.SB(op, max_bose_mode, max_occ=max_bose_occ)
-                    )
-            if mapped_fermions == [] and self.has_fermions:
-                mapped_fermions = [
-                    PauliwordOp.from_dictionary({"I" * n_fermi_qubits: 1})
-                ]
-            if mapped_antifermions == [] and self.has_antifermions:
-                mapped_antifermions = [
-                    PauliwordOp.from_dictionary({"I" * n_antifermi_qubits: 1})
-                ]
-            if mapped_bosons == [] and self.has_bosons:
-                mapped_bosons = [
-                    PauliwordOp.from_dictionary({"I" * n_bosonic_qubits: 1})
-                ]
-            pauli_op += (
-                (tensor_list(mapped_fermions + mapped_antifermions + mapped_bosons))
-                * term.coeff
-                * term.get_parity_for_coeff()
-            )
+                )
+            pauli_op += tensor_list(mapped_term)
 
         return pauli_op.cleanup(zero_threshold=zero_threshold)
 
@@ -943,7 +1018,8 @@ class ParticleOperator:
 
     @property
     def max_fermionic_mode(self):
-        assert self.has_fermions
+        if not self.has_fermions:
+            return None
 
         max_fermionic_mode = 0
 
@@ -956,7 +1032,8 @@ class ParticleOperator:
 
     @property
     def max_antifermionic_mode(self):
-        assert self.has_antifermions
+        if not self.has_antifermions:
+            return None
 
         max_antifermionic_mode = 0
 
@@ -969,7 +1046,8 @@ class ParticleOperator:
 
     @property
     def max_bosonic_mode(self):
-        assert self.has_bosons
+        if not self.has_bosons:
+            return None
 
         max_bosonic_mode = 0
 
@@ -1296,13 +1374,13 @@ class Fock(ParticleOperator):
         return Fock([], [], [])
 
     @staticmethod
-    def fermion_fock_to_qubit(f_occ, max_mode: int = None):
-        if f_occ != []:
-            fock_list = f_occ
+    def fermion_fock_to_qubit(occ, max_mode: int = None):
+        if occ != []:
+            fock_list = occ
             if max_mode is not None:
                 qubit_state = [0] * (max_mode + 1)
             else:
-                qubit_state = [0] * (max(f_occ) + 1)
+                qubit_state = [0] * (max(occ) + 1)
 
             for index in fock_list:
                 qubit_state[index] = 1
@@ -1315,13 +1393,13 @@ class Fock(ParticleOperator):
                 return []
 
     @staticmethod
-    def boson_fock_to_qubit(b_occ, max_bose_occ, max_mode: int = None):
+    def boson_fock_to_qubit(b_occ, max_bosonic_occupancy: int, max_mode: int = None):
         if b_occ != []:
             if max_mode is not None:
                 _max = max_mode
             else:
                 _max = max(b_occ, key=lambda x: x[0])[0]
-            n_qubits_one_mode = int(np.log2(max_bose_occ + 1))
+            n_qubits_one_mode = int(np.log2(max_bosonic_occupancy + 1))
             qubit_occ = ["0" * n_qubits_one_mode] * (_max + 1)
             for occ in b_occ:
                 qubit_occ[_max - occ[0]] = f"{occ[1]:0{n_qubits_one_mode}b}"
@@ -1330,36 +1408,48 @@ class Fock(ParticleOperator):
 
         else:
             if max_mode is not None:
-                return [0] * (max_mode + 1) * int(np.log2(max_bose_occ + 1))
+                return [0] * (max_mode + 1) * int(np.log2(max_bosonic_occupancy + 1))
             else:
                 return []
 
     def to_qubit_state(
         self,
-        max_bose_occ: int = None,
-        max_fermion_mode: int = None,
-        max_antifermion_mode: int = None,
-        max_boson_mode: int = None,
+        max_bosonic_occupancy: int = None,
+        max_fermionic_mode: int = None,
+        max_antifermionic_mode: int = None,
+        max_bosonic_mode: int = None,
     ):
-        qubit_f_occ = []
-        qubit_af_occ = []
-        qubit_b_occ = []
+        qubits, nfq, nafq, nbq = self.allocate_qubits(
+            max_fermionic_mode=max_fermionic_mode,
+            max_antifermionic_mode=max_antifermionic_mode,
+            max_bosonic_mode=max_bosonic_mode,
+            max_bosonic_occupancy=max_bosonic_occupancy,
+            return_details=True,
+        )
 
-        if self.has_fermions:
-            qubit_f_occ = self.fermion_fock_to_qubit(
-                self.f_occ, max_mode=max_fermion_mode
-            )
-        if self.has_antifermions:
-            qubit_af_occ = self.fermion_fock_to_qubit(
-                self.af_occ, max_mode=max_antifermion_mode
-            )
-        if self.has_bosons:
-            qubit_b_occ = self.boson_fock_to_qubit(
-                self.b_occ, max_bose_occ=max_bose_occ, max_mode=max_boson_mode
-            )
+        total_qubit_state = QuantumState([0] * sum(qubits)) * 0
 
-        qubit_state = qubit_f_occ + qubit_af_occ + qubit_b_occ
-        return QuantumState(qubit_state)
+        for state_key, coeff in self.state_dict.items():
+            state = [0] * sum(qubits)
+            fock = Fock(state_dict={state_key: coeff})
+
+            state_dict_form = list(state_key)
+            if fock.has_fermions:
+                state[:(nfq)] = fock.fermion_fock_to_qubit(
+                    list(state_dict_form[0]), max_mode=max_fermionic_mode
+                )
+            if fock.has_antifermions:
+                state[(nfq) : (nfq) + (nafq)] = fock.fermion_fock_to_qubit(
+                    list(state_dict_form[1]), max_mode=max_antifermionic_mode
+                )
+            if fock.has_bosons:
+                state[(nfq) + (nafq) :] = fock.boson_fock_to_qubit(
+                    list(state_dict_form[2]),
+                    max_bosonic_occupancy=max_bosonic_occupancy,
+                    max_mode=max_bosonic_mode,
+                )
+            total_qubit_state += QuantumState(state) * coeff
+        return total_qubit_state
 
 
 class FermionOperator(ParticleOperator):
