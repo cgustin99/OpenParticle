@@ -153,24 +153,6 @@ def test_mapping(op):
         )
 
 
-# def test_complicated_mapping(op):
-#     max_bose_occ = 3
-#     max_fermionic_mode = op.max_fermionic_mode
-#     max_antifermionic_mode = op.max_antifermionic_mode
-#     max_bosonic_mode = op.max_bosonic_mode
-#     print(max_fermionic_mode, max_antifermionic_mode, max_bosonic_mode)
-#     basis = get_fock_basis(op, max_bose_occ=max_bose_occ)
-#     matrix = generate_matrix(op, basis)
-#     matrix_from_paulis = op.to_paulis(
-#         max_fermionic_mode=max_fermionic_mode,
-#         max_antifermionic_mode=max_antifermionic_mode,
-#         max_bosonic_mode=max_bosonic_mode,
-#         max_bosonic_occupancy=max_bose_occ,
-#     ).to_sparse_matrix.toarray()
-
-#     assert np.allclose(matrix, matrix_from_paulis)
-
-
 def test_mapping_product_of_different_types_ops():
     op = ParticleOperator("b1^ a0")
     max_bose_occ = 1
