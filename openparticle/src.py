@@ -192,7 +192,7 @@ class ParticleOperator:
                 key = indices[step]
                 j = step - 1
 
-                while j >= 0 and key < indices[j]:
+                while j >= 0 and indices[j] < key:
                     indices[j + 1] = indices[j]
                     if type == 4 or type == 5:
                         n_swaps += 0
