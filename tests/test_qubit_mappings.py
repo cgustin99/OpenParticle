@@ -1,24 +1,8 @@
 from openparticle import ParticleOperator, Fock
-from openparticle.utils import get_fock_basis, generate_matrix
+from openparticle.utils import get_fock_basis, generate_matrix, _check_cutoff
 from symmer import PauliwordOp, QuantumState
 import pytest
 import numpy as np
-
-
-def _check_cutoff(state, max_bosonic_occupancy):
-    proper_state_dict = {}
-
-    if isinstance(state, int):
-        return state
-
-    for state_dict, coeff in state.state_dict.items():
-        if state_dict[-1] == ():  # if state == vacuum
-            proper_state_dict[((), (), ())] = coeff
-        for tup in state_dict[-1]:
-            if tup[-1] <= max_bosonic_occupancy:  # n_bosons in a mode < cutoff
-                proper_state_dict[state_dict] = coeff
-
-    return Fock(state_dict=proper_state_dict)
 
 
 def _verify_mapping(
