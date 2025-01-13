@@ -101,13 +101,35 @@ def get_matrix_element(left_state, operator, right_state):
     ).VEV()
 
 
-def generate_matrix_hermitian(op, basis, processes: int = 8):
+def _check_cutoff(state, max_bosonic_occupancy: int = None):
+    if max_bosonic_occupancy is None:
+        return state
+    else:
+        proper_state_dict = {}
+
+        if isinstance(state, int):
+            return state
+
+        for state_dict, coeff in state.state_dict.items():
+            if state_dict[-1] == ():  # if state == vacuum
+                proper_state_dict[((), (), ())] = coeff
+            for tup in state_dict[-1]:
+                if tup[-1] <= max_bosonic_occupancy:  # n_bosons in a mode < cutoff
+                    proper_state_dict[state_dict] = coeff
+
+        return Fock(state_dict=proper_state_dict)
+
+
+def generate_matrix_hermitian(
+    op, basis, max_bosonic_occupancy: int = None, processes: int = 8
+):
     # Calculates the matrix representation of a Hermitian operator in a given basis
     size = (len(basis), len(basis))
     matrix = np.zeros(size, dtype=complex)
+    op = op.normal_order()
 
     for j, state_j in enumerate(basis):
-        rhs = op * state_j
+        rhs = _check_cutoff(op * state_j, max_bosonic_occupancy=max_bosonic_occupancy)
         # with Pool(processes=processes) as pool:
         #     matrix[j] = pool.starmap(overlap, product([rhs], [0] * j + basis[j:]))
         for i, state_i in enumerate(basis):
@@ -122,17 +144,21 @@ def generate_matrix_hermitian(op, basis, processes: int = 8):
 # pass into Pool [rhs] and basis[j:]
 
 
-def generate_matrix(op, basis):
+def generate_matrix(op, basis, max_bosonic_occupancy: int = None):
     # Calculates the matrix representation of an operator in a given basis
 
     if op.is_hermitian:
-        return generate_matrix_hermitian(op, basis)
+        return generate_matrix_hermitian(
+            op=op, basis=basis, max_bosonic_occupancy=max_bosonic_occupancy
+        )
     else:
         size = (len(basis), len(basis))
         matrix = np.zeros(size, dtype=complex)
 
         for j, state_j in enumerate(basis):
-            rhs = op * state_j
+            rhs = _check_cutoff(
+                op * state_j, max_bosonic_occupancy=max_bosonic_occupancy
+            )
             for i, state_i in enumerate(basis):
                 matrix[i][j] = overlap(state_i, rhs)
 
