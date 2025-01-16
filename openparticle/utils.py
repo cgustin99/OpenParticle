@@ -3,6 +3,7 @@ import numpy as np
 from typing import List
 from itertools import product, combinations
 from multiprocessing import Pool
+from symmer import QuantumState
 
 
 def _fermion_combinations(n):
@@ -104,20 +105,82 @@ def get_matrix_element(left_state, operator, right_state):
 def _check_cutoff(state, max_bosonic_occupancy: int = None):
     if max_bosonic_occupancy is None:
         return state
+    if isinstance(state, int):
+        return state
+    if state.has_bosons is False:  # No need to check cutoff
+        return state
     else:
         proper_state_dict = {}
 
-        if isinstance(state, int):
-            return state
-
         for state_dict, coeff in state.state_dict.items():
+            valid_state = True
             if state_dict[-1] == ():  # if state == vacuum
                 proper_state_dict[((), (), ())] = coeff
             for tup in state_dict[-1]:
-                if tup[-1] <= max_bosonic_occupancy:  # n_bosons in a mode < cutoff
-                    proper_state_dict[state_dict] = coeff
+                if tup[-1] > max_bosonic_occupancy:  # n_bosons in a mode > cutoff
+                    valid_state = False
+            if valid_state:
+                proper_state_dict[state_dict] = coeff
 
         return Fock(state_dict=proper_state_dict)
+
+
+def _verify_mapping(
+    op,
+    state,
+    max_fermionic_mode: int = None,
+    max_antifermionic_mode: int = None,
+    max_bosonic_mode: int = None,
+    max_bosonic_occupancy: int = None,
+    threshold: float = 1e-14,
+    verbose: bool = False,
+):
+    n_qubits = sum(
+        state.allocate_qubits(
+            max_fermionic_mode=max_fermionic_mode,
+            max_antifermionic_mode=max_antifermionic_mode,
+            max_bosonic_mode=max_bosonic_mode,
+            max_bosonic_occupancy=max_bosonic_occupancy,
+        )
+    )
+    output = _check_cutoff(op * state, max_bosonic_occupancy=max_bosonic_occupancy)
+    pauli_op = op.to_paulis(
+        max_fermionic_mode=max_fermionic_mode,
+        max_antifermionic_mode=max_antifermionic_mode,
+        max_bosonic_mode=max_bosonic_mode,
+        max_bosonic_occupancy=max_bosonic_occupancy,
+    )
+    qubit_state = state.to_qubit_state(
+        max_fermionic_mode=max_fermionic_mode,
+        max_antifermionic_mode=max_antifermionic_mode,
+        max_bosonic_mode=max_bosonic_mode,
+        max_bosonic_occupancy=max_bosonic_occupancy,
+    )
+    output_pauli = pauli_op * qubit_state
+    if isinstance(output, Fock):
+        expected_output = output.to_qubit_state(
+            max_fermionic_mode=max_fermionic_mode,
+            max_antifermionic_mode=max_antifermionic_mode,
+            max_bosonic_mode=max_bosonic_mode,
+            max_bosonic_occupancy=max_bosonic_occupancy,
+        )
+    else:
+        expected_output = QuantumState([0] * n_qubits) * 0
+
+    similarity = output_pauli - expected_output
+    if verbose:
+        print("-----")
+        print("Initial state: ", state)
+        print("Final state (output): ", output, ",", op * state)
+        print("output pauli: ", output_pauli)
+        print("expected: ", expected_output)
+        print("Passes test: ", (list(similarity.state_op.coeff_vec) == []))
+
+    if np.sum(similarity.state_op.coeff_vec) > threshold:
+        if list(similarity.state_op.coeff_vec) == []:
+            assert True
+        else:
+            assert False
 
 
 def generate_matrix_hermitian(op, basis, max_bosonic_occupancy: int = None):
