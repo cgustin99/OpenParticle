@@ -192,7 +192,7 @@ class ParticleOperator:
                 key = indices[step]
                 j = step - 1
 
-                while j >= 0 and key < indices[j]:
+                while j >= 0 and indices[j] < key:
                     indices[j + 1] = indices[j]
                     if type == 4 or type == 5:
                         n_swaps += 0
@@ -296,13 +296,6 @@ class ParticleOperator:
                     used.append(dag)
         return groups
 
-    # def _jordan_wigner(operator):
-
-    #     if operator.all_creation:
-    #         return PauliwordOp.from_list(["X", "Y"], [1 / 2, -1j / 2])
-    #     else:
-    #         return PauliwordOp.from_list(["X", "Y"], [1 / 2, 1j / 2])
-
     @staticmethod
     def SB(operator, max_mode, max_occ: int):
         def _SB(operator, omega):
@@ -338,7 +331,8 @@ class ParticleOperator:
         n_qubits_per_mode = int(np.log2(max_occ + 1))
         n_modes = max_mode + 1
         sb = PauliwordOp.from_dictionary({"I" * (n_modes * n_qubits_per_mode): 1.0})
-
+        if operator == ParticleOperator(""):  # Identity
+            return sb
         for op in operator.split():
             mode = op.mode
             n_higher_modes = (n_modes - (mode + 1)) * n_qubits_per_mode
@@ -364,6 +358,8 @@ class ParticleOperator:
         assert not operator.has_bosons, "Must be a fermionic operator only"
 
         jw = PauliwordOp.from_dictionary({"I" * (max_mode + 1): 1.0})
+        if operator == ParticleOperator(""):
+            return jw
 
         for op in operator.split():
             mode = op.mode
@@ -377,63 +373,6 @@ class ParticleOperator:
             jw *= current_jw
 
         return jw
-
-    # def to_paulis(
-    #     self, max_bose_occ: int = None, zero_threshold: float = 1e-15
-    # ) -> PauliwordOp:
-    #     n_qubits = 0
-    #     if self.has_bosons:
-    #         max_bose_mode = self.max_bosonic_mode
-    #         n_bosonic_qubits = (max_bose_mode + 1) * int(
-    #             np.ceil(np.log2(max_bose_occ + 1))
-    #         )
-    #         n_qubits += n_bosonic_qubits
-    #     if self.has_fermions:
-    #         max_fermi_mode = self.max_fermionic_mode
-    #         n_fermi_qubits = max_fermi_mode + 1
-    #         n_qubits += n_fermi_qubits
-    #     if self.has_antifermions:
-    #         max_antifermi_mode = self.max_antifermionic_mode
-    #         n_antifermi_qubits = max_antifermi_mode + 1
-    #         n_qubits += n_antifermi_qubits
-
-    #     pauli_op = PauliwordOp.empty(n_qubits=n_qubits)
-
-    #     for term in self.to_list():
-    #         mapped_fermions = []
-    #         mapped_antifermions = []
-    #         mapped_bosons = []
-    #         for op in term.partition():
-    #             if op.has_fermions:
-    #                 mapped_fermions.append(self.jordan_wigner(op, max_fermi_mode))
-
-    #             elif op.has_antifermions:
-    #                 mapped_antifermions.append(
-    #                     self.jordan_wigner(op, max_antifermi_mode)
-    #                 )
-    #             elif op.has_bosons:
-    #                 mapped_bosons.append(
-    #                     self.SB(op, max_bose_mode, max_occ=max_bose_occ)
-    #                 )
-    #         if mapped_fermions == [] and self.has_fermions:
-    #             mapped_fermions = [
-    #                 PauliwordOp.from_dictionary({"I" * n_fermi_qubits: 1})
-    #             ]
-    #         if mapped_antifermions == [] and self.has_antifermions:
-    #             mapped_antifermions = [
-    #                 PauliwordOp.from_dictionary({"I" * n_antifermi_qubits: 1})
-    #             ]
-    #         if mapped_bosons == [] and self.has_bosons:
-    #             mapped_bosons = [
-    #                 PauliwordOp.from_dictionary({"I" * n_bosonic_qubits: 1})
-    #             ]
-    #         pauli_op += (
-    #             (tensor_list(mapped_fermions + mapped_antifermions + mapped_bosons))
-    #             * term.coeff
-    #             * term.get_parity_for_coeff()
-    #         )
-
-    #     return pauli_op.cleanup(zero_threshold=zero_threshold)
 
     @staticmethod
     def allocate_qubits(
@@ -497,28 +436,32 @@ class ParticleOperator:
         for term in self.to_list():
             mapped_term = []
             partitioned_op = term.partition()
+            coeff_of_term = term.coeff
             f_op = partitioned_op[0]
             af_op = partitioned_op[1]
             b_op = partitioned_op[2]
-            if f_op != ParticleOperator(""):
+            if max_fermionic_mode is not None:
                 mapped_term.append(
                     self.jordan_wigner(f_op, max_mode=max_fermionic_mode)
                 )
-            if af_op != ParticleOperator(""):
+            if max_antifermionic_mode is not None:
                 mapped_term.append(
                     self.jordan_wigner(af_op, max_mode=max_antifermionic_mode)
                 )
-                for _ in range(len(af_op.split())):
-                    mapped_term[0] *= PauliwordOp.from_list(
-                        ["Z" * (max_fermionic_mode + 1)], [1]
-                    )  # Multiply fermion qubits by Z for parity
-            if b_op != ParticleOperator(""):
+                if f_op != ParticleOperator(
+                    ""
+                ):  # If there are fermions, multiply fermion qubits by Z for parity
+                    for _ in range(len(af_op.split())):
+                        mapped_term[0] *= PauliwordOp.from_list(
+                            ["Z" * (max_fermionic_mode + 1)], [1]
+                        )
+            if max_bosonic_mode is not None:
                 mapped_term.append(
                     self.SB(
                         b_op, max_mode=max_bosonic_mode, max_occ=max_bosonic_occupancy
                     )
                 )
-            pauli_op += tensor_list(mapped_term)
+            pauli_op += tensor_list(mapped_term) * coeff_of_term
 
         return pauli_op.cleanup(zero_threshold=zero_threshold)
 

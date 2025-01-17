@@ -292,17 +292,17 @@ def test_equality4():
 
 def test_order_indices_1():
     op = ParticleOperator("b0^ b1 b0")
-    assert -1 * ParticleOperator("b0^ b0 b1") == op.order_indices()
+    assert op == op.order_indices()
 
 
 def test_order_indices_2():
-    op = ParticleOperator("a0^ a1^")
+    op = ParticleOperator("a1^ a0^")
     assert op == op.order_indices()
 
 
 def test_order_indices_3():
-    op = ParticleOperator("a1^ a0^")
-    assert ParticleOperator("a0^ a1^") == op.order_indices()
+    op = ParticleOperator("a0^ a1^")
+    assert ParticleOperator("a1^ a0^") == op.order_indices()
 
 
 def test_order_indices_4():

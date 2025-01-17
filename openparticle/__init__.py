@@ -8,7 +8,12 @@ from .src import (
     OccupationOperator,
 )
 
-from .utils import generate_matrix, get_fock_basis, remove_symmetry_terms
+from .utils import (
+    generate_matrix,
+    get_fock_basis,
+    remove_symmetry_terms,
+    _verify_mapping,
+)
 
 from .fields import ScalarField, FermionField
 

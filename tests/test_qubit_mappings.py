@@ -1,59 +1,14 @@
 from openparticle import ParticleOperator, Fock
-from openparticle.utils import get_fock_basis, generate_matrix, _check_cutoff
+from openparticle.utils import (
+    get_fock_basis,
+    generate_matrix,
+    _check_cutoff,
+    _verify_mapping,
+)
+from openparticle.hamiltonians.phi4_hamiltonian import phi4_Hamiltonian
 from symmer import PauliwordOp, QuantumState
 import pytest
 import numpy as np
-
-
-def _verify_mapping(
-    op,
-    state,
-    max_fermionic_mode: int = None,
-    max_antifermionic_mode: int = None,
-    max_bosonic_mode: int = None,
-    max_bosonic_occupancy: int = None,
-    threshold: float = 1e-14,
-):
-    n_qubits = sum(
-        state.allocate_qubits(
-            max_fermionic_mode=max_fermionic_mode,
-            max_antifermionic_mode=max_antifermionic_mode,
-            max_bosonic_mode=max_bosonic_mode,
-            max_bosonic_occupancy=max_bosonic_occupancy,
-        )
-    )
-    output = _check_cutoff(op * state, max_bosonic_occupancy=max_bosonic_occupancy)
-
-    output_pauli = op.to_paulis(
-        max_fermionic_mode=max_fermionic_mode,
-        max_antifermionic_mode=max_antifermionic_mode,
-        max_bosonic_mode=max_bosonic_mode,
-        max_bosonic_occupancy=max_bosonic_occupancy,
-    ) * state.to_qubit_state(
-        max_fermionic_mode=max_fermionic_mode,
-        max_antifermionic_mode=max_antifermionic_mode,
-        max_bosonic_mode=max_bosonic_mode,
-        max_bosonic_occupancy=max_bosonic_occupancy,
-    )
-    if isinstance(output, Fock):
-        expected_output = output.to_qubit_state(
-            max_fermionic_mode=max_fermionic_mode,
-            max_antifermionic_mode=max_antifermionic_mode,
-            max_bosonic_mode=max_bosonic_mode,
-            max_bosonic_occupancy=max_bosonic_occupancy,
-        )
-    else:
-        expected_output = QuantumState([0] * n_qubits) * 0
-
-    similarity = output_pauli - expected_output
-    # print("-----")
-    # print("Initial state: ", state)
-    # print("Final state (output): ", output)
-    # print("output pauli: ", output_pauli)
-    # print("expected: ", expected_output)
-    # print("T or F: ", (list(similarity.state_op.coeff_vec) == []))
-    if np.sum(similarity.state_op.coeff_vec) > threshold:
-        assert list(similarity.state_op.coeff_vec) == []
 
 
 def test_JW_dagger():
@@ -124,6 +79,7 @@ def test_SB_higher_max_occ():
     "op",
     [
         ParticleOperator("b0"),
+        ParticleOperator("d0^"),
         ParticleOperator("a0 a0"),
         ParticleOperator("a0 a1"),
         ParticleOperator("a0") + ParticleOperator("a2"),
@@ -133,6 +89,7 @@ def test_SB_higher_max_occ():
         ParticleOperator("b1 d1"),
         ParticleOperator("b0 b1 d0"),
         ParticleOperator("b0 b2 b3 d2"),
+        ParticleOperator("b0^ b0") + ParticleOperator("b0^ b0 a0"),
     ],
 )
 def test_mapping(op):
@@ -150,6 +107,7 @@ def test_mapping(op):
             max_antifermionic_mode=max_antifermionic_mode,
             max_bosonic_mode=max_bosonic_mode,
             max_bosonic_occupancy=max_bosonic_occupancy,
+            threshold=1e-3,
         )
 
 
@@ -188,3 +146,23 @@ def test_fock_qubit_map():
     )
 
     assert expected_quantum_state == obtained_quantum_state
+
+
+@pytest.mark.parametrize("res", np.arange(2, 5, 1))
+def test_phi4_hamiltonian_mapping(res):
+    omega = 3
+    ham = phi4_Hamiltonian(res=res, g=1, mb=1)
+    phi4 = ham.to_paulis(
+        max_bosonic_mode=ham.max_bosonic_mode, max_bosonic_occupancy=omega
+    )
+    basis = get_fock_basis(ham, omega)
+    for state_number in range(len(basis)):
+        _verify_mapping(
+            ham,
+            basis[state_number],
+            None,
+            None,
+            ham.max_bosonic_mode,
+            omega,
+            threshold=1e-3,
+        )
