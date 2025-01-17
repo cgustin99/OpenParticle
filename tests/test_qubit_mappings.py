@@ -89,6 +89,7 @@ def test_SB_higher_max_occ():
         ParticleOperator("b1 d1"),
         ParticleOperator("b0 b1 d0"),
         ParticleOperator("b0 b2 b3 d2"),
+        ParticleOperator("b0^ b0") + ParticleOperator("b0^ b0 a0"),
     ],
 )
 def test_mapping(op):

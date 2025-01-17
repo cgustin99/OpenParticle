@@ -331,7 +331,8 @@ class ParticleOperator:
         n_qubits_per_mode = int(np.log2(max_occ + 1))
         n_modes = max_mode + 1
         sb = PauliwordOp.from_dictionary({"I" * (n_modes * n_qubits_per_mode): 1.0})
-
+        if operator == ParticleOperator(""):  # Identity
+            return sb
         for op in operator.split():
             mode = op.mode
             n_higher_modes = (n_modes - (mode + 1)) * n_qubits_per_mode
@@ -357,6 +358,8 @@ class ParticleOperator:
         assert not operator.has_bosons, "Must be a fermionic operator only"
 
         jw = PauliwordOp.from_dictionary({"I" * (max_mode + 1): 1.0})
+        if operator == ParticleOperator(""):
+            return jw
 
         for op in operator.split():
             mode = op.mode
@@ -437,11 +440,11 @@ class ParticleOperator:
             f_op = partitioned_op[0]
             af_op = partitioned_op[1]
             b_op = partitioned_op[2]
-            if f_op != ParticleOperator(""):
+            if max_fermionic_mode is not None:
                 mapped_term.append(
                     self.jordan_wigner(f_op, max_mode=max_fermionic_mode)
                 )
-            if af_op != ParticleOperator(""):
+            if max_antifermionic_mode is not None:
                 mapped_term.append(
                     self.jordan_wigner(af_op, max_mode=max_antifermionic_mode)
                 )
@@ -452,7 +455,7 @@ class ParticleOperator:
                         mapped_term[0] *= PauliwordOp.from_list(
                             ["Z" * (max_fermionic_mode + 1)], [1]
                         )
-            if b_op != ParticleOperator(""):
+            if max_bosonic_mode is not None:
                 mapped_term.append(
                     self.SB(
                         b_op, max_mode=max_bosonic_mode, max_occ=max_bosonic_occupancy
