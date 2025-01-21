@@ -277,7 +277,7 @@ class ParticleOperator:
             sorted_terms += term.coeff * term._order_indices()
         return sorted_terms
 
-    def group(self) -> List:
+    def group(self):
         """
         Groups terms in a sum of ParticleOperators (hermitian) into a list of term + term.dagger()
         """
@@ -285,15 +285,20 @@ class ParticleOperator:
 
         groups = []
         used = []
-        for term in self.order_indices().to_list():
+        operator = self.order_indices()
+        for term in operator.order_indices().to_list():
             if term not in used:
                 if term.is_hermitian:
                     groups.append(term)
                 else:
                     dag = term.dagger().normal_order().order_indices()
-                    groups.append(term + dag)
-                    used.append(term)
-                    used.append(dag)
+                    if dag in operator.to_list():
+                        groups.append(term + dag)
+                        used.append(term)
+                        used.append(dag)
+                    else:
+                        groups.append(term)
+                        used.append(term)
         return groups
 
     @staticmethod
@@ -1161,7 +1166,7 @@ class ParticleOperator:
 
     @property
     def is_hermitian(self):
-        return self.op_dict == self.dagger().op_dict
+        return self.op_dict == self.dagger().order_indices().op_dict
 
     def has_identity(self):
         return () in self.op_dict.keys()
