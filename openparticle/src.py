@@ -36,6 +36,25 @@ class ParticleOperator:
         else:
             raise ValueError("input must be dictionary or op string")
 
+    @classmethod
+    def from_openfermion(cls, of_operator):
+        """
+        Initializes a ParticleOperator from a openfermion FermionOperator instance
+        Args:
+            of_operator: openfermion.FermionOperator object
+        Returns:
+            ParticleOperator: A new ParticleOperator object matching the input
+        """
+        from openfermion import FermionOperator as fo
+
+        assert isinstance(of_operator, fo), "Must supply a FermionOperator"
+
+        op_dict = {
+            tuple((0,) + inner_tuple for inner_tuple in key): value
+            for key, value in of_operator.terms.items()
+        }
+        return ParticleOperator(op_dict)
+
     @staticmethod
     def op_string_to_key(op_str, coeff: complex = 1.0):
         key = []

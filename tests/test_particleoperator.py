@@ -342,3 +342,15 @@ def test_group_2():
 def test_group_3():
     op = ParticleOperator("a1^ a0^ a1 a0")
     assert op.group() == [op]
+
+
+def test_from_openfermion():
+    from openfermion import FermionOperator as fo
+
+    of_operator = fo("2^ 1") - fo("3") + 3 * fo("2^ 1^ 0^")
+    op_operator = (
+        ParticleOperator("b2^ b1")
+        - ParticleOperator("b3")
+        + 3 * ParticleOperator("b2^ b1^ b0^")
+    )
+    assert op_operator == ParticleOperator.from_openfermion(of_operator)
