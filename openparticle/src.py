@@ -36,6 +36,20 @@ class ParticleOperator:
         else:
             raise ValueError("input must be dictionary or op string")
 
+        self.items = list(self.op_dict.items())
+        self.index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.index < len(self.items):
+            key, value = self.items[self.index]
+            self.index += 1
+            return ParticleOperator({key: value})
+        else:
+            raise StopIteration
+
     @classmethod
     def from_openfermion(cls, of_operator):
         """
