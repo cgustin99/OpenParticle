@@ -36,6 +36,39 @@ class ParticleOperator:
         else:
             raise ValueError("input must be dictionary or op string")
 
+        self.items = list(self.op_dict.items())
+        self.index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.index < len(self.items):
+            key, value = self.items[self.index]
+            self.index += 1
+            return ParticleOperator({key: value})
+        else:
+            raise StopIteration
+
+    @classmethod
+    def from_openfermion(cls, of_operator):
+        """
+        Initializes a ParticleOperator from a openfermion FermionOperator instance
+        Args:
+            of_operator: openfermion.FermionOperator object
+        Returns:
+            ParticleOperator: A new ParticleOperator object matching the input
+        """
+        from openfermion import FermionOperator as fo
+
+        assert isinstance(of_operator, fo), "Must supply a FermionOperator"
+
+        op_dict = {
+            tuple((0,) + inner_tuple for inner_tuple in key): value
+            for key, value in of_operator.terms.items()
+        }
+        return ParticleOperator(op_dict)
+
     @staticmethod
     def op_string_to_key(op_str, coeff: complex = 1.0):
         key = []
@@ -277,7 +310,7 @@ class ParticleOperator:
             sorted_terms += term.coeff * term._order_indices()
         return sorted_terms
 
-    def group(self) -> List:
+    def group(self):
         """
         Groups terms in a sum of ParticleOperators (hermitian) into a list of term + term.dagger()
         """
@@ -285,15 +318,20 @@ class ParticleOperator:
 
         groups = []
         used = []
-        for term in self.order_indices().to_list():
+        operator = self.order_indices()
+        for term in operator.order_indices().to_list():
             if term not in used:
                 if term.is_hermitian:
                     groups.append(term)
                 else:
                     dag = term.dagger().normal_order().order_indices()
-                    groups.append(term + dag)
-                    used.append(term)
-                    used.append(dag)
+                    if dag in operator.to_list():
+                        groups.append(term + dag)
+                        used.append(term)
+                        used.append(dag)
+                    else:
+                        groups.append(term)
+                        used.append(term)
         return groups
 
     @staticmethod
@@ -1161,7 +1199,7 @@ class ParticleOperator:
 
     @property
     def is_hermitian(self):
-        return self.op_dict == self.dagger().op_dict
+        return self.op_dict == self.dagger().order_indices().op_dict
 
     def has_identity(self):
         return () in self.op_dict.keys()

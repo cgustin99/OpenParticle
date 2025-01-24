@@ -312,3 +312,45 @@ def test_order_indices_4():
         + ParticleOperator("b0^ b1^ d2 a1")
     )
     assert ParticleOperator("a0") == op.order_indices()
+
+
+def test_is_hermitian():
+    op = ParticleOperator("b0^ a1")
+    assert op.is_hermitian == False
+
+
+def test_is_hermitian2():
+    op = ParticleOperator("b0^ b0")
+    assert op.is_hermitian
+
+
+def test_is_hermitian3():
+    op = ParticleOperator("b1^ b0^ b1 b0")
+    assert op.is_hermitian
+
+
+def test_group_1():
+    op = ParticleOperator("a1^ a2^") + ParticleOperator("a2^ a1^")
+    assert op.group()[0] == 2 * ParticleOperator("a2^ a1^")
+
+
+def test_group_2():
+    op = ParticleOperator("b1^ b2^") + ParticleOperator("b2^ b1^")
+    assert op.group() == []
+
+
+def test_group_3():
+    op = ParticleOperator("a1^ a0^ a1 a0")
+    assert op.group() == [op]
+
+
+def test_from_openfermion():
+    from openfermion import FermionOperator as fo
+
+    of_operator = fo("2^ 1") - fo("3") + 3 * fo("2^ 1^ 0^")
+    op_operator = (
+        ParticleOperator("b2^ b1")
+        - ParticleOperator("b3")
+        + 3 * ParticleOperator("b2^ b1^ b0^")
+    )
+    assert op_operator == ParticleOperator.from_openfermion(of_operator)
