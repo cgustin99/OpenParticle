@@ -329,19 +329,20 @@ def test_is_hermitian3():
     assert op.is_hermitian
 
 
-def test_group_1():
-    op = ParticleOperator("a1^ a2^") + ParticleOperator("a2^ a1^")
-    assert op.group()[0] == 2 * ParticleOperator("a2^ a1^")
-
-
 def test_group_2():
     op = ParticleOperator("b1^ b2^") + ParticleOperator("b2^ b1^")
-    assert op.group() == []
+    assert op.group().op_dict == dict()
 
 
 def test_group_3():
     op = ParticleOperator("a1^ a0^ a1 a0")
     assert op.group() == [op]
+
+
+def test_group_4():
+    op = ParticleOperator("b1^ b1 b0^ b0") + ParticleOperator("b0^ b0 b1^ b1")
+
+    assert ((op - op.order_indices()).order_indices()).op_dict == dict()
 
 
 def test_from_openfermion():

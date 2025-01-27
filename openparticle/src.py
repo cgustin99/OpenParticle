@@ -7,7 +7,6 @@ from copy import deepcopy
 from itertools import product
 import math
 import scipy
-
 from symmer import PauliwordOp, QuantumState
 from symmer.utils import tensor_list
 
@@ -306,7 +305,7 @@ class ParticleOperator:
     def order_indices(self) -> "ParticleOperator":
 
         sorted_terms = ParticleOperator()
-        for term in self.to_list():
+        for term in self.normal_order():
             sorted_terms += term.coeff * term._order_indices()
         return sorted_terms
 
@@ -319,19 +318,44 @@ class ParticleOperator:
         groups = []
         used = []
         operator = self.order_indices()
-        for term in operator.order_indices().to_list():
-            if term not in used:
+        if operator.op_dict == dict():
+            return operator
+        for term in operator.to_list():
+            print("------")
+            print(term)
+            if list(term.op_dict.keys())[0] not in used:
                 if term.is_hermitian:
+                    print("found hermie", term)
                     groups.append(term)
                 else:
+                    print("not hermitian")
                     dag = term.dagger().normal_order().order_indices()
-                    if dag in operator.to_list():
+                    found_term = False
+                    for cand_term in operator.to_list():
+
+                        copied_term = deepcopy(dag.op_dict)
+                        copied_term[list(dag.op_dict.keys())[0]] = 1
+                        copied_term = ParticleOperator(copied_term)
+                        candidate_term = deepcopy(cand_term.op_dict)
+                        candidate_term[list(cand_term.op_dict.keys())[0]] = 1
+                        candidate_term = ParticleOperator(candidate_term)
+
+                        if copied_term == candidate_term:
+                            print("copied", copied_term, candidate_term)
+                            print("copied", dag.coeff.conj(), cand_term.coeff)
+                            if np.isclose(dag.coeff.conj(), term.coeff):
+                                found_term = True
+
+                    if found_term:
+                        print("found hc")
                         groups.append(term + dag)
-                        used.append(term)
-                        used.append(dag)
+                        used.append(list(term.op_dict.keys())[0])
+                        used.append(list(dag.op_dict.keys())[0])
                     else:
+                        print("no hc")
+                        assert False
                         groups.append(term)
-                        used.append(term)
+                        used.append(list(term.op_dict.keys())[0])
         return groups
 
     @staticmethod
@@ -1098,9 +1122,11 @@ class ParticleOperator:
         else:
             return ParticleOperator(random_op_dict)
 
-    def remove_identity(self):
+    def remove_identity(self) -> np.complex128:
         if () in self.op_dict:
-            del self.op_dict[()]
+            return self.op_dict.pop(())
+        else:
+            return 0
 
     @staticmethod
     def fermionic_parity(fermi_occ):
