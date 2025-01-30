@@ -354,3 +354,23 @@ def test_from_openfermion():
         + 3 * ParticleOperator("b2^ b1^ b0^")
     )
     assert op_operator == ParticleOperator.from_openfermion(of_operator)
+
+
+@pytest.mark.parametrize("n_terms", np.random.random_integers(1, 20, size=10))
+def test_contains_returns_true_when_operator_is_present(n_terms):
+    operator = ParticleOperator.random()
+    contained_operator = np.random.choice(operator.to_list())
+    assert operator.contains(contained_operator)
+
+
+def test_contains_returns_false_when_operator_is_not_present():
+    operator = ParticleOperator("b0 b1^ d3 a2")
+    noncontained_operator = ParticleOperator("b0")
+    assert not operator.contains(noncontained_operator)
+
+
+def test_group_works_with_close_coefficients():
+    operator = 1 * ParticleOperator("b0 b1^ d3 a2")
+    operator += ((1 + 1e-13)) * operator.dagger()
+    assert len(operator.group()) == 1
+    assert len(operator.group()[0].to_list()) == 2

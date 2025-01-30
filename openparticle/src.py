@@ -310,28 +310,41 @@ class ParticleOperator:
             sorted_terms += term.coeff * term._order_indices()
         return sorted_terms
 
-    def group(self):
+    def contains(self, operator):
+        assert len(operator.to_list()) == 1
+        operator_key = list(operator.op_dict.keys())[0]
+        return operator_key in self.op_dict.keys()
+
+    def group(self, atol=1e-14):
         """
         Groups terms in a sum of ParticleOperators (hermitian) into a list of term + term.dagger()
         """
         # assert self.is_hermitian
 
         groups = []
-        used = []
+        used = ParticleOperator()
         operator = self.order_indices()
         for term in operator.order_indices().to_list():
-            if term not in used:
+            if not used.contains(term):
                 if term.is_hermitian:
                     groups.append(term)
                 else:
                     dag = term.dagger().normal_order().order_indices()
-                    if dag in operator.to_list():
+                    found_dag = False
+                    if operator.contains(dag):
+                        if np.allclose(
+                            dag.coeff,
+                            operator.op_dict.get(list(dag.op_dict.keys())[0], 0),
+                            atol=atol,
+                        ):
+                            found_dag = True
+                    if found_dag:
                         groups.append(term + dag)
-                        used.append(term)
-                        used.append(dag)
+                        used += term
+                        used += dag
                     else:
                         groups.append(term)
-                        used.append(term)
+                        used += term
         return groups
 
     @staticmethod
