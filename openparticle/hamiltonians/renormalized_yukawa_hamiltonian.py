@@ -1,25 +1,26 @@
 from openparticle.hamiltonians.yukawa_hamiltonians import *
 from openparticle.utils import _get_sign, _get_mass, _get_pminus
 from scipy.integrate import quad
+import numba as nb
 
 
-def renormalized_Yukawa_hamiltonian(res, t, treg, g, mf, mb):
+def renormalized_yukawa_hamiltonian(res, t, treg=0, g=1, mf=1, mb=1):
     # Returns the renormalized Yukawa Hamiltonian up to O(g^2)
     Ham = (
         free_boson_Hamiltonian(res=res, mb=mb)
         + free_fermion_Hamiltonian(res=res, mf=mf)
-        + renormalized_Yukawa_first_order(res=res, t=t, treg=treg, g=g, mf=mf, mb=mb)
-        + renormalized_Yukawa_second_order_form_factor(
+        + renormalized_yukawa_first_order(res=res, t=t, treg=treg, g=g, mf=mf, mb=mb)
+        + renormalized_yukawa_second_order_form_factor(
             res=res, t=t, treg=treg, g=g, mf=mf, mb=mb
         )
-        + renormalized_Yukawa_second_order_contractions(
+        + renormalized_yukawa_second_order_contractions(
             res=res, t=t, treg=treg, g=g, mf=mf, mb=mb
         )
     )
     return Ham
 
 
-def renormalized_Yukawa_first_order(res, t, treg, g, mf, mb):
+def renormalized_yukawa_first_order(res, t, treg, g, mf, mb):
     H1 = three_point_yukawa(res=res, g=g, mf=mf, mb=mb)
 
     ren_H1 = ParticleOperator({})
@@ -37,7 +38,7 @@ def renormalized_Yukawa_first_order(res, t, treg, g, mf, mb):
     return ren_H1
 
 
-def renormalized_Yukawa_second_order_form_factor(res, t, treg, g, mf, mb):
+def renormalized_yukawa_second_order_form_factor(res, t, treg, g, mf, mb):
     H1inst = instantaneous_yukawa(res=res, g=g, mf=mf, mb=mb)
 
     ren_H1inst = ParticleOperator({})
@@ -71,13 +72,12 @@ def boson_exchange(t, g, res, mf, mb):
 
             f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
             f453_ = np.exp(-t * (q4_ + q5_ - q3_) ** 2)
-            f124_5_ = np.exp(-t * (q1_ + q2_ - q4_ - q5_) ** 2)
             f1245 = np.exp(-t * (q1_ + q2_ + q4_ + q5_) ** 2)
 
             B = (
                 0.5
                 * (1 / (q1_ + q2_ + q3_) - 1 / (q4_ + q5_ - q3_))
-                * (f123 * f453_ / f124_5_ - 1)
+                * (f123 * f453_ / f1245 - 1)
                 * f1245
             )
 
@@ -120,13 +120,12 @@ def fermion_exchange(t, g, res, mf, mb):
 
         f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
         f562_ = np.exp(-t * (q5_ + q6_ - q2_) ** 2)
-        f135_6_ = np.exp(-t * (q1_ + q3_ - q5_ - q6_) ** 2)
         f1356 = np.exp(-t * (q1_ + q3_ + q5_ + q6_) ** 2)
 
         B = (
             0.5
-            * (1 / (q1_ + q2_ + q3_) - 1 / (q5_ + q6_ - q1_))
-            * (f123 * f562_ / f135_6_ - 1)
+            * (1 / (q1_ + q2_ + q3_) - 1 / (q5_ + q6_ - q2_))
+            * (f123 * f562_ / f1356 - 1)
             * f1356
         )
 
@@ -141,7 +140,6 @@ def fermion_exchange(t, g, res, mf, mb):
             field_contractions = fermion_field_contractions * boson_field_contractions
 
         h_tree += B / (q2) * (field_contractions.normal_order())
-    # print("Fermionic exchange counter:", counter)
     h_tree = remove_symmetry_terms(h_tree, 4)
     return g**2 / (2 * L) ** 5 * h_tree
 
@@ -259,7 +257,7 @@ def boson_mass_counterterm(res, treg, g, mf, mb):
     return 1 / (2 * L) ** 2 * g**2 * H_free_scalar
 
 
-def renormalized_Yukawa_second_order_contractions(res, t, treg, g, mf, mb):
+def renormalized_yukawa_second_order_contractions(res, t, treg, g, mf, mb):
     second_order = (
         boson_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb)
         + fermion_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb)
