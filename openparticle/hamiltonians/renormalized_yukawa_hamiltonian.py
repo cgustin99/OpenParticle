@@ -2,25 +2,28 @@ from openparticle.hamiltonians.yukawa_hamiltonians import *
 from openparticle.utils import _get_sign, _get_mass, _get_pminus
 from scipy.integrate import quad
 import numba as nb
+import time
 
 
-def renormalized_yukawa_hamiltonian(res, t, treg=0, g=1, mf=1, mb=1):
+def renormalized_yukawa_hamiltonian(res, t, treg=0, g=1, mf=1, mb=1, verbose=False):
     # Returns the renormalized Yukawa Hamiltonian up to O(g^2)
     Ham = (
         free_boson_Hamiltonian(res=res, mb=mb)
         + free_fermion_Hamiltonian(res=res, mf=mf)
-        + renormalized_yukawa_first_order(res=res, t=t, treg=treg, g=g, mf=mf, mb=mb)
+        + renormalized_yukawa_first_order(
+            res=res, t=t, treg=treg, g=g, mf=mf, mb=mb, verbose=verbose
+        )
         + renormalized_yukawa_second_order_form_factor(
-            res=res, t=t, treg=treg, g=g, mf=mf, mb=mb
+            res=res, t=t, treg=treg, g=g, mf=mf, mb=mb, verbose=verbose
         )
         + renormalized_yukawa_second_order_contractions(
-            res=res, t=t, treg=treg, g=g, mf=mf, mb=mb
+            res=res, t=t, treg=treg, g=g, mf=mf, mb=mb, verbose=verbose
         )
     )
     return Ham
 
 
-def renormalized_yukawa_first_order(res, t, treg, g, mf, mb):
+def renormalized_yukawa_first_order(res, t, treg, g, mf, mb, verbose=False):
     H1 = three_point_yukawa(res=res, g=g, mf=mf, mb=mb)
 
     ren_H1 = ParticleOperator({})
@@ -38,7 +41,10 @@ def renormalized_yukawa_first_order(res, t, treg, g, mf, mb):
     return ren_H1
 
 
-def renormalized_yukawa_second_order_form_factor(res, t, treg, g, mf, mb):
+def renormalized_yukawa_second_order_form_factor(
+    res, t, treg, g, mf, mb, verbose=False
+):
+    start = time.time()
     H1inst = instantaneous_yukawa(res=res, g=g, mf=mf, mb=mb)
 
     ren_H1inst = ParticleOperator({})
@@ -52,12 +58,14 @@ def renormalized_yukawa_second_order_form_factor(res, t, treg, g, mf, mb):
                 * _get_pminus(op, mf, mb, res)
             )
         ren_H1inst += np.exp(-(exp_factor**2) * (t + treg)) * term
-
+    finish = time.time()
+    if verbose:
+        print("Time of renormalized_yukawa_second_order_form_factor:", finish - start)
     return ren_H1inst
 
 
-def boson_exchange(t, g, res, mf, mb):
-
+def boson_exchange(t, g, res, mf, mb, verbose=False):
+    start = time.time()
     fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
 
     L = 2 * np.pi * res
@@ -95,11 +103,14 @@ def boson_exchange(t, g, res, mf, mb):
                 )[0][0].normal_order()
             )
     h_tree = remove_symmetry_terms(h_tree, 4)
+    finish = time.time()
+    if verbose:
+        print("Time of boson_exchange:", finish - start)
     return g**2 / (2 * L) ** 5 * h_tree
 
 
-def fermion_exchange(t, g, res, mf, mb):
-
+def fermion_exchange(t, g, res, mf, mb, verbose=False):
+    start = time.time()
     fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
     bosonic_range = [i for i in range(-res, res + 1) if i != 0]
 
@@ -141,10 +152,15 @@ def fermion_exchange(t, g, res, mf, mb):
 
         h_tree += B / (q2) * (field_contractions.normal_order())
     h_tree = remove_symmetry_terms(h_tree, 4)
+    finish = time.time()
+    if verbose:
+        print("Time of fermion_exchange:", finish - start)
     return g**2 / (2 * L) ** 5 * h_tree
 
 
-def fermion_loop(t, p, mf, mb):
+def fermion_loop(t, p, mf, mb, verbose=False):
+    start = time.time()
+
     def integrand(x, t, p, mf, mb):
         return (
             1
@@ -154,11 +170,14 @@ def fermion_loop(t, p, mf, mb):
             * np.exp(-2 * t / p**2 * (mf**2 / x + mb**2 / (1 - x) - mf**2))
         )
 
+    finish = time.time()
+    if verbose:
+        print("Time of fermion_loop:", finish - start)
     return quad(integrand, 0, 1, args=(t, p, mf, mb))[0]
 
 
-def fermion_self_energy(t, g, res, mf, mb):
-
+def fermion_self_energy(t, g, res, mf, mb, verbose=False):
+    start = time.time()
     _fermion_loop = ParticleOperator({})
 
     fermionic_range = np.arange(1 / 2, res + 1, 1)
@@ -169,14 +188,17 @@ def fermion_self_energy(t, g, res, mf, mb):
         p1 = p(k, L)
         _fermion_loop += (
             (1 / p1)
-            * fermion_loop(t=t, p=p1, mf=mf, mb=mb)
+            * fermion_loop(t=t, p=p1, mf=mf, mb=mb, verbose=False)
             * ParticleOperator("b" + str(int(k - 1 / 2)) + "^ b" + str(int(k - 1 / 2)))
         )
-
+    finish = time.time()
+    if verbose:
+        print("Time of fermion_self_energy (with loop):", finish - start)
     return g**2 / (2 * L) * _fermion_loop
 
 
-def antifermion_self_energy(t, g, res, mf, mb):
+def antifermion_self_energy(t, g, res, mf, mb, verbose=False):
+    start = time.time()
     _antifermion_loop = ParticleOperator({})
 
     fermionic_range = np.arange(1 / 2, res + 1, 1)
@@ -187,14 +209,18 @@ def antifermion_self_energy(t, g, res, mf, mb):
         p1 = p(k, L)
         _antifermion_loop += (
             (1 / p1)
-            * fermion_loop(t=t, p=p1, mf=mf, mb=mb)
+            * fermion_loop(t=t, p=p1, mf=mf, mb=mb, verbose=False)
             * ParticleOperator("d" + str(int(k - 1 / 2)) + "^ d" + str(int(k - 1 / 2)))
         )
-
+    finish = time.time()
+    if verbose:
+        print("Time of antifermion_self_energy (with loop):", finish - start)
     return g**2 / (2 * L) * _antifermion_loop
 
 
-def boson_loop(t, p, mf, mb):
+def boson_loop(t, p, mf, mb, verbose=False):
+    start = time.time()
+
     def integrand(x, t, p, mf, mb):
         return (
             1
@@ -204,10 +230,14 @@ def boson_loop(t, p, mf, mb):
             * np.exp(-2 * t / p**2 * (mf**2 / x + mf**2 / (1 - x) - mb**2))
         )
 
+    finish = time.time()
+    if verbose:
+        print("Time of boson_loop:", finish - start)
     return quad(integrand, 0, 1, args=(t, p, mf, mb))[0]
 
 
-def boson_self_energy(t, g, res, mf, mb):
+def boson_self_energy(t, g, res, mf, mb, verbose=False):
+    start = time.time()
     _boson_loop = ParticleOperator({})
 
     bosonic_range = np.arange(1, res + 1, 1)
@@ -218,10 +248,12 @@ def boson_self_energy(t, g, res, mf, mb):
         p3 = p(k, L)
         _boson_loop += (
             (1 / p3)
-            * boson_loop(t=t, p=p3, mf=mf, mb=mb)
+            * boson_loop(t=t, p=p3, mf=mf, mb=mb, verbose=False)
             * ParticleOperator("a" + str(int(k - 1)) + "^ a" + str(int(k - 1)))
         )
-
+    finish = time.time()
+    if verbose:
+        print("Time of boson_self_energy (with loop):", finish - start)
     return g**2 / (2 * L) * _boson_loop
 
 
@@ -257,13 +289,17 @@ def boson_mass_counterterm(res, treg, g, mf, mb):
     return 1 / (2 * L) ** 2 * g**2 * H_free_scalar
 
 
-def renormalized_yukawa_second_order_contractions(res, t, treg, g, mf, mb):
+def renormalized_yukawa_second_order_contractions(
+    res, t, treg, g, mf, mb, verbose: bool = False
+):
     second_order = (
-        boson_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb)
-        + fermion_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb)
-        + fermion_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb)
-        + antifermion_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb)
-        + boson_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb)
+        boson_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb, verbose=verbose)
+        + fermion_exchange(t=t + treg, g=g, res=res, mf=mf, mb=mb, verbose=verbose)
+        + fermion_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb, verbose=verbose)
+        + antifermion_self_energy(
+            t=t + treg, g=g, res=res, mf=mf, mb=mb, verbose=verbose
+        )
+        + boson_self_energy(t=t + treg, g=g, res=res, mf=mf, mb=mb, verbose=verbose)
     )
 
     return second_order
