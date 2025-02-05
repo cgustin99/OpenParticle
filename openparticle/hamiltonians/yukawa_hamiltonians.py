@@ -63,7 +63,7 @@ def instantaneous_yukawa(res, g, mf, mb):
     return 0.5 * 2 * L * g**2 / (2 * L) ** 4 * four_point
 
 
-def yukawa_Hamiltonian(res, g, mf, mb):
+def yukawa_hamiltonian(res, g, mf, mb):
     Ham = (
         free_boson_Hamiltonian(res=res, mb=mb)
         + free_fermion_Hamiltonian(res=res, mf=mf)
