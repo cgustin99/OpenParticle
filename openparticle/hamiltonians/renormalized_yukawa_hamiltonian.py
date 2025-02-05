@@ -160,7 +160,7 @@ def fermion_exchange(t, g, res, mf, mb, verbose=False):
         if fermion_field_contractions.op_dict != {}:
             field_contractions = fermion_field_contractions * boson_field_contractions
 
-        helper_variable = (B / q2 * field_contractions.normal_order())
+        helper_variable = B / q2 * field_contractions.normal_order()
         for op_str, coeff in helper_variable.op_dict.items():
             container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
     h_tree = ParticleOperator(container_dict)
@@ -190,12 +190,10 @@ def fermion_loop(t, p, mf, mb, verbose=False):
     return quad(integrand, 0, 1, args=(t, p, mf, mb))[0]
 
 
-
-def fermion_self_energy(t, g, res, mf, mb):
+def fermion_self_energy(t, g, res, mf, mb, verbose: bool = False):
 
     container_dict = dict()
     start = time.time()
-
 
     fermionic_range = np.arange(1 / 2, res + 1, 1)
 
@@ -203,7 +201,7 @@ def fermion_self_energy(t, g, res, mf, mb):
 
     for k in fermionic_range:
         p1 = p(k, L)
-        #TODO: Replace ParticleOperator with a dictionary
+        # TODO: Replace ParticleOperator with a dictionary
         helper_variable = (
             (1 / p1)
             * fermion_loop(t=t, p=p1, mf=mf, mb=mb, verbose=False)
@@ -219,7 +217,7 @@ def fermion_self_energy(t, g, res, mf, mb):
     return g**2 / (2 * L) * _fermion_loop
 
 
-def antifermion_self_energy(t, g, res, mf, mb):
+def antifermion_self_energy(t, g, res, mf, mb, verbose: bool = False):
 
     container_dict = dict()
     start = time.time()
@@ -230,7 +228,7 @@ def antifermion_self_energy(t, g, res, mf, mb):
 
     for k in fermionic_range:
         p1 = p(k, L)
-        #TODO: Replace ParticleOperator with a dictionary
+        # TODO: Replace ParticleOperator with a dictionary
         helper_variable = (
             (1 / p1)
             * fermion_loop(t=t, p=p1, mf=mf, mb=mb, verbose=False)
@@ -239,7 +237,6 @@ def antifermion_self_energy(t, g, res, mf, mb):
         for op_str, coeff in helper_variable.op_dict.items():
             container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
     _antifermion_loop = ParticleOperator(container_dict)
-
 
     finish = time.time()
     if verbose:
@@ -265,11 +262,10 @@ def boson_loop(t, p, mf, mb, verbose=False):
     return quad(integrand, 0, 1, args=(t, p, mf, mb))[0]
 
 
-def boson_self_energy(t, g, res, mf, mb):
+def boson_self_energy(t, g, res, mf, mb, verbose: bool = False):
 
     container_dict = dict()
     start = time.time()
-
 
     bosonic_range = np.arange(1, res + 1, 1)
 
@@ -277,7 +273,7 @@ def boson_self_energy(t, g, res, mf, mb):
 
     for k in bosonic_range:
         p3 = p(k, L)
-        #TODO: Replace ParticleOperator with a dictionary
+        # TODO: Replace ParticleOperator with a dictionary
         helper_variable = (
             (1 / p3)
             * boson_loop(t=t, p=p3, mf=mf, mb=mb, verbose=False)
@@ -298,7 +294,7 @@ def fermion_mass_counterterm(res, treg, g, mf):
 
     container_dict = dict()
     for k in np.arange(-res + 1 / 2, res + 1 / 2, 1):
-        #TODO: Use simple formula instead of FermionField
+        # TODO: Use simple formula instead of FermionField
         helper_variable = 0.5 * (
             (-np.euler_gamma + np.log((2 * np.pi * k / L) ** 2 / (2 * mf**4 * treg)))
             / p(k, L)
@@ -320,7 +316,7 @@ def boson_mass_counterterm(res, treg, g, mf, mb):
 
     container_dict = dict()
     for k in [i for i in range(-res, res + 1) if i != 0]:
-        #TODO: Use simple formula instead of ScalarField
+        # TODO: Use simple formula instead of ScalarField
         helper_variable = 0.5 * (
             (-np.euler_gamma + np.log((2 * np.pi * k / L) ** 2 / (2 * mf**4 * treg)))
             / p(k, L)
