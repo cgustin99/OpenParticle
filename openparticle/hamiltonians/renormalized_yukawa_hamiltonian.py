@@ -26,7 +26,7 @@ def renormalized_yukawa_hamiltonian(res, t, treg=0, g=1, mf=1, mb=1, verbose=Fal
 def renormalized_yukawa_first_order(res, t, treg, g, mf, mb, verbose=False):
     H1 = three_point_yukawa(res=res, g=g, mf=mf, mb=mb)
 
-    ren_H1 = ParticleOperator({})
+    container_dict = dict()
 
     for term in H1.to_list():
         exp_factor = 0
@@ -36,7 +36,10 @@ def renormalized_yukawa_first_order(res, t, treg, g, mf, mb, verbose=False):
                 * _get_mass(op, mf, mb) ** 2
                 * _get_pminus(op, mf, mb, res)
             )
-        ren_H1 += np.exp(-(exp_factor**2) * (t + treg)) * term
+        helper_variable = np.exp(-(exp_factor**2) * (t + treg)) * term
+        for op_str, coeff in helper_variable.op_dict.items():
+            container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+    ren_H1 = ParticleOperator(container_dict)
 
     return ren_H1
 
@@ -47,7 +50,7 @@ def renormalized_yukawa_second_order_form_factor(
     start = time.time()
     H1inst = instantaneous_yukawa(res=res, g=g, mf=mf, mb=mb)
 
-    ren_H1inst = ParticleOperator({})
+    container_dict = dict()
 
     for term in H1inst.to_list():
         exp_factor = 0
@@ -57,7 +60,11 @@ def renormalized_yukawa_second_order_form_factor(
                 * _get_mass(op, mf, mb) ** 2
                 * _get_pminus(op, mf, mb, res)
             )
-        ren_H1inst += np.exp(-(exp_factor**2) * (t + treg)) * term
+
+        helper_variable = np.exp(-(exp_factor**2) * (t + treg)) * term
+        for op_str, coeff in helper_variable.op_dict.items():
+            container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+    ren_H1inst = ParticleOperator(container_dict)
     finish = time.time()
     if verbose:
         print("Time of renormalized_yukawa_second_order_form_factor:", finish - start)
@@ -69,7 +76,7 @@ def boson_exchange(t, g, res, mf, mb, verbose=False):
     fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
 
     L = 2 * np.pi * res
-    h_tree = ParticleOperator()
+    container_dict = dict()
     for q1, q4, q5 in product(fermionic_range, fermionic_range, fermionic_range):
         q3 = q4 + q5
         q2 = -q1 - q3
@@ -89,7 +96,7 @@ def boson_exchange(t, g, res, mf, mb, verbose=False):
                 * f1245
             )
 
-            h_tree += (
+            helper_variable = (
                 B
                 / np.abs(q3)
                 * (
@@ -102,6 +109,9 @@ def boson_exchange(t, g, res, mf, mb, verbose=False):
                     )
                 )[0][0].normal_order()
             )
+            for op_str, coeff in helper_variable.op_dict.items():
+                container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+    h_tree = ParticleOperator(container_dict)
     h_tree = remove_symmetry_terms(h_tree, 4)
     finish = time.time()
     if verbose:
@@ -118,7 +128,7 @@ def fermion_exchange(t, g, res, mf, mb, verbose=False):
 
     L = 2 * np.pi * res
 
-    h_tree = ParticleOperator()
+    container_dict = dict()
 
     for q3, q5, q6 in product(
         bosonic_range,
@@ -150,7 +160,11 @@ def fermion_exchange(t, g, res, mf, mb, verbose=False):
         if fermion_field_contractions.op_dict != {}:
             field_contractions = fermion_field_contractions * boson_field_contractions
 
-        h_tree += B / (q2) * (field_contractions.normal_order())
+        helper_variable = (B / q2 * field_contractions.normal_order())
+        for op_str, coeff in helper_variable.op_dict.items():
+            container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+    h_tree = ParticleOperator(container_dict)
+
     h_tree = remove_symmetry_terms(h_tree, 4)
     finish = time.time()
     if verbose:
@@ -176,9 +190,12 @@ def fermion_loop(t, p, mf, mb, verbose=False):
     return quad(integrand, 0, 1, args=(t, p, mf, mb))[0]
 
 
-def fermion_self_energy(t, g, res, mf, mb, verbose=False):
+
+def fermion_self_energy(t, g, res, mf, mb):
+
+    container_dict = dict()
     start = time.time()
-    _fermion_loop = ParticleOperator({})
+
 
     fermionic_range = np.arange(1 / 2, res + 1, 1)
 
@@ -186,20 +203,26 @@ def fermion_self_energy(t, g, res, mf, mb, verbose=False):
 
     for k in fermionic_range:
         p1 = p(k, L)
-        _fermion_loop += (
+        #TODO: Replace ParticleOperator with a dictionary
+        helper_variable = (
             (1 / p1)
             * fermion_loop(t=t, p=p1, mf=mf, mb=mb, verbose=False)
             * ParticleOperator("b" + str(int(k - 1 / 2)) + "^ b" + str(int(k - 1 / 2)))
         )
+        for op_str, coeff in helper_variable.op_dict.items():
+            container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+    _fermion_loop = ParticleOperator(container_dict)
+
     finish = time.time()
     if verbose:
         print("Time of fermion_self_energy (with loop):", finish - start)
     return g**2 / (2 * L) * _fermion_loop
 
 
-def antifermion_self_energy(t, g, res, mf, mb, verbose=False):
+def antifermion_self_energy(t, g, res, mf, mb):
+
+    container_dict = dict()
     start = time.time()
-    _antifermion_loop = ParticleOperator({})
 
     fermionic_range = np.arange(1 / 2, res + 1, 1)
 
@@ -207,11 +230,17 @@ def antifermion_self_energy(t, g, res, mf, mb, verbose=False):
 
     for k in fermionic_range:
         p1 = p(k, L)
-        _antifermion_loop += (
+        #TODO: Replace ParticleOperator with a dictionary
+        helper_variable = (
             (1 / p1)
             * fermion_loop(t=t, p=p1, mf=mf, mb=mb, verbose=False)
             * ParticleOperator("d" + str(int(k - 1 / 2)) + "^ d" + str(int(k - 1 / 2)))
         )
+        for op_str, coeff in helper_variable.op_dict.items():
+            container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+    _antifermion_loop = ParticleOperator(container_dict)
+
+
     finish = time.time()
     if verbose:
         print("Time of antifermion_self_energy (with loop):", finish - start)
@@ -236,9 +265,11 @@ def boson_loop(t, p, mf, mb, verbose=False):
     return quad(integrand, 0, 1, args=(t, p, mf, mb))[0]
 
 
-def boson_self_energy(t, g, res, mf, mb, verbose=False):
+def boson_self_energy(t, g, res, mf, mb):
+
+    container_dict = dict()
     start = time.time()
-    _boson_loop = ParticleOperator({})
+
 
     bosonic_range = np.arange(1, res + 1, 1)
 
@@ -246,11 +277,16 @@ def boson_self_energy(t, g, res, mf, mb, verbose=False):
 
     for k in bosonic_range:
         p3 = p(k, L)
-        _boson_loop += (
+        #TODO: Replace ParticleOperator with a dictionary
+        helper_variable = (
             (1 / p3)
             * boson_loop(t=t, p=p3, mf=mf, mb=mb, verbose=False)
             * ParticleOperator("a" + str(int(k - 1)) + "^ a" + str(int(k - 1)))
         )
+        for op_str, coeff in helper_variable.op_dict.items():
+            container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+    _boson_loop = ParticleOperator(container_dict)
+
     finish = time.time()
     if verbose:
         print("Time of boson_self_energy (with loop):", finish - start)
@@ -260,9 +296,10 @@ def boson_self_energy(t, g, res, mf, mb, verbose=False):
 def fermion_mass_counterterm(res, treg, g, mf):
     L = 2 * np.pi * res
 
-    H_free_fermion = ParticleOperator({})
+    container_dict = dict()
     for k in np.arange(-res + 1 / 2, res + 1 / 2, 1):
-        H_free_fermion += 0.5 * (
+        #TODO: Use simple formula instead of FermionField
+        helper_variable = 0.5 * (
             (-np.euler_gamma + np.log((2 * np.pi * k / L) ** 2 / (2 * mf**4 * treg)))
             / p(k, L)
             * (
@@ -271,6 +308,9 @@ def fermion_mass_counterterm(res, treg, g, mf):
                 )
             )[0][0].normal_order()
         )
+        for op_str, coeff in helper_variable.op_dict.items():
+            container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+    H_free_fermion = ParticleOperator(container_dict)
     H_free_fermion.remove_identity()
     return 1 / (2 * L) ** 2 * g**2 * H_free_fermion
 
@@ -278,13 +318,17 @@ def fermion_mass_counterterm(res, treg, g, mf):
 def boson_mass_counterterm(res, treg, g, mf, mb):
     L = 2 * np.pi * res
 
-    H_free_scalar = ParticleOperator({})
+    container_dict = dict()
     for k in [i for i in range(-res, res + 1) if i != 0]:
-        H_free_scalar += 0.5 * (
+        #TODO: Use simple formula instead of ScalarField
+        helper_variable = 0.5 * (
             (-np.euler_gamma + np.log((2 * np.pi * k / L) ** 2 / (2 * mf**4 * treg)))
             / p(k, L)
             * (ScalarField(-k, L, mb).phi * ScalarField(k, L, mb).phi).normal_order()
         )
+        for op_str, coeff in helper_variable.op_dict.items():
+            container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+    H_free_scalar = ParticleOperator(container_dict)
     H_free_scalar.remove_identity()
     return 1 / (2 * L) ** 2 * g**2 * H_free_scalar
 
