@@ -217,3 +217,15 @@ def pdf(res, state, particle_type):
             f.append(get_matrix_element(state, pdf_op, state))
 
     return np.array(f)
+
+
+def fock_sector_budget(eigenstate):
+
+    budget = {}
+
+    for state, coeff in eigenstate.state_dict.items():
+        fock_state = Fock(state_dict={state: coeff})
+        key = (fock_state.n_fermions, fock_state.n_antifermions, fock_state.n_bosons)
+        budget[key] = np.abs(coeff) ** 2 + budget.get(key, 0)
+
+    return budget
