@@ -120,7 +120,6 @@ class ParticleOperator:
             new_dict = deepcopy(self.op_dict)
             for op_str, coeff in other.op_dict.items():
                 new_dict[op_str] = coeff + new_dict.get(op_str, 0)
-
         return ParticleOperator(new_dict)._cleanup()
 
     def __str__(self) -> str:
@@ -141,7 +140,7 @@ class ParticleOperator:
             return self
         else:
             keys, coeffs = zip(*self.op_dict.items())
-            mask = np.where(abs(np.array(coeffs)) > 1e-15)[0]
+            mask = np.where(abs(np.array(coeffs)) > zero_threshold)[0]
 
             new_keys = np.array(keys, dtype=object)
             if len(new_keys.shape) == 1:
