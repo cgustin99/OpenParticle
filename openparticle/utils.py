@@ -184,7 +184,6 @@ def _verify_mapping(
             assert False
 
 
-@nb.jit(nopyhon=True)
 def generate_matrix_hermitian(op, basis, max_bosonic_occupancy: int = None):
     # Calculates the matrix representation of a Hermitian operator in a given basis
     size = (len(basis), len(basis))
