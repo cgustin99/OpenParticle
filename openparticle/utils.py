@@ -4,6 +4,7 @@ from typing import List
 from itertools import product, combinations
 from multiprocessing import Pool
 from symmer import QuantumState
+import numba as nb
 
 
 def _fermion_combinations(n):
@@ -183,6 +184,7 @@ def _verify_mapping(
             assert False
 
 
+@nb.jit(nopyhon=True)
 def generate_matrix_hermitian(op, basis, max_bosonic_occupancy: int = None):
     # Calculates the matrix representation of a Hermitian operator in a given basis
     size = (len(basis), len(basis))
