@@ -108,18 +108,9 @@ class ParticleOperator:
         return op_str[:-1]
 
     def __add__(self, other: "ParticleOperator") -> "ParticleOperator":
-
-        # (TODO: could uses sets to find common and different keys and loop only over unique terms)
-        # loop over smaller dict
-        if len(self.op_dict) < len(other.op_dict):
-
-            new_dict = deepcopy(other.op_dict)
-            for op_str, coeff in self.op_dict.items():
-                new_dict[op_str] = coeff + new_dict.get(op_str, 0)
-        else:
-            new_dict = deepcopy(self.op_dict)
-            for op_str, coeff in other.op_dict.items():
-                new_dict[op_str] = coeff + new_dict.get(op_str, 0)
+        new_dict = defaultdict(float, self.op_dict)
+        for key, value in other.op_dict.items():
+            new_dict[key] += value
         return ParticleOperator(new_dict)._cleanup()
 
     def __str__(self) -> str:
@@ -1348,14 +1339,9 @@ class Fock(ParticleOperator):
             return ParticleOperator(new_dict).act_on_vacuum()
 
     def __add__(self, other):
-        if len(self.state_dict) < len(other.state_dict):
-            new_dict = deepcopy(other.state_dict)
-            for state, coeff in self.state_dict.items():
-                new_dict[state] = coeff + new_dict.get(state, 0)
-        else:
-            new_dict = deepcopy(self.state_dict)
-            for state, coeff in other.state_dict.items():
-                new_dict[state] = coeff + new_dict.get(state, 0)
+        new_dict = defaultdict(float, self.state_dict)
+        for key, value in other.state_dict.items():
+            new_dict[key] += value
         out_state = Fock(state_dict=new_dict)
         if len(out_state.state_dict) == 0:
             return 0
