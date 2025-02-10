@@ -374,3 +374,23 @@ def test_group_works_with_close_coefficients():
     operator += ((1 + 1e-13)) * operator.dagger()
     assert len(operator.group()) == 1
     assert len(operator.group()[0].to_list()) == 2
+
+
+def test_bug_kamil_found():
+    op = (ParticleOperator("a0^ a0 a0^") + ParticleOperator("a0^ a0")) * (
+        ParticleOperator("a0^ a0 a0^ a0") + ParticleOperator("a0 a0^ a0")
+    )
+    expected_op_dict = {
+        (
+            (2, 0, 1),
+            (2, 0, 0),
+            (2, 0, 1),
+            (2, 0, 1),
+            (2, 0, 0),
+            (2, 0, 1),
+            (2, 0, 0),
+        ): 1.0,
+        ((2, 0, 1), (2, 0, 0), (2, 0, 1), (2, 0, 0), (2, 0, 1), (2, 0, 0)): 2.0,
+        ((2, 0, 1), (2, 0, 0), (2, 0, 0), (2, 0, 1), (2, 0, 0)): 1.0,
+    }
+    assert op.op_dict == expected_op_dict

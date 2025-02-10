@@ -7,6 +7,7 @@ from copy import deepcopy
 from itertools import product
 import math
 import scipy
+import time
 
 from symmer import PauliwordOp, QuantumState
 from symmer.utils import tensor_list
@@ -615,7 +616,9 @@ class ParticleOperator:
                         product_dict[()] = coeffs1 * coeffs2
                     else:
                         # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
-                        product_dict[op1 + op2] = coeffs1 * coeffs2
+                        product_dict[op1 + op2] = coeffs1 * coeffs2 + product_dict.get(
+                            op1 + op2, 0
+                        )
             return ParticleOperator(product_dict)
 
     def __pow__(self, other) -> "ParticleOperator":
@@ -1308,19 +1311,78 @@ class Fock(ParticleOperator):
 
     def __rmul__(self, other):
         if isinstance(other, ParticleOperator):
+            """
+            Main functionality to calculate O|f> = |g>
+            O|f> = O*U|vac> -> NormalOrder(OU)|vac> = |g>
+            """
             # TODO: pop term then add back into other (for now just copying)
             op_dict_copy = deepcopy(other.op_dict)
             const = op_dict_copy.pop((), Fock([], [], [], coeff=0))  # Identity
 
             output = ParticleOperator({})
 
-            new_op = ParticleOperator(op_dict_copy) * ParticleOperator(self.op_dict)
+            new_op = ParticleOperator(op_dict_copy) * ParticleOperator(
+                self.op_dict
+            )  # Calling __rmul__ method in ParticleOperator class
             if new_op.op_dict != {}:  # i.e. has more than just the identity
                 for term in new_op.normal_order().to_list():
                     if term.all_creation:
                         output += term
             else:
                 return const * self
+            identity_term = const * self  # Already a Fock state
+            other = output.act_on_vacuum()  # Turn PO -> Fock
+            if identity_term.coeff != 0:
+                return identity_term + other
+            else:
+                return other
+
+        elif isinstance(other, (float, int, complex)):
+            if other == 0:
+                return 0
+            new_dict = {
+                key: other * val
+                for key in self.op_dict.keys()
+                for val in self.op_dict.values()
+            }
+            return ParticleOperator(new_dict).act_on_vacuum()
+
+    def multiply_from_left_by_operator(self, other):
+        if isinstance(other, ParticleOperator):
+            """
+            Main functionality to calculate O|f> = |g>
+            O|f> = O*U|vac> -> NormalOrder(OU)|vac> = |g>
+            """
+            # TODO: pop term then add back into other (for now just copying)
+            # op_dict_copy = deepcopy(other.op_dict)
+            const = other.op_dict.pop((), Fock([], [], [], coeff=0))  # Identity
+
+            output = ParticleOperator({})
+
+            # new_op = ParticleOperator(other.op_dict) * ParticleOperator(
+            #     self.op_dict
+            # )  # Calling __rmul__ method in ParticleOperator class
+            start = time.time()
+            product_dict = {}
+            for op1, coeffs1 in other.op_dict.items():
+                for op2, coeffs2 in self.op_dict.items():
+                    if op1 == () and op2 == ():
+                        product_dict[()] = coeffs1 * coeffs2
+                    else:
+                        # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
+                        product_dict[op1 + op2] = coeffs1 * coeffs2 + product_dict.get(
+                            op1 + op2, 0
+                        )
+            new_op = ParticleOperator(product_dict)
+            print("Time to multiply", time.time() - start)
+            start = time.time()
+            if new_op.op_dict != {}:  # i.e. has more than just the identity
+                for term in new_op.normal_order():
+                    if term.all_creation:
+                        output += term
+            else:
+                return const * self
+            print("Time to do other thing", time.time() - start)
             identity_term = const * self  # Already a Fock state
             other = output.act_on_vacuum()  # Turn PO -> Fock
             if identity_term.coeff != 0:

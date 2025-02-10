@@ -191,7 +191,8 @@ def generate_matrix_hermitian(op, basis, max_bosonic_occupancy: int = None):
     op = op.normal_order()
 
     for j, state_j in enumerate(basis):
-        rhs = op * state_j
+        # rhs = op * state_j
+        rhs = state_j.multiply_from_left_by_operator(op)
         for i, state_i in enumerate(basis):
             if i <= j:
                 matrix[i][j] = matrix[j][i] = overlap(state_i, rhs)
