@@ -374,3 +374,41 @@ def test_group_works_with_close_coefficients():
     operator += ((1 + 1e-13)) * operator.dagger()
     assert len(operator.group()) == 1
     assert len(operator.group()[0].to_list()) == 2
+
+
+def test_mode_ordering_1():
+    unordered = ParticleOperator("b0^ b2 b2^ b0")
+    ordered = ParticleOperator("b2 b2^ b0^ b0")
+    assert ordered == unordered.mode_order()
+
+
+def test_mode_ordering_2():
+    unordered = ParticleOperator("b1 b0 b3 b0^ b1^")
+    ordered = (-1) ** 4 * ParticleOperator("b3 b1 b1^ b0 b0^")
+    assert ordered == unordered.mode_order()
+
+
+def test_mode_ordering_3():
+
+    unordered = 3.1 * ParticleOperator("b3^ b0^ b2 b1") + 3.1 * ParticleOperator(
+        "b2^ b1^ b3 b0"
+    )
+    expected = 3.1 * ParticleOperator("b3^ b2 b1 b0^") + 3.1 * ParticleOperator(
+        "b3 b2^ b1^ b0"
+    )
+    assert unordered.mode_order() == expected
+
+
+@pytest.mark.parametrize("trial", range(10))
+def test_modes(trial):
+    len_of_term = np.random.randint(1, 3)
+    n_terms = np.random.randint(1, 3)
+    modes = np.random.randint(0, 5, (n_terms, len_of_term))
+
+    op_dict = {}
+
+    for row in modes:
+        key = tuple((0, val, 0) for val in row)
+        op_dict[key] = 1
+
+    assert np.allclose(modes, ParticleOperator(op_dict).modes)

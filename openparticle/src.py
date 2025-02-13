@@ -228,6 +228,26 @@ class ParticleOperator:
 
         return ordered_indices, n_swaps
 
+    @staticmethod
+    def _swap_with_op_types(indices, op_types):
+        n_swaps = 0
+
+        for step in range(1, len(indices)):
+            key = indices[step]
+            op_key = op_types[step]
+            j = step - 1
+
+            while j >= 0 and indices[j] < key:
+                indices[j + 1] = indices[j]
+                op_types[j + 1] = op_types[j]
+                n_swaps += 1
+                j = j - 1
+
+            indices[j + 1] = key
+            op_types[j + 1] = op_key
+
+        return indices, op_types, n_swaps
+
     def preprocess_indices(self) -> List:
         """
         Return
@@ -299,6 +319,33 @@ class ParticleOperator:
         for term in self.to_list():
             sorted_terms += term.coeff * term._order_indices()
         return sorted_terms
+
+    def mode_order(self) -> "ParticleOperator":
+        """
+        Alternative form of ordering where operators are ordered by increasing mode number, and may not be normal ordered
+        Args:
+            self (ParticleOperator): Operator to order by mode index
+        Returns:
+            (ParticleOperator): Operator ordered by mode indices
+        """
+
+        properly_ordered = ParticleOperator()
+
+        for term, coeff in self.op_dict.items():
+            modes = [key[1] for key in term]
+            op_types = [key[2] for key in term]
+            new_modes, new_op_types, n_swaps = ParticleOperator._swap_with_op_types(
+                modes, op_types
+            )
+            properly_ordered += ParticleOperator(
+                {
+                    tuple((0, a, b) for a, b in zip(new_modes, new_op_types)): (-1)
+                    ** n_swaps
+                    * coeff
+                }
+            )
+
+        return properly_ordered
 
     def contains(self, operator):
         assert len(operator.to_list()) == 1
@@ -999,6 +1046,15 @@ class ParticleOperator:
                 if maximum_mode is None or mode > maximum_mode:
                     maximum_mode = mode
         return maximum_mode
+
+    @property
+    def modes(self):
+        modes_list = []
+
+        for term in self.op_dict:
+            modes_list.append([key[1] for key in term])
+
+        return modes_list
 
     @property
     def max_fermionic_mode(self):
