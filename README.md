@@ -3,7 +3,11 @@
 [![Continuous Integration (CI)](https://github.com/cgustin99/OpenParticle/actions/workflows/python-package.yml/badge.svg)](https://github.com/cgustin99/OpenParticle/actions/workflows/python-package.yml)
 
 [![codecov](https://codecov.io/gh/cgustin99/OpenParticle/graph/badge.svg?token=ZYS8VULY5V)](https://codecov.io/gh/cgustin99/OpenParticle)
-![image](OpenParticleLogo.png)
+<!-- ![image](OpenParticleLogo.png) -->
+<picture>
+  <source srcset="OpenParticleLogoDark.png" media="(prefers-color-scheme: dark)">
+  <img src="OpenParticleLogoLight.png" alt="Theme-aware image">
+</picture>
 
 Code base designed to translate problems in Quantum Field Theory to be solved via quantum computing. 
 
