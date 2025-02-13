@@ -229,31 +229,24 @@ class ParticleOperator:
         return ordered_indices, n_swaps
 
     @staticmethod
-    def swap_with_op_types(indices, op_types):
-        lists_of_indices = [indices]
+    def _swap_with_op_types(indices, op_types):
         n_swaps = 0
-        ordered_indices = []
 
-        for type, indices in enumerate(lists_of_indices):
-            for step in range(1, len(indices)):
-                key = indices[step]
-                op_key = op_types[step]
-                j = step - 1
+        for step in range(1, len(indices)):
+            key = indices[step]
+            op_key = op_types[step]
+            j = step - 1
 
-                while j >= 0 and indices[j] < key:
-                    indices[j + 1] = indices[j]
-                    op_types[j + 1] = op_types[j]
-                    if type == 4 or type == 5:
-                        n_swaps += 0
-                    else:
-                        n_swaps += 1
-                    j = j - 1
+            while j >= 0 and indices[j] < key:
+                indices[j + 1] = indices[j]
+                op_types[j + 1] = op_types[j]
+                n_swaps += 1
+                j = j - 1
 
-                indices[j + 1] = key
-                op_types[j + 1] = op_key
-            ordered_indices.append(indices)
+            indices[j + 1] = key
+            op_types[j + 1] = op_key
 
-        return ordered_indices[0], op_types, n_swaps
+        return indices, op_types, n_swaps
 
     def preprocess_indices(self) -> List:
         """
@@ -341,7 +334,7 @@ class ParticleOperator:
         for term, coeff in self.op_dict.items():
             modes = [key[1] for key in term]
             op_types = [key[2] for key in term]
-            new_modes, new_op_types, n_swaps = ParticleOperator.swap_with_op_types(
+            new_modes, new_op_types, n_swaps = ParticleOperator._swap_with_op_types(
                 modes, op_types
             )
             properly_ordered += ParticleOperator(

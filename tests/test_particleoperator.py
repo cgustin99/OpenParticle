@@ -397,3 +397,18 @@ def test_mode_ordering_3():
         "b3 b2^ b1^ b0"
     )
     assert unordered.mode_order() == expected
+
+
+@pytest.mark.parametrize("trial", range(10))
+def test_modes(trial):
+    len_of_term = np.random.randint(1, 3)
+    n_terms = np.random.randint(1, 3)
+    modes = np.random.randint(0, 5, (n_terms, len_of_term))
+
+    op_dict = {}
+
+    for row in modes:
+        key = tuple((0, val, 0) for val in row)
+        op_dict[key] = 1
+
+    assert np.allclose(modes, ParticleOperator(op_dict).modes)
