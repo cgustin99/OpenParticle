@@ -320,17 +320,3 @@ def test_matrix_generation_5():
         ]
     )
     assert np.allclose(generate_matrix(op, basis), expected)
-
-
-# def test_check_cutoff():
-#     exponent = 2
-#     max_bosonic_occupancy = 1
-#     operator = (ParticleOperator("a0^") + ParticleOperator("a0")) ** exponent
-
-#     basis = get_fock_basis(operator, max_bosonic_occupancy)
-#     unitary = generate_matrix(
-#         operator, basis, max_bosonic_occupancy=max_bosonic_occupancy
-#     )
-#     expected_unitary = np.array([[1.0, 0.0], [0.0, 1.0]])
-
-#     assert np.allclose(unitary, expected_unitary)
