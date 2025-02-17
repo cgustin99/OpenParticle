@@ -185,7 +185,7 @@ def _verify_mapping(
 
 
 @nb.jit(parallel=True)
-def generate_matrix_hermitian(operator, basis):
+def generate_matrix_hermitian_alt(operator, basis):
     size = (len(basis), len(basis))
     matrix = np.zeros(size, dtype=complex)
 
@@ -200,9 +200,9 @@ def generate_matrix_hermitian(operator, basis):
     return matrix
 
 
-def generate_matrix(operator, basis):
+def generate_matrix_alt(operator, basis):
     if operator.is_hermitian:
-        return generate_matrix_hermitian(operator, basis)
+        return generate_matrix_hermitian_alt(operator, basis)
     size = (len(basis), len(basis))
     matrix = np.zeros(size, dtype=complex)
 
@@ -213,6 +213,41 @@ def generate_matrix(operator, basis):
             product = (i_op * operator * j_op).normal_order()
             mat_el = product.op_dict.get((), 0)
             matrix[i][j] = mat_el
+
+    return matrix
+
+
+def generate_matrix_hermitian(op, basis, max_bosonic_occupancy: int = None):
+    # Calculates the matrix representation of a Hermitian operator in a given basis
+    size = (len(basis), len(basis))
+    matrix = np.zeros(size, dtype=complex)
+    op = op.normal_order()
+
+    for j, state_j in enumerate(basis):
+        rhs = op * state_j
+        for i, state_i in enumerate(basis):
+            if i <= j:
+                matrix[i][j] = matrix[j][i] = overlap(state_i, rhs)
+    return matrix
+
+
+def generate_matrix(op, basis, max_bosonic_occupancy: int = None):
+    # Calculates the matrix representation of an operator in a given basis
+
+    if op.is_hermitian:
+        return generate_matrix_hermitian(
+            op=op, basis=basis, max_bosonic_occupancy=max_bosonic_occupancy
+        )
+    else:
+        size = (len(basis), len(basis))
+        matrix = np.zeros(size, dtype=complex)
+
+        for j, state_j in enumerate(basis):
+            rhs = _check_cutoff(
+                op * state_j, max_bosonic_occupancy=max_bosonic_occupancy
+            )
+            for i, state_i in enumerate(basis):
+                matrix[i][j] = overlap(state_i, rhs)
 
     return matrix
 
