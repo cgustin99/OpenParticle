@@ -170,7 +170,9 @@ class ParticleOperator:
             for oper in ParticleOperator.key_to_op_string(
                 list(self.op_dict.keys())[0]
             ).split(" "):
-                if oper[0] == "a":  # boson
+                if len(oper) == 0:
+                    split_list.append(ParticleOperator(""))
+                elif oper[0] == "a":  # boson
                     split_list.append(BosonOperator(oper[1:]))
                 elif oper[0] == "b":  # fermion
                     split_list.append(FermionOperator(oper[1:]))
@@ -1160,6 +1162,12 @@ class ParticleOperator:
     def remove_identity(self):
         if () in self.op_dict:
             del self.op_dict[()]
+
+    def pop_identity(self):
+        if () in self.op_dict:
+            id_coeff = self.op_dict[()]
+            del self.op_dict[()]
+            return id_coeff
 
     @staticmethod
     def fermionic_parity(fermi_occ):
