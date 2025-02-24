@@ -33,7 +33,6 @@ def get_eigenstates(
         if verbose:
             print("---K = ", res, "---")
         res_time_init = time.time()
-        # hamiltonian = yukawa_Hamiltonian(res = res, g = g, mf = mf, mb = mb)
         hamiltonian = yukawa_hamiltonian(res=res, g=g, mf=mf, mb=mb)
         if verbose:
             print("Size of Hamiltonian:", len(hamiltonian))
@@ -65,19 +64,19 @@ def get_eigenstates(
             if verbose:
                 print("Eigenvalues:", time.time() - res_time_init)
             vals = sorted(vals)
-        # eigenvalues.append(vals[:num_eigenstates])
-        # for i in range(0, num_eigenstates):
-        #     eigenstates.append(numpy_to_fock(vecs[:, i], baryon_number_basis))
+            # eigenvalues.append(vals[:num_eigenstates])
+            # for i in range(0, num_eigenstates):
+            #     eigenstates.append(numpy_to_fock(vecs[:, i], baryon_number_basis))
 
-        if num_eigenstates != "all":
-            eigenvalues.append(vals[:num_eigenstates])
-            for i in range(0, num_eigenstates):
-                eigenstates.append(numpy_to_fock(vecs[:, i], baryon_number_basis))
-        else:
-            number_of_eigenstates = len(baryon_number_basis)
-            eigenvalues.append(vals[:number_of_eigenstates])
-            for i in range(0, number_of_eigenstates):
-                eigenstates.append(numpy_to_fock(vecs[:, i], baryon_number_basis))
+            if num_eigenstates != "all":
+                eigenvalues.append(vals[:num_eigenstates])
+                for i in range(0, num_eigenstates):
+                    eigenstates.append(numpy_to_fock(vecs[:, i], baryon_number_basis))
+            else:
+                number_of_eigenstates = len(baryon_number_basis)
+                eigenvalues.append(vals[:number_of_eigenstates])
+                for i in range(0, number_of_eigenstates):
+                    eigenstates.append(numpy_to_fock(vecs[:, i], baryon_number_basis))
 
     K_values = np.arange(1, len(eigenvalues) + 1)
     max_eigenvalues = max(len(eig) for eig in eigenvalues)
