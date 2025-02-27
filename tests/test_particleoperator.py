@@ -388,6 +388,12 @@ def test_mode_ordering_2():
     assert ordered == unordered.mode_order()
 
 
+def test_mode_ordering_does_not_relabel_particle_type():
+    unordered = ParticleOperator("a0 a2 b0 b1")
+    ordered = -1 * ParticleOperator("a2 b1 a0 b0")
+    assert ordered == unordered.mode_order()
+
+
 def test_mode_ordering_3():
 
     unordered = 3.1 * ParticleOperator("b3^ b0^ b2 b1") + 3.1 * ParticleOperator(

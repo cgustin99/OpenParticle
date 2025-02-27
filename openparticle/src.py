@@ -231,24 +231,27 @@ class ParticleOperator:
         return ordered_indices, n_swaps
 
     @staticmethod
-    def _swap_with_op_types(indices, op_types):
+    def _swap_with_op_types(indices, op_types, particle_types):
         n_swaps = 0
 
         for step in range(1, len(indices)):
             key = indices[step]
             op_key = op_types[step]
+            particle_key = particle_types[step]
             j = step - 1
 
             while j >= 0 and indices[j] < key:
                 indices[j + 1] = indices[j]
                 op_types[j + 1] = op_types[j]
+                particle_types[j + 1] = particle_types[j]
                 n_swaps += 1
                 j = j - 1
 
             indices[j + 1] = key
             op_types[j + 1] = op_key
+            particle_types[j + 1] = particle_key
 
-        return indices, op_types, n_swaps
+        return indices, op_types, particle_types, n_swaps
 
     def preprocess_indices(self) -> List:
         """
@@ -334,14 +337,21 @@ class ParticleOperator:
         properly_ordered = ParticleOperator()
 
         for term, coeff in self.op_dict.items():
+            particle_types = [key[0] for key in term]
             modes = [key[1] for key in term]
             op_types = [key[2] for key in term]
-            new_modes, new_op_types, n_swaps = ParticleOperator._swap_with_op_types(
-                modes, op_types
+
+            new_modes, new_op_types, new_particle_types, n_swaps = (
+                ParticleOperator._swap_with_op_types(modes, op_types, particle_types)
             )
             properly_ordered += ParticleOperator(
                 {
-                    tuple((0, a, b) for a, b in zip(new_modes, new_op_types)): (-1)
+                    tuple(
+                        (particle_type, mode, operator_type)
+                        for particle_type, mode, operator_type in zip(
+                            new_particle_types, new_modes, new_op_types
+                        )
+                    ): (-1)
                     ** n_swaps
                     * coeff
                 }
