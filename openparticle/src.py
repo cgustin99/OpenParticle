@@ -244,7 +244,8 @@ class ParticleOperator:
                 indices[j + 1] = indices[j]
                 op_types[j + 1] = op_types[j]
                 particle_types[j + 1] = particle_types[j]
-                n_swaps += 1
+                if (particle_types[j] != 2) and (particle_key != 2):
+                    n_swaps += 1
                 j = j - 1
 
             indices[j + 1] = key
