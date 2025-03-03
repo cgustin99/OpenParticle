@@ -394,6 +394,12 @@ def test_mode_ordering_does_not_relabel_particle_type():
     assert ordered == unordered.mode_order()
 
 
+def test_mode_ordering_does_not_count_bosons_for_swaps():
+    unordered = ParticleOperator("b0 b1 a1^")
+    ordered = -1 * ParticleOperator("b1 a1^ b0")
+    assert ordered == unordered.mode_order()
+
+
 def test_mode_ordering_3():
 
     unordered = 3.1 * ParticleOperator("b3^ b0^ b2 b1") + 3.1 * ParticleOperator(
