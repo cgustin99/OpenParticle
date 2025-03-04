@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies not in package
         run: |
           pip install symmer
-          pip install openfermion
+          pip install pyscf
       - name: Generate codecov report
         run: |
           pip install coverage
