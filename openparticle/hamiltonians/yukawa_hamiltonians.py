@@ -14,8 +14,10 @@ import time
 # Yukawa Interaction
 def three_point_yukawa(res, g, mf, mb):
 
-    fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
-    bosonic_range = np.array([i for i in range(-res, res + 1) if i != 0])
+    fermion_lim = res - ((res - 0.5) % 1)
+    boson_lim = int(res)
+    fermionic_range = np.arange(-fermion_lim, fermion_lim + 1, 1)
+    bosonic_range = np.array([i for i in range(-boson_lim, boson_lim + 1) if i != 0])
 
     L = 2 * np.pi * res
     container_dict = dict()
@@ -33,13 +35,15 @@ def three_point_yukawa(res, g, mf, mb):
                     container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
     three_point = ParticleOperator(container_dict)
     three_point.remove_identity()
-    return 2 * L * g / (2 * L) ** 3 * three_point
+    return 2 * L * g / (2 * L) ** 3 * three_point  # * (P+ = 1)
 
 
 def instantaneous_yukawa(res, g, mf, mb):
 
-    fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
-    bosonic_range = np.array([i for i in range(-res, res + 1) if i != 0])
+    fermion_lim = res - ((res - 0.5) % 1)
+    boson_lim = int(res)
+    fermionic_range = np.arange(-fermion_lim, fermion_lim + 1, 1)
+    bosonic_range = np.array([i for i in range(-boson_lim, boson_lim + 1) if i != 0])
 
     L = 2 * np.pi * res
     container_dict = dict()
@@ -60,7 +64,7 @@ def instantaneous_yukawa(res, g, mf, mb):
     four_point.remove_identity()
     four_point = remove_symmetry_terms(four_point, 4)
 
-    return 0.5 * 2 * L * g**2 / (2 * L) ** 4 * four_point
+    return 2 * L * g**2 / (2 * L) ** 4 * four_point  # * (P+ = 1)
 
 
 def yukawa_hamiltonian(res, g, mf, mb):

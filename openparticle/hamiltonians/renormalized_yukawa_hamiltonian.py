@@ -73,14 +73,15 @@ def renormalized_yukawa_second_order_form_factor(
 
 def boson_exchange(t, g, res, mf, mb, verbose=False):
     start = time.time()
-    fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
+    fermion_lim = res - ((res - 0.5) % 1)
+    fermionic_range = np.arange(-fermion_lim, fermion_lim + 1, 1)
 
     L = 2 * np.pi * res
     container_dict = dict()
     for q1, q4, q5 in product(fermionic_range, fermionic_range, fermionic_range):
         q3 = q4 + q5
         q2 = -q1 - q3
-        if q3 > 0:
+        if q3 > 0 and np.abs(q3) <= res and np.abs(q2) <= res:
             q1_, q2_, q3_, q4_, q5_ = pminuses(
                 [q1, q2, q3, q4, q5], [mf, mf, mb, mf, mf]
             )
@@ -121,8 +122,10 @@ def boson_exchange(t, g, res, mf, mb, verbose=False):
 
 def fermion_exchange(t, g, res, mf, mb, verbose=False):
     start = time.time()
-    fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
-    bosonic_range = [i for i in range(-res, res + 1) if i != 0]
+    fermion_lim = res - ((res - 0.5) % 1)
+    boson_lim = int(res)
+    fermionic_range = np.arange(-fermion_lim, fermion_lim + 1, 1)
+    bosonic_range = np.array([i for i in range(-boson_lim, boson_lim + 1) if i != 0])
 
     range_product = product(bosonic_range, fermionic_range, bosonic_range)
 
@@ -137,32 +140,37 @@ def fermion_exchange(t, g, res, mf, mb, verbose=False):
     ):
         q1 = -q3 - q5 - q6
         q2 = q5 + q6
-        q1_, q2_, q3_, q5_, q6_ = pminuses([q1, q2, q3, q5, q6], [mf, mf, mb, mf, mb])
+        if np.abs(q1) <= res and np.abs(q2) <= res:
+            q1_, q2_, q3_, q5_, q6_ = pminuses(
+                [q1, q2, q3, q5, q6], [mf, mf, mb, mf, mb]
+            )
 
-        f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
-        f562_ = np.exp(-t * (q5_ + q6_ - q2_) ** 2)
-        f1356 = np.exp(-t * (q1_ + q3_ + q5_ + q6_) ** 2)
+            f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
+            f562_ = np.exp(-t * (q5_ + q6_ - q2_) ** 2)
+            f1356 = np.exp(-t * (q1_ + q3_ + q5_ + q6_) ** 2)
 
-        B = (
-            0.5
-            * (1 / (q1_ + q2_ + q3_) - 1 / (q5_ + q6_ - q2_))
-            * (f123 * f562_ / f1356 - 1)
-            * f1356
-        )
+            B = (
+                0.5
+                * (1 / (q1_ + q2_ + q3_) - 1 / (q5_ + q6_ - q2_))
+                * (f123 * f562_ / f1356 - 1)
+                * f1356
+            )
 
-        fermion_field_contractions = FermionField(-q1, L, mf).psi_dagger.dot(
-            gamma0.dot(gamma_slash_minus_m(q2, mf).dot(FermionField(q5, L, mf).psi))
-        )[0][0]
-        boson_field_contractions = (
-            ScalarField(q3, L, mb).phi * ScalarField(q6, L, mb).phi
-        )
+            fermion_field_contractions = FermionField(-q1, L, mf).psi_dagger.dot(
+                gamma0.dot(gamma_slash_minus_m(q2, mf).dot(FermionField(q5, L, mf).psi))
+            )[0][0]
+            boson_field_contractions = (
+                ScalarField(q3, L, mb).phi * ScalarField(q6, L, mb).phi
+            )
 
-        if fermion_field_contractions.op_dict != {}:
-            field_contractions = fermion_field_contractions * boson_field_contractions
+            if fermion_field_contractions.op_dict != {}:
+                field_contractions = (
+                    fermion_field_contractions * boson_field_contractions
+                )
 
-        helper_variable = B / q2 * field_contractions.normal_order()
-        for op_str, coeff in helper_variable.op_dict.items():
-            container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
+            helper_variable = B / q2 * field_contractions.normal_order()
+            for op_str, coeff in helper_variable.op_dict.items():
+                container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
     h_tree = ParticleOperator(container_dict)
 
     h_tree = remove_symmetry_terms(h_tree, 4)
@@ -195,7 +203,8 @@ def fermion_self_energy(t, g, res, mf, mb, verbose: bool = False):
     container_dict = dict()
     start = time.time()
 
-    fermionic_range = np.arange(1 / 2, res + 1, 1)
+    fermion_lim = res - ((res - 0.5) % 1)
+    fermionic_range = np.arange(1 / 2, fermion_lim + 1, 1)
 
     L = 2 * np.pi * res
 
@@ -222,7 +231,8 @@ def antifermion_self_energy(t, g, res, mf, mb, verbose: bool = False):
     container_dict = dict()
     start = time.time()
 
-    fermionic_range = np.arange(1 / 2, res + 1, 1)
+    fermion_lim = res - ((res - 0.5) % 1)
+    fermionic_range = np.arange(1 / 2, fermion_lim + 1, 1)
 
     L = 2 * np.pi * res
 
@@ -267,7 +277,8 @@ def boson_self_energy(t, g, res, mf, mb, verbose: bool = False):
     container_dict = dict()
     start = time.time()
 
-    bosonic_range = np.arange(1, res + 1, 1)
+    boson_lim = int(res)
+    bosonic_range = range(1, boson_lim + 1)
 
     L = 2 * np.pi * res
 
