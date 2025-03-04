@@ -182,6 +182,10 @@ class ParticleOperator:
         else:
             return NotImplemented
 
+    @property
+    def n_terms(self):
+        return len(self)
+
     def partition(self) -> List:
         """Splits a ParticleOperator into a list of three terms: [fermionOps, antifermionOps, bosonOps]"""
         partitioned_list = [
@@ -1162,6 +1166,14 @@ class ParticleOperator:
     def remove_identity(self):
         if () in self.op_dict:
             del self.op_dict[()]
+
+    def remove_antifermions(self):
+        no_antifermion_op = {}
+        for term in self:
+            if not term.has_antifermions:
+                no_antifermion_op.update(term.op_dict)
+
+        return ParticleOperator(no_antifermion_op)
 
     def pop_identity(self):
         if () in self.op_dict:
