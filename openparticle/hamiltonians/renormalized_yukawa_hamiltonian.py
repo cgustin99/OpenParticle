@@ -73,7 +73,8 @@ def renormalized_yukawa_second_order_form_factor(
 
 def boson_exchange(t, g, res, mf, mb, verbose=False):
     start = time.time()
-    fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
+    fermion_lim = res - ((res - 0.5) % 1)
+    fermionic_range = np.arange(-fermion_lim, fermion_lim + 1, 1)
 
     L = 2 * np.pi * res
     container_dict = dict()
@@ -121,8 +122,10 @@ def boson_exchange(t, g, res, mf, mb, verbose=False):
 
 def fermion_exchange(t, g, res, mf, mb, verbose=False):
     start = time.time()
-    fermionic_range = np.arange(-res + 1 / 2, res + 1 / 2, 1)
-    bosonic_range = [i for i in range(-res, res + 1) if i != 0]
+    fermion_lim = res - ((res - 0.5) % 1)
+    boson_lim = int(res)
+    fermionic_range = np.arange(-fermion_lim, fermion_lim + 1, 1)
+    bosonic_range = np.array([i for i in range(-boson_lim, boson_lim + 1) if i != 0])
 
     range_product = product(bosonic_range, fermionic_range, bosonic_range)
 
@@ -200,7 +203,8 @@ def fermion_self_energy(t, g, res, mf, mb, verbose: bool = False):
     container_dict = dict()
     start = time.time()
 
-    fermionic_range = np.arange(1 / 2, res, 1)
+    fermion_lim = res - ((res - 0.5) % 1)
+    fermionic_range = np.arange(1 / 2, fermion_lim + 1, 1)
 
     L = 2 * np.pi * res
 
@@ -227,7 +231,8 @@ def antifermion_self_energy(t, g, res, mf, mb, verbose: bool = False):
     container_dict = dict()
     start = time.time()
 
-    fermionic_range = np.arange(1 / 2, res, 1)
+    fermion_lim = res - ((res - 0.5) % 1)
+    fermionic_range = np.arange(1 / 2, fermion_lim + 1, 1)
 
     L = 2 * np.pi * res
 
@@ -272,7 +277,8 @@ def boson_self_energy(t, g, res, mf, mb, verbose: bool = False):
     container_dict = dict()
     start = time.time()
 
-    bosonic_range = np.arange(1, res + 1, 1)
+    boson_lim = int(res)
+    bosonic_range = range(1, boson_lim + 1)
 
     L = 2 * np.pi * res
 
