@@ -20,6 +20,8 @@ jobs:
         run: |
           pip install symmer
           pip install pyscf
+          pip install openfermionpyscf
+          pip install openfermion
       - name: Generate codecov report
         run: |
           pip install coverage
