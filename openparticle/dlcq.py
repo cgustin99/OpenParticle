@@ -82,6 +82,9 @@ def Q(res):
     return B_op
 
 
+# Partitioning Functions
+
+
 def impose_baryon_number(res, basis, baryon_number):
 
     baryon_number_basis = []
@@ -90,9 +93,6 @@ def impose_baryon_number(res, basis, baryon_number):
             baryon_number_basis.append(state)
 
     return baryon_number_basis
-
-
-# Partitioning Functions
 
 
 def generate_fermion_antifermion_partitions(K):
@@ -225,6 +225,35 @@ def get_Q0_sector_basis(resolution, n_ffbar_pairs, n_bosons):
 
         if (
             n_fermions_in_partition == n_antifermions_in_partition == n_ffbar_pairs
+            and n_bosons_in_partition == n_bosons
+        ):
+            good_paritions.append(tup)
+
+    states = []
+    for p in good_paritions:
+        states.append(
+            Fock(
+                f_occ=fermion_partition_to_f_occ(p[0]),
+                af_occ=fermion_partition_to_f_occ(p[1]),
+                b_occ=boson_partition_to_b_occ(p[2]),
+            )
+        )
+
+    return states
+
+
+def get_sector_basis(resolution, n_fermions, n_antifermions, n_bosons):
+    partitions = find_exact_partitions(resolution)
+    good_paritions = []
+
+    for tup in partitions:
+        n_fermions_in_partition = len(tup[0])
+        n_antifermions_in_partition = len(tup[1])
+        n_bosons_in_partition = len(tup[2])
+
+        if (
+            n_fermions_in_partition == n_fermions
+            and n_antifermions_in_partition == n_antifermions
             and n_bosons_in_partition == n_bosons
         ):
             good_paritions.append(tup)
