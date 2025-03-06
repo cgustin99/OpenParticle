@@ -536,37 +536,52 @@ class ParticleOperator:
             max_bosonic_mode=max_bosonic_mode,
             max_bosonic_occupancy=max_bosonic_occupancy,
         )
-        pauli_op = PauliwordOp.empty(n_qubits=sum(qubits))
+        total_qubits = sum(qubits)
+        pauli_op = PauliwordOp.empty(n_qubits=total_qubits)
 
         for term in self.to_list():
-            mapped_term = []
+            # mapped_term = []
             partitioned_op = term.partition()
             coeff_of_term = term.coeff
             f_op = partitioned_op[0]
             af_op = partitioned_op[1]
             b_op = partitioned_op[2]
+            
+            term_pauli = PauliwordOp(np.zeros((1, 2*total_qubits), dtype=bool), np.array([coeff_of_term]))
             if max_fermionic_mode is not None:
-                mapped_term.append(
-                    self.jordan_wigner(f_op, max_mode=max_fermionic_mode)
-                )
+                f_op_paulis =  self.jordan_wigner(f_op, max_mode=max_fermionic_mode)
+
+                ## pad with I on other non fermionic modes!
+                f_op_paulis = f_op_paulis.tensor(PauliwordOp.from_list(['I'*(total_qubits-f_op_paulis.n_qubits)]))
+                term_pauli*=(f_op_paulis)
+
+                # mapped_term.append(
+                #     self.jordan_wigner(f_op, max_mode=max_fermionic_mode)
+                # )
             if max_antifermionic_mode is not None:
-                mapped_term.append(
-                    self.jordan_wigner(af_op, max_mode=max_antifermionic_mode)
-                )
-                if f_op != ParticleOperator(
-                    ""
-                ):  # If there are fermions, multiply fermion qubits by Z for parity
-                    for _ in range(len(af_op.split())):
-                        mapped_term[0] *= PauliwordOp.from_list(
-                            ["Z" * (max_fermionic_mode + 1)], [1]
-                        )
+                af_op_paulis = self.jordan_wigner(af_op, max_mode=max_antifermionic_mode)
+
+                ## pad with I on other non antifermionic modes!
+                if max_fermionic_mode is not None:
+                    af_op_paulis = PauliwordOp.from_list(['I'*(max_fermionic_mode+1)]).tensor(af_op_paulis)
+
+                if max_bosonic_mode is not None:
+                     af_op_paulis = af_op_paulis.tensor(PauliwordOp.from_list(['I'*(total_qubits-af_op_paulis.n_qubits)]))
+
+                ### parity fix for fermions (this modifies term_pauli to fix PHASES if there are any non-I terms... as in f_op_paulis exists)
+                if np.sum(term_pauli.symp_matrix)>0: ### this sum is only nonzero if term_pauli (term to be added) has been modified away from Identity (by the f_op_paulis)
+                    term_pauli*= (PauliwordOp.from_list(["Z" * (max_fermionic_mode + 1)], [1]).tensor(PauliwordOp.from_list(['I'*(total_qubits-(max_fermionic_mode + 1))])))
+                    
+                term_pauli*=(af_op_paulis)
+
             if max_bosonic_mode is not None:
-                mapped_term.append(
-                    self.SB(
-                        b_op, max_mode=max_bosonic_mode, max_occ=max_bosonic_occupancy
-                    )
-                )
-            pauli_op += tensor_list(mapped_term) * coeff_of_term
+                b_op_paulis = self.SB(b_op, max_mode=max_bosonic_mode, max_occ=max_bosonic_occupancy)
+
+                ## pad with I on other non fermionic modes!
+                b_op_paulis = PauliwordOp.from_list(['I'*(total_qubits-b_op_paulis.n_qubits)]).tensor(b_op_paulis)
+                term_pauli*=(b_op_paulis)
+
+            pauli_op +=term_pauli
 
         return pauli_op.cleanup(zero_threshold=zero_threshold)
 
