@@ -553,7 +553,7 @@ class ParticleOperator:
                 mapped_term.append(
                     self.jordan_wigner(af_op, max_mode=max_antifermionic_mode)
                 )
-                if f_op != ParticleOperator(
+                if f_op != ParticleOperator("") and af_op != ParticleOperator(
                     ""
                 ):  # If there are fermions, multiply fermion qubits by Z for parity
                     for _ in range(len(af_op.split())):
@@ -566,6 +566,7 @@ class ParticleOperator:
                         b_op, max_mode=max_bosonic_mode, max_occ=max_bosonic_occupancy
                     )
                 )
+
             pauli_op += tensor_list(mapped_term) * coeff_of_term
 
         return pauli_op.cleanup(zero_threshold=zero_threshold)
