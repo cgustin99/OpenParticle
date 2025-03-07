@@ -253,3 +253,23 @@ def get_pdfs(
 
     plt.tight_layout(rect=[0, 0.1, 1, 1])
     plt.show()
+
+
+def nonrelativistic_yukawa(g, mf, mb):
+    # Credit: Emmanuel Flores
+    # Parameters
+    N = 100  # Number of grid points
+    x_max = 20  # Maximum x value (adjust as needed)
+    x_min = -20
+    dx = (x_max - x_min) / N
+    x = np.linspace(x_min, x_max, N + 1)
+    V = -(g**2) / (2 * mb) * np.exp(-mb * np.abs(x))
+
+    c = 1**2 / (mf * dx**2)
+    hamiltonian = np.zeros((N + 1, N + 1))
+    for i in range(1, N - 1):
+        hamiltonian[i, i] = 2 * c + V[i]
+        hamiltonian[i, i + 1] = -c
+        hamiltonian[i, i - 1] = -c
+    eigenvalues, eigenvectors = np.linalg.eig(hamiltonian)
+    return eigenvalues[eigenvalues < 0]
