@@ -5,6 +5,34 @@ import numba as nb
 import time
 
 
+def index_to_k(operator):
+    # Returns momentum variable k for given operator and index
+    # e.g. b_0 returns k = 1/2, a2 returns k = 3
+    if operator.has_fermions or operator.has_antifermions:
+        return operator.modes[0][0] + 1 / 2
+    elif operator.has_bosons:
+        return operator.modes[0][0] + 1
+
+
+def resolution_constraint(terms, resolution):
+    # Remove terms with sum of all k created or annihilated > K
+    good_terms = {}
+
+    for term in terms:
+        k_created, k_annihilated = 0, 0
+        for op in term.split():
+            k = index_to_k(op)
+            if op.creation:
+                k_created += k
+            else:
+                k_annihilated += k
+        if k_created <= resolution and k_annihilated <= resolution:
+            key, val = list(term.op_dict.keys())[0], list(term.op_dict.values())[0]
+            good_terms[key] = val
+
+    return ParticleOperator(good_terms)
+
+
 def renormalized_yukawa_hamiltonian(res, t, treg=0, g=1, mf=1, mb=1, verbose=False):
     # Returns the renormalized Yukawa Hamiltonian up to O(g^2)
     Ham = (
@@ -114,6 +142,7 @@ def boson_exchange(t, g, res, mf, mb, verbose=False):
                 container_dict[op_str] = coeff + container_dict.get(op_str, 0.0)
     h_tree = ParticleOperator(container_dict)
     h_tree = remove_symmetry_terms(h_tree, 4)
+    h_tree = resolution_constraint(h_tree, res)
     finish = time.time()
     if verbose:
         print("Time of boson_exchange:", finish - start)
@@ -174,6 +203,7 @@ def fermion_exchange(t, g, res, mf, mb, verbose=False):
     h_tree = ParticleOperator(container_dict)
 
     h_tree = remove_symmetry_terms(h_tree, 4)
+    h_tree = resolution_constraint(h_tree, res)
     finish = time.time()
     if verbose:
         print("Time of fermion_exchange:", finish - start)
