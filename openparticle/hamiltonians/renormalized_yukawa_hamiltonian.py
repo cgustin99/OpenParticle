@@ -111,7 +111,7 @@ def boson_exchange(t, g, res, mf, mb, verbose=False):
         q2 = -q1 - q3
         if q3 > 0 and np.abs(q3) <= res and np.abs(q2) <= res:
             q1_, q2_, q3_, q4_, q5_ = pminuses(
-                [q1, q2, q3, q4, q5], [mf, mf, mb, mf, mf]
+                [p(q1, L), p(q2, L), p(q3, L), p(q4, L), p(q5, L)], [mf, mf, mb, mf, mf]
             )
 
             f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
@@ -171,7 +171,7 @@ def fermion_exchange(t, g, res, mf, mb, verbose=False):
         q2 = q5 + q6
         if np.abs(q1) <= res and np.abs(q2) <= res:
             q1_, q2_, q3_, q5_, q6_ = pminuses(
-                [q1, q2, q3, q5, q6], [mf, mf, mb, mf, mb]
+                [p(q1, L), p(q2, L), p(q3, L), p(q5, L), p(q6, L)], [mf, mf, mb, mf, mb]
             )
 
             f123 = np.exp(-t * (q1_ + q2_ + q3_) ** 2)
