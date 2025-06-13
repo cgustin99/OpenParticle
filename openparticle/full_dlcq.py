@@ -22,11 +22,11 @@ def u(p, m, h):
     eta = np.array([h == 1, h == -1], dtype=int).reshape([-1, 1])
     component_1 = p[0] * np.eye(2).dot(eta)
     component_2 = (1j * p[2] * sigma1 - 1j * p[1] * sigma2 + m * np.eye(2)).dot(eta)
-    return 1 / np.sqrt(p[0]) * np.concatenate([component_1, component_2])
+    return 1 / np.sqrt(np.abs(p[0])) * np.concatenate([component_1, component_2])
 
 
-def ubar(p, m, h):
-    return (u(p, m, h).conj().T).dot(gamma0)
+def udag(p, m, h):
+    return u(p, m, h).conj().T
 
 
 def v(p, m, h):
@@ -34,12 +34,14 @@ def v(p, m, h):
     component_1 = -p[0] * np.eye(2).dot(eta)
     component_2 = (-1j * p[2] * sigma1 + 1j * p[1] * sigma2 + m * np.eye(2)).dot(eta)
     return (
-        1 / np.sqrt(p[0]) * np.concatenate([component_1, component_2]).reshape([-1, 1])
+        1
+        / np.sqrt(np.abs(p[0]))
+        * np.concatenate([component_1, component_2]).reshape([-1, 1])
     )
 
 
-def vbar(p, m, h):
-    return (v(p, m, h).conj().T).dot(gamma0)
+def vdag(p, m, h):
+    return v(p, m, h).conj().T
 
 
 def pol_vec(p, pol):
@@ -53,12 +55,13 @@ def pol_vec(p, pol):
 
 def quark_quantum_numbers(k, kp, K, Kp, c, h, Nc=3):
     # k ∈ [1/2, K]
-    # kp ∈ [-Kp, Kp]^2
+    # kp ∈ [-Kp, Kp]^2 / 0
     # quark_color: c ∈ {1, 2, 3}
     # spin_proj: h ∈ {-1, +1}
 
     k_index = k - 1 / 2
-    kp_indices = [kpi + Kp for kpi in kp]
+    # kp_indices = [kpi + Kp for kpi in kp]
+    kp_indices = [[i for i in np.arange(-Kp, Kp + 1)].index(i) for i in kp]
     color_index = c - 1
 
     if h == 1:
@@ -102,14 +105,15 @@ def decode_quark_quantum_numbers(index, K, Kp, Nc=3):
     return k, [kp0, kp1], color, helicity
 
 
-def gluon_quantum_numbers(k, kp, K, Kp, a, pol):
+def gluon_quantum_numbers(k, kp, K, Kp, a, pol, Nc=3):
     # k ∈ [1, K]
     # kp ∈ [-Kp, Kp]^2
     # gluon_color: a ∈ {1, 2, 3, 4, 5, 6, 7, 8}
     # spin_proj: pol ∈ {-1, +1}
 
     k_index = k - 1
-    kp_indices = [kpi + Kp for kpi in kp]
+    # kp_indices = [kpi + Kp for kpi in kp]
+    kp_indices = [[i for i in np.arange(-Kp, Kp + 1)].index(i) for i in kp]
     color_index = a - 1
 
     if pol == 1:
@@ -119,10 +123,10 @@ def gluon_quantum_numbers(k, kp, K, Kp, a, pol):
 
     K_size = K - ((K) % 1)
     Kp_size = 2 * Kp + 1
-
     index = int(
         (
-            ((k_index * Kp_size + kp_indices[0]) * Kp_size + kp_indices[1]) * 8
+            ((k_index * Kp_size + kp_indices[0]) * Kp_size + kp_indices[1])
+            * (Nc**2 - 1)
             + color_index
         )
         * 2
@@ -131,14 +135,14 @@ def gluon_quantum_numbers(k, kp, K, Kp, a, pol):
     return index
 
 
-def decode_gluon_quantum_numbers(index, K, Kp):
+def decode_gluon_quantum_numbers(index, K, Kp, Nc=3):
     polarization_index = index % 2
     polarization = 1 if polarization_index == 0 else +1
     index //= 2
 
-    color_index = index % 8
+    color_index = index % (Nc**2 - 1)
     color = color_index + 1
-    index //= 8
+    index //= Nc**2 - 1
 
     kp1_index = index % (2 * Kp + 1)
     index //= 2 * Kp + 1
@@ -154,7 +158,7 @@ def decode_gluon_quantum_numbers(index, K, Kp):
 
 class QuarkField:
 
-    def __init__(self, mf, k, kp, K, Kp, c, h):
+    def __init__(self, m, k, kp, K, Kp, c, h):
         L = 2 * np.pi * K
         Lp = 2 * np.pi * Kp
         p = np.array(
@@ -165,12 +169,12 @@ class QuarkField:
             / np.sqrt(4 * np.pi * np.abs(k))
             * (
                 np.heaviside(k, 0)
-                * u(p=p, m=mf, h=h)
+                * u(p=p, m=m, h=h)
                 * op.ParticleOperator(
                     "b" + str(quark_quantum_numbers(k=k, kp=kp, K=K, Kp=Kp, c=c, h=h))
                 )
                 + np.heaviside(-k, 0)
-                * v(p=-1 * p, m=mf, h=h)
+                * v(p=-1 * p, m=m, h=h)
                 * op.ParticleOperator(
                     "d"
                     + str(
@@ -188,14 +192,14 @@ class QuarkField:
             / np.sqrt(4 * np.pi * np.abs(k))
             * (
                 np.heaviside(k, 0)
-                * ubar(p=p, m=mf, h=h)
+                * ubar(p=p, m=m, h=h)
                 * op.ParticleOperator(
                     "b"
                     + str(quark_quantum_numbers(k=k, kp=kp, K=K, Kp=Kp, c=c, h=h))
                     + "^"
                 )
                 + np.heaviside(-k, 0)
-                * vbar(p=-1 * p, m=mf, h=h)
+                * vbar(p=-1 * p, m=m, h=h)
                 * op.ParticleOperator(
                     "d"
                     + str(
@@ -208,7 +212,7 @@ class QuarkField:
         )
 
 
-class VectorField:
+class GluonField:
 
     def __init__(self, mg, k, kp, K, Kp, a, pol):
         L = 2 * np.pi * K
