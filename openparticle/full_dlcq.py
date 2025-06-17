@@ -53,14 +53,16 @@ def pol_vec(p, pol):
     )
 
 
-def quark_quantum_numbers(k, kp, K, Kp, c, h, Nc=3):
-    # k ∈ [1/2, K]
-    # kp ∈ [-Kp, Kp]^2 / 0
+def quark_quantum_numbers(k, K, Kp, c, h, Nc=3):
+    # kplus ∈ [1/2, K]
+    # kperp ∈ [-Kp, Kp]^2 / 0
     # quark_color: c ∈ {1, 2, 3}
     # spin_proj: h ∈ {-1, +1}
 
-    k_index = k - 1 / 2
-    # kp_indices = [kpi + Kp for kpi in kp]
+    kplus = k[0]
+    kp = k[1:3]
+
+    kplus_index = kplus - 1 / 2
     kp_indices = [[i for i in np.arange(-Kp, Kp + 1)].index(i) for i in kp]
     color_index = c - 1
 
@@ -69,12 +71,10 @@ def quark_quantum_numbers(k, kp, K, Kp, c, h, Nc=3):
     else:
         h_index = 1
 
-    K_size = K + ((K) % 1 - 0.5)
-
     Kp_size = 2 * Kp + 1
     index = int(
         (
-            ((k_index * Kp_size + kp_indices[0]) * Kp_size + kp_indices[1]) * Nc
+            ((kplus_index * Kp_size + kp_indices[0]) * Kp_size + kp_indices[1]) * Nc
             + color_index
         )
         * 2
@@ -102,17 +102,18 @@ def decode_quark_quantum_numbers(index, K, Kp, Nc=3):
     k_index = int(index % (K + ((K) % 1 - 0.5)))
     k = k_index + 1 / 2
 
-    return k, [kp0, kp1], color, helicity
+    return [k, kp0, kp1], color, helicity
 
 
-def gluon_quantum_numbers(k, kp, K, Kp, a, pol, Nc=3):
-    # k ∈ [1, K]
-    # kp ∈ [-Kp, Kp]^2
+def gluon_quantum_numbers(k, K, Kp, a, pol, Nc=3):
+    # kplus ∈ [1, K]
+    # kperp ∈ [-Kp, Kp]^2
     # gluon_color: a ∈ {1, 2, 3, 4, 5, 6, 7, 8}
     # spin_proj: pol ∈ {-1, +1}
 
-    k_index = k - 1
-    # kp_indices = [kpi + Kp for kpi in kp]
+    kplus = k[0]
+    kp = k[1:3]
+    kplus_index = kplus - 1
     kp_indices = [[i for i in np.arange(-Kp, Kp + 1)].index(i) for i in kp]
     color_index = a - 1
 
@@ -121,11 +122,10 @@ def gluon_quantum_numbers(k, kp, K, Kp, a, pol, Nc=3):
     else:
         polarization_index = 1
 
-    K_size = K - ((K) % 1)
     Kp_size = 2 * Kp + 1
     index = int(
         (
-            ((k_index * Kp_size + kp_indices[0]) * Kp_size + kp_indices[1])
+            ((kplus_index * Kp_size + kp_indices[0]) * Kp_size + kp_indices[1])
             * (Nc**2 - 1)
             + color_index
         )

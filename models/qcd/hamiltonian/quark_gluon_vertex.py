@@ -348,6 +348,3 @@ def quark_gluon_vertex_term(g: float, mq: float, K: float, Kp: float, Nc: int = 
 
     quark_gluon_vertex_term_dictionary = dict(quark_gluon_vertex_term_dictionary)
     return quark_gluon_vertex_term_dictionary
-
-
-print(quark_gluon_vertex_term(g=1, mq=1, K=2, Kp=1))
