@@ -238,6 +238,3 @@ def fermion_exch_inst_term(g: float, mq: float, K: int, Kp: int, Nc: int = 3):
 
     fermion_exch_inst_term_dictionary = dict(fermion_exch_inst_term_dictionary)
     return fermion_exch_inst_term_dictionary
-
-
-print(fermion_exch_inst_term(g=1, mq=1, K=2, Kp=1))
