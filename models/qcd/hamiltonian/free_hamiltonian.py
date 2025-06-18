@@ -2,7 +2,6 @@ import openparticle as op
 from openparticle.full_dlcq import *
 from models.qcd.hamiltonian.gell_mann import T
 import numpy as np
-from itertools import product
 import numba as nb
 
 
@@ -113,7 +112,6 @@ def free_quark_hamiltonian(K: float, Kp: float, mq: float, Nc: int = 3):
     quark_colors = np.arange(1, Nc + 1, 1)
 
     free_quark_term_list = nb.typed.List()
-    # for qns in product(quark_helicities, quark_colors):
     for color in quark_colors:
         for helicity in quark_helicities:
             free_quark_term_list.append(
