@@ -1,13 +1,8 @@
 import openparticle as op
 from openparticle.full_dlcq import *
-from models.qcd.hamiltonian.gell_mann import T
+from color_algebra import T
 import numpy as np
 import numba as nb
-
-
-@nb.njit
-def heaviside(x: complex, y: complex = 0) -> int:
-    return 1 if x.real > y.real else 0
 
 
 @nb.njit(
