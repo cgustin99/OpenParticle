@@ -23,6 +23,7 @@ T = 0.5 * np.array(
 )
 
 
+# structure constants
 def f(a, b, c):
     structure_constants = {
         "123": 1,

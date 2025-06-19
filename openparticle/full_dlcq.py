@@ -19,6 +19,11 @@ gamma2 = np.block([[-1j * sigma1, zeros], [zeros, 1j * sigma1]]).astype(np.compl
 gamma_plus = gamma0 + gamma3
 
 
+@nb.njit
+def heaviside(x: complex, y: complex = 0) -> int:
+    return 1 if x.real > y.real else 0
+
+
 @nb.njit(nb.complex128[:](nb.complex128[:], nb.complex128, nb.int8), fastmath=True)
 def u(p: np.ndarray, m: float, h: int) -> np.ndarray:
     eta = np.zeros((2, 1), dtype=np.complex128)
