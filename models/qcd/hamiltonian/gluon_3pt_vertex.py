@@ -1,13 +1,8 @@
 import openparticle as op
 from openparticle.full_dlcq import *
-from models.qcd.hamiltonian.gell_mann import T, f
+from color_algebra import T, f
 import numpy as np
 import numba as nb
-
-
-@nb.njit
-def heaviside(x: complex, y: complex = 0) -> int:
-    return 1 if x.real > y.real else 0
 
 
 @nb.njit(
@@ -436,4 +431,4 @@ def gluon_3pt_vertex_term(g: float, K: float, Kp: float, Nc: int = 3):
                                     )
                                 )
 
-    return gluon_3pt_vertex_term
+    return gluon_3pt_vertex_term_list
