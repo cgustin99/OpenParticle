@@ -1,6 +1,6 @@
 import openparticle as op
 from openparticle.full_dlcq import *
-from models.qcd.hamiltonian.gell_mann import T
+from color_algebra import T, f
 import numpy as np
 import numba as nb
 

@@ -22,6 +22,7 @@ import numba as nb
         nb.float64,
         nb.float64,
         nb.float64,
+        nb.float64,
         nb.int64,
     ),
     ## other options
@@ -38,6 +39,7 @@ def fixed_gluon_4pt_inst_term(
     e: int,
     fcoeff: float,
     g: float,
+    mg: float,
     K: float,
     Kp: float,
     Nc: int = 3,
@@ -128,7 +130,7 @@ def fixed_gluon_4pt_inst_term(
                                                 * fcoeff
                                                 * q2[0]
                                                 * q4[0]
-                                                / (q3[0] + q4[0]) ** 2
+                                                / ((q3[0] + q4[0]) ** 2 + mg**2)
                                                 * (1 / ((2 * L) * (Lp) ** 2)) ** 3
                                                 / (
                                                     (2 * np.pi / L) ** 4
@@ -968,11 +970,11 @@ def fixed_gluon_4pt_inst_term(
     ## output types
     nb.types.ListType(nb.types.DictType(nb.types.unicode_type, nb.types.complex128))
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.int64),
+    (nb.float64, nb.float64, nb.float64, nb.float64, nb.int64),
     ## other options
     fastmath=True,
 )
-def gluon_4pt_inst_term(g: float, K: float, Kp: float, Nc: int = 3):
+def gluon_4pt_inst_term(g: float, K: float, Kp: float, mg: float = 1, Nc: int = 3):
     gluon_polarizations = [1, -1]
     gluon_colors = np.arange(1, Nc**2 - 1 + 1, 1)
 
@@ -1003,6 +1005,7 @@ def gluon_4pt_inst_term(g: float, K: float, Kp: float, Nc: int = 3):
                                                     e=e,
                                                     fcoeff=fcoeff,
                                                     g=g,
+                                                    mg=mg,
                                                     K=K,
                                                     Kp=Kp,
                                                     Nc=Nc,

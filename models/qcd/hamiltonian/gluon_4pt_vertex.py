@@ -972,7 +972,7 @@ def gluon_4pt_vertex_term(g: float, K: float, Kp: float, Nc: int = 3):
     gluon_polarizations = [1, -1]
     gluon_colors = np.arange(1, Nc**2 - 1 + 1, 1)
 
-    gluon_4pt_vertex_term_list = []
+    gluon_4pt_vertex_term_list = nb.typed.List()
 
     for a in gluon_colors:
         for b in gluon_colors:
