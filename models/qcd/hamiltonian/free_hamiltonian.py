@@ -9,7 +9,7 @@ import numba as nb
     ## output types
     nb.complex128[:, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.int64),
+    (nb.float64, nb.float64, nb.float64, nb.int8),
     ## other options
     fastmath=True,
 )
