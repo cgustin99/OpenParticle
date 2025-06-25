@@ -249,14 +249,14 @@ class QuarkField:
             / np.sqrt(4 * np.pi * np.abs(k))
             * (
                 np.heaviside(k, 0)
-                * ubar(p=p, m=m, h=h)
+                * udag(p=p, m=m, h=h)
                 * op.ParticleOperator(
                     "b"
                     + str(quark_quantum_numbers(k=k, kp=kp, K=K, Kp=Kp, c=c, h=h))
                     + "^"
                 )
                 + np.heaviside(-k, 0)
-                * vbar(p=-1 * p, m=m, h=h)
+                * vdag(p=-1 * p, m=m, h=h)
                 * op.ParticleOperator(
                     "d"
                     + str(
