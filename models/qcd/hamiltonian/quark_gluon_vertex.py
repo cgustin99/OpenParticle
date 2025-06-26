@@ -43,7 +43,7 @@ fixed_qnums = np.vstack(
     ## output types
     nb.complex128[:, :, :, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.float648),
+    (nb.float64, nb.float64, nb.float64, nb.float64),
     ## other options
     fastmath=True,
     parallel=True,

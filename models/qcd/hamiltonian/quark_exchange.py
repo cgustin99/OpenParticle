@@ -1,57 +1,68 @@
-import openparticle as op
 from openparticle.full_dlcq import *
 from color_algebra import T, f
 import numpy as np
 import numba as nb
+from itertools import product
+
+color_combos = np.array(
+    [
+        [0, 0, 2, 2],
+        [0, 0, 7, 2],
+        [0, 0, 2, 7],
+        [0, 0, 7, 7],
+        [0, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 1, 0, 1],
+        [0, 1, 1, 1],
+        [0, 2, 3, 3],
+        [0, 2, 4, 3],
+        [0, 2, 3, 4],
+        [0, 2, 4, 4],
+        [1, 0, 0, 0],
+        [1, 0, 1, 0],
+        [1, 0, 0, 1],
+        [1, 0, 1, 1],
+        [1, 1, 2, 2],
+        [1, 1, 7, 2],
+        [1, 1, 2, 7],
+        [1, 1, 7, 7],
+        [1, 2, 5, 5],
+        [1, 2, 6, 5],
+        [1, 2, 5, 6],
+        [1, 2, 6, 6],
+        [2, 0, 3, 3],
+        [2, 0, 4, 3],
+        [2, 0, 3, 4],
+        [2, 0, 4, 4],
+        [2, 1, 5, 5],
+        [2, 1, 6, 5],
+        [2, 1, 5, 6],
+        [2, 1, 6, 6],
+        [2, 2, 7, 7],
+    ]
+)
+quark_helicities = np.array([1, -1])
+gluon_polarizations = np.array([1, -1])
+spin_arrays = np.array(
+    list(product(quark_helicities, quark_helicities, gluon_polarizations)),
+    dtype=np.int8,
+)
+
+fixed_qnums = np.vstack(
+    [np.hstack([row1, spin]) for row1 in color_combos for spin in spin_arrays]
+)
 
 
 @nb.njit(
-    ## output types
-    nb.types.DictType(nb.types.string, nb.types.complex128)
-    ##input types
-    (
-        nb.int64,
-        nb.int64,
-        nb.int64,
-        nb.int64,
-        nb.int64,
-        nb.int64,
-        nb.int64,
-        nb.int64,
-        nb.float64,
-        nb.float64,
-        nb.float64,
-        nb.float64,
-        nb.int64,
+    nb.complex128[:, :, :, :, :, :, :, :, :, :](
+        nb.float64, nb.float64, nb.float64, nb.float64
     ),
-    ## other options
     fastmath=True,
+    parallel=True,
 )
-def fixed_fermion_exch_inst_term(
-    lambda_1: int,
-    sigma_2: int,
-    sigma_3: int,
-    lambda_4: int,
-    c1: int,
-    c4: int,
-    a: int,
-    b: int,
-    g: float,
-    mq: float,
-    K: float,
-    Kp: float,
-    Nc: int = 3,
-):
-
-    fixed_qns_dict = nb.typed.Dict.empty(
-        key_type=nb.types.unicode_type, value_type=nb.types.complex128
-    )
+def quark_exch_term_tensor(K: float, Kp: float, g: float, mq: float):
     boson_lim = int(K)
     fermion_lim = K - ((K - 0.5) % 1)
-
-    L = 2 * np.pi * K
-    Lp = 2 * np.pi * Kp
-
     fermion_longitudinal_q = np.array(
         [i for i in np.arange(-fermion_lim, fermion_lim + 1.0, 1.0) if i != 0.0],
         dtype=np.float64,
@@ -62,286 +73,187 @@ def fixed_fermion_exch_inst_term(
     )
     transverse_q = np.array([i for i in np.arange(-Kp, Kp + 1.0)], dtype=np.float64)
 
-    for q1plus in fermion_longitudinal_q:
-        for q1trans1 in transverse_q:
-            for q1trans2 in transverse_q:
-                for q2plus in boson_longitudinal_q:
-                    for q2trans1 in transverse_q:
-                        for q2trans2 in transverse_q:
+    dim = (  # particle 1
+        len(fermion_longitudinal_q),
+        len(transverse_q),
+        len(transverse_q),
+        # particle 2
+        len(fermion_longitudinal_q),
+        len(transverse_q),
+        len(transverse_q),
+        # particle 3
+        len(boson_longitudinal_q),
+        len(transverse_q),
+        len(transverse_q),
+        len(fixed_qnums),
+    )
+    quark_exch_tensor = np.zeros(dim, dtype=np.complex128)
+    for idx in nb.prange(len(fermion_longitudinal_q)):
+        q1plus = fermion_longitudinal_q[idx]
+        for q1perp1 in transverse_q:
+            for q1perp2 in transverse_q:
+                for q2plus in fermion_longitudinal_q:
+                    for q2perp1 in transverse_q:
+                        for q2perp2 in transverse_q:
                             for q3plus in boson_longitudinal_q:
-                                for q3trans1 in transverse_q:
-                                    for q3trans2 in transverse_q:
-                                        q1 = np.array(
-                                            [q1plus, q1trans1, q1trans2],
-                                            dtype=np.complex128,
-                                        )
-                                        q2 = np.array(
-                                            [q2plus, q2trans1, q2trans2],
-                                            dtype=np.complex128,
-                                        )
-                                        q3 = np.array(
-                                            [q3plus, q3trans1, q3trans2],
-                                            dtype=np.complex128,
-                                        )
-                                        q4 = -1 * (
-                                            q1 + q2 + q3
-                                        )  # q4 is assigned by delta
-
-                                        if (
-                                            0 < np.abs(q4[0]) <= K
-                                            and np.abs(q4[1]) <= Kp
-                                            and np.abs(q4[2]) <= Kp
-                                        ):  # make sure k4 < K,Kp
-
-                                            psi1 = heaviside(-q1[0]) * udag(
-                                                p=-q1, m=mq, h=lambda_1
-                                            ) + heaviside(
-                                                q1[0] * vdag(p=q1, m=mq, h=lambda_1)
+                                for q3perp1 in transverse_q:
+                                    for q3perp2 in transverse_q:
+                                        for (
+                                            fixed_set_qnums_index,
+                                            fixed_set_qnums,
+                                        ) in enumerate(fixed_qnums):
+                                            c1, c4, a = (
+                                                fixed_set_qnums[0],
+                                                fixed_set_qnums[1],
+                                                fixed_set_qnums[2],
                                             )
-                                            A2 = (
-                                                heaviside(q2[0])
-                                                * pol_vec(p=q2, pol=sigma_2)
-                                                + heaviside(-q2[0])
-                                                * pol_vec(p=-q2, pol=sigma_2).conj()
+                                            b = fixed_set_qnums[3]
+                                            (
+                                                helicity1,
+                                                helicity4,
+                                                polarization2,
+                                                polarization3,
+                                            ) = (
+                                                fixed_set_qnums[4],
+                                                fixed_set_qnums[5],
+                                                fixed_set_qnums[6],
+                                                fixed_set_qnums[7],
                                             )
-                                            A3 = (
-                                                heaviside(q3[0])
-                                                * pol_vec(p=q3, pol=sigma_3)
-                                                + heaviside(-q3[0])
-                                                * pol_vec(p=-q3, pol=sigma_3).conj()
+                                            q1 = np.array(
+                                                [
+                                                    q1plus,
+                                                    q1perp1,
+                                                    q1perp2,
+                                                ],
+                                                dtype=np.complex128,
                                             )
-                                            A2slash = (
-                                                0.5 * gamma_plus * (A2[1])
-                                                - gamma1 * (A2[2])
-                                                - gamma2 * (A2[3])
+                                            q2 = np.array(
+                                                [
+                                                    q2plus,
+                                                    q2perp1,
+                                                    q2perp2,
+                                                ],
+                                                dtype=np.complex128,
                                             )
-                                            A3slash = (
-                                                0.5 * gamma_plus * (A3[1])
-                                                - gamma1 * (A3[2])
-                                                - gamma2 * (A3[3])
+                                            q3 = np.array(
+                                                [
+                                                    q3plus,
+                                                    q3perp1,
+                                                    q3perp2,
+                                                ],
+                                                dtype=np.complex128,
                                             )
-                                            psi4 = heaviside(q4[0]) * u(
-                                                p=q1, m=mq, h=lambda_4
-                                            ) + heaviside(-q1[0]) * v(
-                                                p=-q1, m=mq, h=lambda_4
-                                            )
-
-                                            coeff = psi1.dot(
-                                                gamma0.dot(
-                                                    A2slash.dot(
-                                                        gamma_plus.dot(
-                                                            A3slash.dot(psi4)
+                                            q4 = -1 * (
+                                                q3 + q2 + q1
+                                            )  # q4 is assigned by delta
+                                            if (
+                                                0 < np.abs(q4[0]) <= K
+                                                and np.abs(q4[1]) <= Kp
+                                                and np.abs(q4[2]) <= Kp
+                                            ):  # make sure k4 < K,Kp
+                                                psi1 = heaviside(-q1[0]) * udag(
+                                                    p=-q1, m=mq, h=helicity1
+                                                ) + heaviside(
+                                                    q1[0]
+                                                    * vdag(p=q1, m=mq, h=helicity1)
+                                                )
+                                                A2 = (
+                                                    heaviside(q2[0])
+                                                    * pol_vec(p=q2, pol=polarization2)
+                                                    + heaviside(-q2[0])
+                                                    * pol_vec(
+                                                        p=-q2, pol=polarization2
+                                                    ).conj()
+                                                )
+                                                A3 = (
+                                                    heaviside(q3[0])
+                                                    * pol_vec(p=q3, pol=polarization3)
+                                                    + heaviside(-q3[0])
+                                                    * pol_vec(
+                                                        p=-q3, pol=polarization3
+                                                    ).conj()
+                                                )
+                                                A2slash = (
+                                                    0.5 * gamma_plus * (A2[1])
+                                                    - gamma1 * (A2[2])
+                                                    - gamma2 * (A2[3])
+                                                )
+                                                A3slash = (
+                                                    0.5 * gamma_plus * (A3[1])
+                                                    - gamma1 * (A3[2])
+                                                    - gamma2 * (A3[3])
+                                                )
+                                                psi4 = heaviside(q4[0]) * u(
+                                                    p=q1, m=mq, h=helicity4
+                                                ) + heaviside(-q1[0]) * v(
+                                                    p=-q1, m=mq, h=helicity4
+                                                )
+                                                coeff = psi1.dot(
+                                                    gamma0.dot(
+                                                        A2slash.dot(
+                                                            gamma_plus.dot(
+                                                                A3slash.dot(psi4)
+                                                            )
                                                         )
                                                     )
                                                 )
-                                            )
-                                            if coeff != 0:
                                                 coeff *= (
                                                     g**2
                                                     * T[a - 1][c1 - 1][c4 - 1]
                                                     * T[b - 1][c1 - 1][c4 - 1]
                                                     * 1
+                                                    / (((q3[0] + q4[0])) ** 2)
+                                                    * 1
                                                     / (
-                                                        2
-                                                        * np.pi
-                                                        / L
-                                                        * ((q3[0] + q4[0])) ** 2
-                                                    )
-                                                    * (1 / ((2 * L) * (Lp) ** 2)) ** 3
-                                                    / (
-                                                        (2 * np.pi / L) ** 4
-                                                        * (
-                                                            np.abs(q1[0])
-                                                            * np.abs(q2[0])
-                                                            * np.abs(q3[0])
-                                                            * np.abs(q4[0])
-                                                        )
+                                                        np.abs(q1[0])
+                                                        * np.abs(q2[0])
+                                                        * np.abs(q3[0])
+                                                        * np.abs(q4[0])
                                                     )
                                                 )
+                                                if coeff != 0:
 
-                                                particle_operator_string = (
-                                                    (
-                                                        heaviside(-q1[0])
-                                                        * (
-                                                            "b"
-                                                            + str(
-                                                                quark_quantum_numbers(
-                                                                    k=-q1,
-                                                                    K=K,
-                                                                    Kp=Kp,
-                                                                    c=c1,
-                                                                    h=lambda_1,
-                                                                    Nc=Nc,
-                                                                )
-                                                            )
-                                                            + "^ "
-                                                        )
-                                                        + heaviside(q1[0])
-                                                        * (
-                                                            "d"
-                                                            + str(
-                                                                quark_quantum_numbers(
-                                                                    k=q1,
-                                                                    K=K,
-                                                                    Kp=Kp,
-                                                                    c=c1,
-                                                                    h=lambda_1,
-                                                                    Nc=Nc,
-                                                                )
-                                                            )
-                                                            + " "
-                                                        )
-                                                    )
-                                                    + (
-                                                        heaviside(q2[0])
-                                                        * (
-                                                            "a"
-                                                            + str(
-                                                                gluon_quantum_numbers(
-                                                                    k=q2,
-                                                                    K=K,
-                                                                    Kp=Kp,
-                                                                    a=a,
-                                                                    pol=sigma_2,
-                                                                    Nc=Nc,
-                                                                )
-                                                            )
-                                                            + " "
-                                                        )
-                                                        + heaviside(-q2[0])
-                                                        * (
-                                                            "a"
-                                                            + str(
-                                                                gluon_quantum_numbers(
-                                                                    k=-q2,
-                                                                    K=K,
-                                                                    Kp=Kp,
-                                                                    a=a,
-                                                                    pol=sigma_2,
-                                                                    Nc=Nc,
-                                                                )
-                                                            )
-                                                            + "^ "
-                                                        )
-                                                    )
-                                                    + (
-                                                        heaviside(q3[0])
-                                                        * (
-                                                            "a"
-                                                            + str(
-                                                                gluon_quantum_numbers(
-                                                                    k=q3,
-                                                                    K=K,
-                                                                    Kp=Kp,
-                                                                    a=b,
-                                                                    pol=sigma_3,
-                                                                    Nc=Nc,
-                                                                )
-                                                            )
-                                                            + " "
-                                                        )
-                                                        + heaviside(-q3[0])
-                                                        * (
-                                                            "a"
-                                                            + str(
-                                                                gluon_quantum_numbers(
-                                                                    k=-q3,
-                                                                    K=K,
-                                                                    Kp=Kp,
-                                                                    a=b,
-                                                                    pol=sigma_3,
-                                                                    Nc=Nc,
-                                                                )
-                                                            )
-                                                            + "^ "
-                                                        )
-                                                    )
-                                                    + (
-                                                        heaviside(q4[0])
-                                                        * (
-                                                            "b"
-                                                            + str(
-                                                                quark_quantum_numbers(
-                                                                    k=q4,
-                                                                    K=K,
-                                                                    Kp=Kp,
-                                                                    c=c4,
-                                                                    h=lambda_4,
-                                                                    Nc=Nc,
-                                                                )
-                                                            )
-                                                            + "^ "
-                                                        )
-                                                        + heaviside(-q4[0])
-                                                        * (
-                                                            "d"
-                                                            + str(
-                                                                quark_quantum_numbers(
-                                                                    k=-q4,
-                                                                    K=K,
-                                                                    Kp=Kp,
-                                                                    c=c4,
-                                                                    h=lambda_4,
-                                                                    Nc=Nc,
-                                                                )
-                                                            )
-                                                            + " "
-                                                        )
-                                                    )
-                                                )
-                                                fixed_qns_dict[
-                                                    particle_operator_string
-                                                ] = coeff
+                                                    q1plus_index = np.where(
+                                                        fermion_longitudinal_q == q1plus
+                                                    )[0][0]
+                                                    q1perp1_index = np.where(
+                                                        transverse_q == q1perp1
+                                                    )[0][0]
+                                                    q1perp2_index = np.where(
+                                                        transverse_q == q1perp2
+                                                    )[0][0]
 
-    return fixed_qns_dict
+                                                    q2plus_index = np.where(
+                                                        boson_longitudinal_q == q2plus
+                                                    )[0][0]
+                                                    q2perp1_index = np.where(
+                                                        transverse_q == q2perp1
+                                                    )[0][0]
+                                                    q2perp2_index = np.where(
+                                                        transverse_q == q2perp2
+                                                    )[0][0]
 
+                                                    q3plus_index = np.where(
+                                                        boson_longitudinal_q == q3[0]
+                                                    )[0][0]
+                                                    q3perp1_index = np.where(
+                                                        transverse_q == q3[1]
+                                                    )[0][0]
+                                                    q3perp2_index = np.where(
+                                                        transverse_q == q3[2]
+                                                    )[0][0]
 
-@nb.njit(
-    ## output types
-    nb.types.ListType(nb.types.DictType(nb.types.unicode_type, nb.types.complex128))
-    ##input types
-    (nb.float64, nb.float64, nb.float64, nb.float64, nb.int64),
-    ## other options
-    fastmath=True,
-)
-def fermion_exch_inst_term(g: float, mq: float, K: float, Kp: float, Nc: int = 3):
-    gluon_polarizations = [1, -1]
-    gluon_colors = np.arange(1, Nc**2 - 1 + 1, 1)
-    quark_helicities = [1, -1]
-    quark_colors = np.arange(1, Nc + 1, 1)
+                                                    quark_exch_tensor[
+                                                        q1plus_index,
+                                                        q1perp1_index,
+                                                        q1perp2_index,
+                                                        q2plus_index,
+                                                        q2perp1_index,
+                                                        q2perp2_index,
+                                                        q3plus_index,
+                                                        q3perp1_index,
+                                                        q3perp2_index,
+                                                        fixed_set_qnums_index,
+                                                    ] = coeff
 
-    fermion_exch_inst_term_list = nb.typed.List()
-
-    for a in gluon_colors:
-        for b in gluon_colors:
-            for c1 in quark_colors:
-                for c4 in quark_colors:
-                    for lambda_1 in quark_helicities:
-                        for lambda_4 in quark_helicities:
-                            for sigma_2 in gluon_polarizations:
-                                for sigma_3 in gluon_polarizations:
-
-                                    if (
-                                        T[a - 1][c1 - 1][c4 - 1]
-                                        * T[b - 1][c1 - 1][c4 - 1]
-                                        != 0
-                                    ):
-                                        fermion_exch_inst_term_list.append(
-                                            fixed_fermion_exch_inst_term(
-                                                lambda_1=lambda_1,
-                                                sigma_2=sigma_2,
-                                                sigma_3=sigma_3,
-                                                lambda_4=lambda_4,
-                                                a=a,
-                                                c1=c1,
-                                                c4=c4,
-                                                b=b,
-                                                g=g,
-                                                mq=mq,
-                                                K=K,
-                                                Kp=Kp,
-                                                Nc=Nc,
-                                            )
-                                        )
-
-    return fermion_exch_inst_term_list
+    return quark_exch_tensor

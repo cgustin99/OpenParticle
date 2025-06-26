@@ -4,16 +4,18 @@ from color_algebra import T, f
 import numpy as np
 import numba as nb
 
+Nc = 3
+
 
 @nb.njit(
     ## output types
     nb.complex128[:, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.int8),
+    (nb.float64, nb.float64, nb.float64),
     ## other options
     fastmath=True,
 )
-def free_quark_hamiltonian_tensor(K: float, Kp: float, mq: float, Nc: int = 3):
+def free_quark_hamiltonian_tensor(K: float, Kp: float, mq: float):
     quark_helicities = [1, -1]
     quark_colors = np.arange(1, Nc + 1, 1)
     fermion_lim = K - ((K - 0.5) % 1)
@@ -60,11 +62,11 @@ def free_quark_hamiltonian_tensor(K: float, Kp: float, mq: float, Nc: int = 3):
     ## output types
     nb.complex128[:, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.int64),
+    (nb.float64, nb.float64, nb.float64),
     ## other options
     fastmath=True,
 )
-def free_gluon_hamiltonian_tensor(K: float, Kp: float, mg: float, Nc: int = 3):
+def free_gluon_hamiltonian_tensor(K: float, Kp: float, mg: float):
     gluon_polarizations = [1, -1]
     gluon_colors = np.arange(1, Nc**2 - 1 + 1, 1)
     boson_lim = int(K)
