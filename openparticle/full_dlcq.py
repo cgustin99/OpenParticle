@@ -5,6 +5,8 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+Nc = 3
+
 
 sigma1 = np.array([[0, 1], [1, 0]], dtype=np.complex128)
 sigma2 = np.array([[0, -1j], [1j, 0]], dtype=np.complex128)
@@ -82,11 +84,11 @@ def pol_vec(p, pol):
     ## output types
     nb.int32
     ##input types
-    (nb.complex128[:], nb.int64, nb.int64, nb.int8, nb.int8, nb.int32),
+    (nb.complex128[:], nb.int64, nb.int64, nb.int8, nb.int8),
     ## other options
     fastmath=True,
 )
-def quark_quantum_numbers(k, K, Kp, c, h, Nc=3):
+def quark_quantum_numbers(k, K, Kp, c, h):
     # kplus ∈ [1/2, K]
     # kperp ∈ [-Kp, Kp]^2 / 0
     # quark_color: c ∈ {1, 2, 3}
@@ -120,11 +122,11 @@ def quark_quantum_numbers(k, K, Kp, c, h, Nc=3):
     ## output types
     nb.types.Tuple((nb.complex128[:], nb.int8, nb.int8))
     ##input types
-    (nb.int64, nb.int64, nb.int64, nb.int32),
+    (nb.int64, nb.int64, nb.int64),
     ## other options
     fastmath=True,
 )
-def decode_quark_quantum_numbers(index, K, Kp, Nc=3):
+def decode_quark_quantum_numbers(index, K, Kp):
     helicity_index = index % 2
     helicity = 1 if helicity_index == 0 else -1
     index //= 2
@@ -150,11 +152,11 @@ def decode_quark_quantum_numbers(index, K, Kp, Nc=3):
     ## output types
     nb.int32
     ##input types
-    (nb.complex128[:], nb.int64, nb.int64, nb.int8, nb.int8, nb.int32),
+    (nb.complex128[:], nb.int64, nb.int64, nb.int8, nb.int8),
     ## other options
     fastmath=True,
 )
-def gluon_quantum_numbers(k, K, Kp, a, pol, Nc=3):
+def gluon_quantum_numbers(k, K, Kp, a, pol):
     # kplus ∈ [1, K]
     # kperp ∈ [-Kp, Kp]^2
     # gluon_color: a ∈ {1, 2, 3, 4, 5, 6, 7, 8}
@@ -188,11 +190,11 @@ def gluon_quantum_numbers(k, K, Kp, a, pol, Nc=3):
     ## output types
     nb.types.Tuple((nb.complex128[:], nb.int8, nb.int8))
     ##input types
-    (nb.int64, nb.int64, nb.int64, nb.int32),
+    (nb.int64, nb.int64, nb.int64),
     ## other options
     fastmath=True,
 )
-def decode_gluon_quantum_numbers(index, K, Kp, Nc=3):
+def decode_gluon_quantum_numbers(index, K, Kp):
     polarization_index = index % 2
     polarization = 1 if polarization_index == 0 else +1
     index //= 2
