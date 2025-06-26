@@ -33,17 +33,17 @@ fixed_qnums = np.vstack(
     ## output types
     nb.complex128[:, :, :, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.int8),
+    (nb.float64, nb.float64, nb.float64),
     ## other options
     fastmath=True,
 )
-def gluon_3pt_vertex_term_tensor(K: float, Kp: float, g: float, Nc: int):
+def gluon_3pt_vertex_term_tensor(K: float, Kp: float, g: float):
     """
     Indices 0, 3 correspond respectively to q1+, q2+.
     """
 
     boson_lim = int(K)
-    boson_longitudinal_q = np.arange(1, boson_lim + 1, 1, dtype=np.float64)
+    boson_longitudinal_q = np.arange(-boson_lim, boson_lim + 1, 1, dtype=np.float64)
 
     transverse_q = np.array([i for i in np.arange(-Kp, Kp + 1.0)], dtype=np.float64)
 

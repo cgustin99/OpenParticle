@@ -43,14 +43,12 @@ fixed_qnums = np.vstack(
     ## output types
     nb.complex128[:, :, :, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.float64, nb.int8),
+    (nb.float64, nb.float64, nb.float64, nb.float648),
     ## other options
     fastmath=True,
     parallel=True,
 )
-def quark_gluon_vertex_term_tensor(
-    K: float, Kp: float, g: float, mq: float, Nc: int = 3
-):
+def quark_gluon_vertex_term_tensor(K: float, Kp: float, g: float, mq: float):
     """
     Indices 0, 3 correspond respectively to q1+, q2+.
     """

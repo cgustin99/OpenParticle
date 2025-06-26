@@ -60,7 +60,7 @@ def gluon_4pt_vertex_term_tensor(K: float, Kp: float, g: float, Nc: int):
     """
 
     boson_lim = int(K)
-    boson_longitudinal_q = np.arange(1, boson_lim + 1, 1, dtype=np.float64)
+    boson_longitudinal_q = np.arange(-boson_lim, boson_lim + 1, 1, dtype=np.float64)
 
     transverse_q = np.array([i for i in np.arange(-Kp, Kp + 1.0)], dtype=np.float64)
 
