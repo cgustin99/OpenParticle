@@ -13,7 +13,7 @@ Lambdap = 0.5 * gamma0.dot(gammap)
 
 
 def gamma_slash_minus_m(q, m):
-    return gammap * (m**2 / q) + gammam * q - m * np.eye(2)
+    return 0.5 * gammap * (m**2 / q) + 0.5 * gammam * q - m * np.eye(2)
 
 
 # discretized lightfront momentum
