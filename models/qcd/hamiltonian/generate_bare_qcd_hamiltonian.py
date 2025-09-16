@@ -111,7 +111,7 @@ idxs_t5 = np.block([[nonzero_idxs5[i]] for i in range(len(nonzero_idxs5))]).T
 del T5
 
 start_T6 = time.time()
-T6 = gluon_legs_term_tensor(K=K, Kp=Kp, g=g, mg=mg)
+T6 = gluon_legs_term_tensor(s=0, K=K, Kp=Kp, g=g, mg=mg)
 end_T6 = time.time()
 print("T6 time:", end_T6 - start_T6)
 nonzero_idxs6 = T6.nonzero()
@@ -120,7 +120,7 @@ idxs_t6 = np.block([[nonzero_idxs6[i]] for i in range(len(nonzero_idxs6))]).T
 del T6
 
 start_T7 = time.time()
-T7 = quark_legs_term_tensor(K=K, Kp=Kp, g=g, mg=mg, mq=mq)
+T7 = quark_legs_term_tensor(s=0, K=K, Kp=Kp, g=g, mg=mg)
 end_T7 = time.time()
 print("T7 time:", end_T7 - start_T7)
 nonzero_idxs7 = T7.nonzero()
@@ -129,7 +129,7 @@ idxs_t7 = np.block([[nonzero_idxs7[i]] for i in range(len(nonzero_idxs7))]).T
 del T7
 
 start_T8 = time.time()
-T8 = mixed_legs_term_tensor(K=K, Kp=Kp, g=g, mg=mg, mq=mq)
+T8 = gluon_exchange_mixed_legs_term_tensor(s=0, K=K, Kp=Kp, g=g, mg=mg, mq=mq)
 end_T8 = time.time()
 print("T8 time:", end_T8 - start_T8)
 nonzero_idxs8 = T8.nonzero()
@@ -138,7 +138,7 @@ idxs_t8 = np.block([[nonzero_idxs8[i]] for i in range(len(nonzero_idxs8))]).T
 del T8
 
 start_T9 = time.time()
-T9 = quark_exch_term_tensor(K=K, Kp=Kp, g=g, mq=mg)
+T9 = quark_exchange_mixed_legs_term_tensor(s=0, K=K, Kp=Kp, g=g, mq=mg)
 end_T9 = time.time()
 print("T9 time:", end_T9 - start_T9)
 nonzero_idxs9 = T9.nonzero()

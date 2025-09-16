@@ -7,6 +7,7 @@ import argparse
 
 ### terminal input
 parser = argparse.ArgumentParser()
+parser.add_argument("-s", "--scale", type=float, help="rgpep scale")
 parser.add_argument("-K", "--res", type=float, help="cut-off resolution")
 parser.add_argument("-Kp", "--res_perp", type=float, help="cut-off resolution perp")
 parser.add_argument("-mq", "--massq", type=float, help="quark mass")
@@ -25,10 +26,14 @@ from color_algebra import *
 from free_hamiltonian import *
 from openparticle.full_dlcq import *
 
+from type_3_contractions import *
+from type_1_contractions import *
+from mixed_contractions import *
+
 end = time.time()
 print("Time to complile Hamiltonian tensor code:", end - beginning)
 
-
+s = args.s
 K = args.res
 Kp = args.res_perp
 mq = args.massq
@@ -66,7 +71,7 @@ filesave_path_hamiltonian = os.path.join(data_dir, filename_hamiltonian)
 
 
 start_T1 = time.time()
-T1 = free_gluon_hamiltonian_tensor(K=K, Kp=Kp, mg=mg)
+T1 = effective_free_gluon_hamiltonian_tensor(s=s, K=K, Kp=Kp, mg=mg, mq=mq)
 end_T1 = time.time()
 print("T1 time:", end_T1 - start_T1)
 nonzero_idxs1 = T1.nonzero()
@@ -75,7 +80,7 @@ idxs_t1 = np.block([[nonzero_idxs1[i]] for i in range(len(nonzero_idxs1))]).T
 del T1
 
 start_T2 = time.time()
-T2 = free_quark_hamiltonian_tensor(K=K, Kp=Kp, mq=mq)
+T2 = effective_free_quark_hamiltonian_tensor(s=s, K=K, Kp=Kp, mq=mq, mg=mg)
 end_T2 = time.time()
 print("T2 time:", end_T2 - start_T2)
 nonzero_idxs2 = T2.nonzero()
@@ -84,7 +89,7 @@ idxs_t2 = np.block([[nonzero_idxs2[i]] for i in range(len(nonzero_idxs2))]).T
 del T2
 
 start_T3 = time.time()
-T3 = quark_gluon_vertex_term_tensor(K=K, Kp=Kp, g=g, mq=mq)
+T3 = quark_gluon_vertex_term_tensor(s=s, K=K, Kp=Kp, g=g, mq=mq, mg=mg)
 end_T3 = time.time()
 print("T3 time:", end_T3 - start_T3)
 nonzero_idxs3 = T3.nonzero()
@@ -93,7 +98,7 @@ idxs_t3 = np.block([[nonzero_idxs3[i]] for i in range(len(nonzero_idxs3))]).T
 del T3
 
 start_T4 = time.time()
-T4 = gluon_3pt_vertex_term_tensor(K=K, Kp=Kp, g=g)
+T4 = gluon_3pt_vertex_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
 end_T4 = time.time()
 print("T4 time:", end_T4 - start_T4)
 nonzero_idxs4 = T4.nonzero()
@@ -102,7 +107,7 @@ idxs_t4 = np.block([[nonzero_idxs4[i]] for i in range(len(nonzero_idxs4))]).T
 del T4
 
 start_T5 = time.time()
-T5 = gluon_4pt_vertex_term_tensor(K=K, Kp=Kp, g=g)
+T5 = gluon_4pt_vertex_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
 end_T5 = time.time()
 print("T5 time:", end_T5 - start_T5)
 nonzero_idxs5 = T5.nonzero()
@@ -110,8 +115,10 @@ nonzero_values5 = T5[nonzero_idxs5]
 idxs_t5 = np.block([[nonzero_idxs5[i]] for i in range(len(nonzero_idxs5))]).T
 del T5
 
+# gluon legs
+
 start_T6 = time.time()
-T6 = gluon_legs_term_tensor(K=K, Kp=Kp, g=g, mg=mg)
+T6 = gluon_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
 end_T6 = time.time()
 print("T6 time:", end_T6 - start_T6)
 nonzero_idxs6 = T6.nonzero()
@@ -120,16 +127,18 @@ idxs_t6 = np.block([[nonzero_idxs6[i]] for i in range(len(nonzero_idxs6))]).T
 del T6
 
 start_T7 = time.time()
-T7 = quark_legs_term_tensor(K=K, Kp=Kp, g=g, mg=mg, mq=mq)
+T7 = effective_gluon_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
 end_T7 = time.time()
 print("T7 time:", end_T7 - start_T7)
 nonzero_idxs7 = T7.nonzero()
-nonzero_values7 = T7[nonzero_idxs7]
-idxs_t7 = np.block([[nonzero_idxs7[i]] for i in range(len(nonzero_idxs7))]).T
+nonzero_values7 = T7[nonzero_idxs6]
+idxs_t7 = np.block([[nonzero_idxs6[i]] for i in range(len(nonzero_idxs7))]).T
 del T7
 
+# quark legs
+
 start_T8 = time.time()
-T8 = mixed_legs_term_tensor(K=K, Kp=Kp, g=g, mg=mg, mq=mq)
+T8 = quark_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
 end_T8 = time.time()
 print("T8 time:", end_T8 - start_T8)
 nonzero_idxs8 = T8.nonzero()
@@ -138,7 +147,7 @@ idxs_t8 = np.block([[nonzero_idxs8[i]] for i in range(len(nonzero_idxs8))]).T
 del T8
 
 start_T9 = time.time()
-T9 = quark_exch_term_tensor(K=K, Kp=Kp, g=g, mq=mg)
+T9 = effective_quark_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
 end_T9 = time.time()
 print("T9 time:", end_T9 - start_T9)
 nonzero_idxs9 = T9.nonzero()
@@ -146,92 +155,164 @@ nonzero_values9 = T9[nonzero_idxs9]
 idxs_t9 = np.block([[nonzero_idxs9[i]] for i in range(len(nonzero_idxs9))]).T
 del T9
 
+# mixed legs gluon exchange
+
+start_T10 = time.time()
+T10 = gluon_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+end_T10 = time.time()
+print("T10 time:", end_T10 - start_T10)
+nonzero_idxs10 = T10.nonzero()
+nonzero_values10 = T10[nonzero_idxs10]
+idxs_t10 = np.block([[nonzero_idxs10[i]] for i in range(len(nonzero_idxs10))]).T
+del T10
+
+start_T11 = time.time()
+T11 = effective_gluon_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+end_T11 = time.time()
+print("T11 time:", end_T11 - start_T11)
+nonzero_idxs11 = T11.nonzero()
+nonzero_values11 = T11[nonzero_idxs11]
+idxs_t11 = np.block([[nonzero_idxs11[i]] for i in range(len(nonzero_idxs11))]).T
+del T11
+
+
+# mixed legs quark exchange
+
+start_T12 = time.time()
+T12 = quark_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+end_T12 = time.time()
+print("T12 time:", end_T12 - start_T12)
+nonzero_idxs12 = T12.nonzero()
+nonzero_values12 = T12[nonzero_idxs12]
+idxs_t12 = np.block([[nonzero_idxs12[i]] for i in range(len(nonzero_idxs12))]).T
+del T12
+
+start_T13 = time.time()
+T13 = effective_quark_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+end_T13 = time.time()
+print("T13 time:", end_T13 - start_T13)
+nonzero_idxs13 = T13.nonzero()
+nonzero_values13 = T13[nonzero_idxs13]
+idxs_t13 = np.block([[nonzero_idxs13[i]] for i in range(len(nonzero_idxs13))]).T
+del T13
 
 print(f"saving file at:{filesave_path_tensor_form}")
 # Create HDF5 file and add groups
 with h5py.File(filesave_path_tensor_form, "w") as f:
     # Create groups
-    group1 = f.create_group("free_gluon")
+    group1 = f.create_group("effective_free_gluon")
     group1.attrs["description"] = (
-        "This contains Hamiltonian elements and q nos for free gluon term"
+        "This contains Hamiltonian elements and q nos for effective free gluon term"
     )
     dset1 = group1.create_dataset("idxs_t", data=idxs_t1)
     dset2 = group1.create_dataset("nonzero_values", data=nonzero_values1)
 
     # Create groups
-    group2 = f.create_group("free_quark")
+    group2 = f.create_group("effective_free_quark")
     group2.attrs["description"] = (
-        "This contains Hamiltonian elements and q nos for free quark term"
+        "This contains Hamiltonian elements and q nos for effective free quark term"
     )
     dset3 = group2.create_dataset("idxs_t", data=idxs_t2)
     dset4 = group2.create_dataset("nonzero_values", data=nonzero_values2)
 
     # Create groups
-    group3 = f.create_group("quark_gluon_interaction")
+    group3 = f.create_group("effective_quark_gluon_interaction")
     group3.attrs["description"] = (
-        "This contains Hamiltonian elements and q nos for quark gluon vertex"
+        "This contains Hamiltonian elements and q nos for effective quark gluon vertex"
     )
     dset5 = group3.create_dataset("idxs_t", data=idxs_t3)
     dset6 = group3.create_dataset("nonzero_values", data=nonzero_values3)
 
     # Create groups
-    group4 = f.create_group("ggg_interaction")
+    group4 = f.create_group("effective_ggg_interaction")
     group4.attrs["description"] = (
-        "This contains Hamiltonian elements and q nos for 3 gluon vertex"
+        "This contains Hamiltonian elements and q nos for effective 3 gluon vertex"
     )
     dset7 = group4.create_dataset("idxs_t", data=idxs_t4)
     dset8 = group4.create_dataset("nonzero_values", data=nonzero_values4)
 
     # Create groups
-    group5 = f.create_group("gggg_interaction")
+    group5 = f.create_group("effective_gggg_interaction")
     group5.attrs["description"] = (
-        "This contains Hamiltonian elements and q nos for 4 gluon vertex"
+        "This contains Hamiltonian elements and q nos for effective 4 gluon vertex"
     )
     dset9 = group5.create_dataset("idxs_t", data=idxs_t5)
     dset10 = group5.create_dataset("nonzero_values", data=nonzero_values5)
 
     # Create groups
-    group6 = f.create_group("gggg_inst_interaction")
+    group6 = f.create_group("effective_gggg_inst_interaction")
     group6.attrs["description"] = (
-        "This contains Hamiltonian elements and q nos for 4 gluon inst. vertex"
+        "This contains Hamiltonian elements and q nos for effective 4 gluon inst. vertex"
     )
     dset11 = group6.create_dataset("idxs_t", data=idxs_t6)
     dset12 = group6.create_dataset("nonzero_values", data=nonzero_values6)
 
     # Create groups
-    group7 = f.create_group("qqqq_inst_interaction")
+    group7 = f.create_group("effective_gggg_cont_interaction")
     group7.attrs["description"] = (
-        "This contains Hamiltonian elements and q nos for 4 quark inst. vertex"
+        "This contains Hamiltonian elements and q nos for effective 4 gluon cont. vertex"
     )
-    dset13 = group7.create_dataset("idxs_t", data=idxs_t7)
-    dset14 = group7.create_dataset("nonzero_values", data=nonzero_values7)
+    dset13 = group6.create_dataset("idxs_t", data=idxs_t7)
+    dset14 = group6.create_dataset("nonzero_values", data=nonzero_values7)
 
     # Create groups
-    group8 = f.create_group("mixed_inst_interaction")
+    group8 = f.create_group("effective_qqqq_inst_interaction")
     group8.attrs["description"] = (
-        "This contains Hamiltonian elements and q nos for mixed inst. vertex"
+        "This contains Hamiltonian elements and q nos for effective 4 quark inst. vertex"
     )
     dset15 = group8.create_dataset("idxs_t", data=idxs_t8)
     dset16 = group8.create_dataset("nonzero_values", data=nonzero_values8)
 
     # Create groups
-    group9 = f.create_group("quark_inst_interaction")
+    group9 = f.create_group("effective_qqqq_cont_interaction")
     group9.attrs["description"] = (
-        "This contains Hamiltonian elements and q nos for quark inst. vertex"
+        "This contains Hamiltonian elements and q nos for effective 4 quark cont. vertex"
     )
     dset17 = group9.create_dataset("idxs_t", data=idxs_t9)
     dset18 = group9.create_dataset("nonzero_values", data=nonzero_values9)
 
-    # Add attributes (metadata)
-    group10 = f.create_group("H-params")
-    group10.attrs["description"] = "This contains parameters for H setup"
+    # Create groups
+    group10 = f.create_group("effective_mixed_inst_interaction")
+    group10.attrs["description"] = (
+        "This contains Hamiltonian elements and q nos for effective mixed inst. vertex"
+    )
+    dset19 = group10.create_dataset("idxs_t", data=idxs_t10)
+    dset20 = group10.create_dataset("nonzero_values", data=nonzero_values10)
 
-    dset19 = group10.create_dataset("K", data=K)
-    dset20 = group10.create_dataset("Kperp", data=Kp)
-    dset21 = group10.create_dataset("mg", data=mg)
-    dset22 = group10.create_dataset("mq", data=mq)
-    dset23 = group10.create_dataset("g", data=g)
-    dset24 = group10.create_dataset("runtime", data=end_T9 - start_T1)
+    # Create groups
+    group11 = f.create_group("effective_mixed_cont_interaction")
+    group11.attrs["description"] = (
+        "This contains Hamiltonian elements and q nos for effective mixed cont. vertex"
+    )
+    dset21 = group11.create_dataset("idxs_t", data=idxs_t11)
+    dset22 = group11.create_dataset("nonzero_values", data=nonzero_values11)
+
+    # Create groups
+    group12 = f.create_group("effective_quark_inst_interaction")
+    group12.attrs["description"] = (
+        "This contains Hamiltonian elements and q nos for effective quark inst. vertex"
+    )
+    dset23 = group12.create_dataset("idxs_t", data=idxs_t12)
+    dset24 = group12.create_dataset("nonzero_values", data=nonzero_values12)
+
+    # Create groups
+    group13 = f.create_group("effective_quark_cont_interaction")
+    group13.attrs["description"] = (
+        "This contains Hamiltonian elements and q nos for effective quark cont. vertex"
+    )
+    dset25 = group13.create_dataset("idxs_t", data=idxs_t13)
+    dset26 = group13.create_dataset("nonzero_values", data=nonzero_values13)
+
+    # Add attributes (metadata)
+    group14 = f.create_group("H-params")
+    group14.attrs["description"] = "This contains parameters for H setup"
+
+    dset27 = group14.create_dataset("K", data=K)
+    dset28 = group14.create_dataset("Kperp", data=Kp)
+    dset29 = group14.create_dataset("mg", data=mg)
+    dset30 = group14.create_dataset("mq", data=mq)
+    dset31 = group14.create_dataset("g", data=g)
+    dset32 = group14.create_dataset("runtime", data=end_T9 - start_T1)
 
 
 # Get QCD Hamiltonian dictionary from nonzero tensor elements in T1->T9
@@ -542,7 +623,7 @@ fixed_qnums_gg_g_gg = np.vstack(
     ]
 )
 for i in range(len(nonzero_values6)):
-    coeff = nonzero_values6[i]
+    coeff = nonzero_values6[i] + nonzero_values7[i]
     qnums = idxs_t6[i]
 
     q1 = np.array(
@@ -650,9 +731,9 @@ fixed_qnums_qq_g_qq = np.vstack(
     ]
 )  # Can use same spin_arrays_gggg because spin_arrays_qqqq is the same
 
-for i in range(len(nonzero_values7)):
-    coeff = nonzero_values7[i]
-    qnums = idxs_t7[i]
+for i in range(len(nonzero_values8)):
+    coeff = nonzero_values8[i] + nonzero_values9[i]
+    qnums = idxs_t8[i]
 
     q1 = np.array(
         [
@@ -743,9 +824,9 @@ fixed_qnums_qqgg = np.vstack(
 
 qcd_hamiltonian_dictionary = {}
 
-for i in range(len(nonzero_values8)):
-    coeff = nonzero_values8[i]
-    qnums = idxs_t8[i]
+for i in range(len(nonzero_values10)):
+    coeff = nonzero_values10[i] + nonzero_values11[i]
+    qnums = idxs_t10[i]
 
     q1 = np.array(
         [
@@ -864,9 +945,9 @@ fixed_qnums_qgqg = np.vstack(
 
 qcd_hamiltonian_dictionary = {}
 
-for i in range(len(nonzero_values9)):
-    coeff = nonzero_values9[i]
-    qnums = idxs_t9[i]
+for i in range(len(nonzero_values12)):
+    coeff = nonzero_values12[i] + nonzero_values13[i]
+    qnums = idxs_t12[i]
 
     q1 = np.array(
         [
