@@ -3,7 +3,8 @@ from openparticle.full_dlcq import *
 from color_algebra import T, f
 from effective_mass import *
 import numpy as np
-import numba as nb
+
+# import numba as nb
 
 Nc = 3
 
@@ -109,14 +110,14 @@ def free_gluon_hamiltonian_tensor(K: float, Kp: float, mg: float):
     return free_gluon_tensor
 
 
-@nb.njit(
-    ## output types
-    nb.complex128[:, :, :, :, :]
-    ##input types
-    (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
-    ## other options
-    fastmath=True,
-)
+# @nb.njit(
+#     ## output types
+#     nb.complex128[:, :, :, :, :]
+#     ##input types
+#     (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
+#     ## other options
+#     fastmath=True,
+# )
 def effective_free_quark_hamiltonian_tensor(
     s: float, K: float, Kp: float, mq: float, mg: float
 ):
@@ -145,7 +146,7 @@ def effective_free_quark_hamiltonian_tensor(
                     for qperp2 in transverse_q:
                         q = np.array([qplus, qperp1, qperp2], dtype=np.complex128)
                         coeff = (
-                            effective_quark_mass_sq(s=s, q=q[0], mq=mq, mg=mg)
+                            effective_quark_mass_sq(s=s, q=qplus, mq=mq, mg=mg)
                             + q[1:3].dot(q[1:3])
                         ) / q[0]
 
@@ -166,14 +167,14 @@ def effective_free_quark_hamiltonian_tensor(
     return free_quark_tensor
 
 
-@nb.njit(
-    ## output types
-    nb.complex128[:, :, :, :, :]
-    ##input types
-    (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
-    ## other options
-    fastmath=True,
-)
+# @nb.njit(
+#     ## output types
+#     nb.complex128[:, :, :, :, :]
+#     ##input types
+#     (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
+#     ## other options
+#     fastmath=True,
+# )
 def effective_free_gluon_hamiltonian_tensor(
     s: float, K: float, Kp: float, mg: float, mq: float
 ):
@@ -199,7 +200,7 @@ def effective_free_gluon_hamiltonian_tensor(
                     for qperp2 in transverse_q:
                         q = np.array([qplus, qperp1, qperp2], dtype=np.complex128)
                         coeff = (
-                            effective_gluon_mass_sq(s=s, q=q, mq=mq, mg=mg)
+                            effective_gluon_mass_sq(s=s, q=qplus, mq=mq, mg=mg)
                             + q[1:3].dot(q[1:3])
                         ) / q[0]
 

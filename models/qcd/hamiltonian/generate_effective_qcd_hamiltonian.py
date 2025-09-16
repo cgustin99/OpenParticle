@@ -33,7 +33,7 @@ from mixed_contractions import *
 end = time.time()
 print("Time to complile Hamiltonian tensor code:", end - beginning)
 
-s = args.s
+s = args.scale
 K = args.res
 Kp = args.res_perp
 mq = args.massq
@@ -138,7 +138,7 @@ del T7
 # quark legs
 
 start_T8 = time.time()
-T8 = quark_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+T8 = quark_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg, mq=mq)
 end_T8 = time.time()
 print("T8 time:", end_T8 - start_T8)
 nonzero_idxs8 = T8.nonzero()
@@ -147,7 +147,7 @@ idxs_t8 = np.block([[nonzero_idxs8[i]] for i in range(len(nonzero_idxs8))]).T
 del T8
 
 start_T9 = time.time()
-T9 = effective_quark_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+T9 = effective_quark_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg, mq=mq)
 end_T9 = time.time()
 print("T9 time:", end_T9 - start_T9)
 nonzero_idxs9 = T9.nonzero()
@@ -158,7 +158,7 @@ del T9
 # mixed legs gluon exchange
 
 start_T10 = time.time()
-T10 = gluon_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+T10 = gluon_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg, mq=mq)
 end_T10 = time.time()
 print("T10 time:", end_T10 - start_T10)
 nonzero_idxs10 = T10.nonzero()
@@ -167,7 +167,9 @@ idxs_t10 = np.block([[nonzero_idxs10[i]] for i in range(len(nonzero_idxs10))]).T
 del T10
 
 start_T11 = time.time()
-T11 = effective_gluon_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+T11 = effective_gluon_exchange_mixed_legs_term_tensor(
+    s=s, K=K, Kp=Kp, g=g, mg=mg, mq=mq
+)
 end_T11 = time.time()
 print("T11 time:", end_T11 - start_T11)
 nonzero_idxs11 = T11.nonzero()
@@ -179,7 +181,7 @@ del T11
 # mixed legs quark exchange
 
 start_T12 = time.time()
-T12 = quark_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+T12 = quark_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg, mq=mq)
 end_T12 = time.time()
 print("T12 time:", end_T12 - start_T12)
 nonzero_idxs12 = T12.nonzero()
@@ -188,7 +190,9 @@ idxs_t12 = np.block([[nonzero_idxs12[i]] for i in range(len(nonzero_idxs12))]).T
 del T12
 
 start_T13 = time.time()
-T13 = effective_quark_exchange_mixed_legs_term_tensor(s=s, K=K, Kp=Kp, g=g, mg=mg)
+T13 = effective_quark_exchange_mixed_legs_term_tensor(
+    s=s, K=K, Kp=Kp, g=g, mg=mg, mq=mq
+)
 end_T13 = time.time()
 print("T13 time:", end_T13 - start_T13)
 nonzero_idxs13 = T13.nonzero()
@@ -252,8 +256,8 @@ with h5py.File(filesave_path_tensor_form, "w") as f:
     group7.attrs["description"] = (
         "This contains Hamiltonian elements and q nos for effective 4 gluon cont. vertex"
     )
-    dset13 = group6.create_dataset("idxs_t", data=idxs_t7)
-    dset14 = group6.create_dataset("nonzero_values", data=nonzero_values7)
+    dset13 = group7.create_dataset("idxs_t", data=idxs_t7)
+    dset14 = group7.create_dataset("nonzero_values", data=nonzero_values7)
 
     # Create groups
     group8 = f.create_group("effective_qqqq_inst_interaction")
@@ -825,7 +829,7 @@ fixed_qnums_qqgg = np.vstack(
 qcd_hamiltonian_dictionary = {}
 
 for i in range(len(nonzero_values10)):
-    coeff = nonzero_values10[i] + nonzero_values11[i]
+    coeff = nonzero_values10[i]
     qnums = idxs_t10[i]
 
     q1 = np.array(
@@ -886,9 +890,71 @@ for i in range(len(nonzero_values10)):
         qcd_hamiltonian_dictionary.get(po_string, 0) + coeff
     )
 end = time.time()
-print("Inst. gluon exchange terms: ", end - start)
+for i in range(len(nonzero_values11)):
+    coeff = nonzero_values11[i]
+    qnums = idxs_t10[i]
 
-print("Calculating inst. quark exchange...")
+    q1 = np.array(
+        [
+            fermion_longitudinal_q[qnums[0]],
+            transverse_q[qnums[1]],
+            transverse_q[qnums[2]],
+        ],
+        dtype=np.complex128,
+    )
+    q2 = np.array(
+        [
+            fermion_longitudinal_q[qnums[3]],
+            transverse_q[qnums[4]],
+            transverse_q[qnums[5]],
+        ],
+        dtype=np.complex128,
+    )
+    q3 = np.array(
+        [
+            boson_longitudinal_q[qnums[6]],
+            transverse_q[qnums[7]],
+            transverse_q[qnums[8]],
+        ],
+        dtype=np.complex128,
+    )
+    q4 = -1 * (q1 + q2 + q3)
+    fixed = fixed_qnums_qqgg[qnums[-1]]
+    a, c1, c2, b, c = fixed[2], fixed[0], fixed[1], fixed[3], fixed[4]
+    h1, h2, p3, p4 = fixed[5], fixed[6], fixed[7], fixed[8]
+    po_string = (
+        (
+            heaviside(-q1[0])
+            * ("b" + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1, h=h1)) + "^ ")
+            + heaviside(q1[0])
+            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1, h=h1)) + " ")
+        )
+        + (
+            heaviside(q2[0])
+            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c2, h=h2)) + " ")
+            + heaviside(-q2[0])
+            * ("d" + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c2, h=h2)) + "^ ")
+        )
+        + (
+            heaviside(q3[0])
+            * ("a" + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=b, pol=p3)) + " ")
+            + heaviside(-q3[0])
+            * ("a" + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=b, pol=p3)) + "^ ")
+        )
+        + (
+            heaviside(q4[0])
+            * ("a" + str(gluon_quantum_numbers(k=q4, K=K, Kp=Kp, a=c, pol=p4)) + " ")
+            + heaviside(-q4[0])
+            * ("a" + str(gluon_quantum_numbers(k=-q4, K=K, Kp=Kp, a=c, pol=p4)) + "^ ")
+        )
+    )
+    qcd_hamiltonian_dictionary[po_string] = (
+        qcd_hamiltonian_dictionary.get(po_string, 0) + coeff
+    )
+end = time.time()
+print("Inst. + cont. gluon exchange terms: ", end - start)
+
+print("Calculating inst. + cont. quark exchange...")
 start = time.time()
 
 # Inst. quark exchange tensor -> qcd H. Dict
@@ -946,7 +1012,68 @@ fixed_qnums_qgqg = np.vstack(
 qcd_hamiltonian_dictionary = {}
 
 for i in range(len(nonzero_values12)):
-    coeff = nonzero_values12[i] + nonzero_values13[i]
+    coeff = nonzero_values12[i]
+    qnums = idxs_t12[i]
+
+    q1 = np.array(
+        [
+            fermion_longitudinal_q[qnums[0]],
+            transverse_q[qnums[1]],
+            transverse_q[qnums[2]],
+        ],
+        dtype=np.complex128,
+    )
+    q2 = np.array(
+        [
+            fermion_longitudinal_q[qnums[3]],
+            transverse_q[qnums[4]],
+            transverse_q[qnums[5]],
+        ],
+        dtype=np.complex128,
+    )
+    q3 = np.array(
+        [
+            boson_longitudinal_q[qnums[6]],
+            transverse_q[qnums[7]],
+            transverse_q[qnums[8]],
+        ],
+        dtype=np.complex128,
+    )
+    q4 = -1 * (q1 + q2 + q3)
+    fixed = fixed_qnums_qgqg[qnums[-1]]
+    a, c1, c4, b = fixed[2], fixed[0], fixed[1], fixed[3]
+    h1, h4, p2, p3 = fixed[4], fixed[7], fixed[5], fixed[6]
+    po_string = (
+        (
+            heaviside(-q1[0])
+            * ("b" + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1, h=h1)) + "^ ")
+            + heaviside(q1[0])
+            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1, h=h1)) + " ")
+        )
+        + (
+            heaviside(q2[0])
+            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c4, h=h4)) + " ")
+            + heaviside(-q2[0])
+            * ("d" + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c4, h=h4)) + "^ ")
+        )
+        + (
+            heaviside(q3[0])
+            * ("a" + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=a, pol=p2)) + " ")
+            + heaviside(-q3[0])
+            * ("a" + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=a, pol=p2)) + "^ ")
+        )
+        + (
+            heaviside(q4[0])
+            * ("a" + str(gluon_quantum_numbers(k=q4, K=K, Kp=Kp, a=b, pol=p3)) + " ")
+            + heaviside(-q4[0])
+            * ("a" + str(gluon_quantum_numbers(k=-q4, K=K, Kp=Kp, a=b, pol=p3)) + "^ ")
+        )
+    )
+    qcd_hamiltonian_dictionary[po_string] = (
+        qcd_hamiltonian_dictionary.get(po_string, 0) + coeff
+    )
+for i in range(len(nonzero_values13)):
+    coeff = nonzero_values13[i]
     qnums = idxs_t12[i]
 
     q1 = np.array(
@@ -1007,7 +1134,7 @@ for i in range(len(nonzero_values12)):
         qcd_hamiltonian_dictionary.get(po_string, 0) + coeff
     )
 end = time.time()
-print("Inst. quark exchange runtime: ", end - start)
+print("Inst. + cont. quark exchange runtime: ", end - start)
 
 end_dict = time.time()
 

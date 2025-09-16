@@ -59,12 +59,14 @@ fixed_qnums = np.vstack(
 
 @nb.njit(
     nb.complex128[:, :, :, :, :, :, :, :, :, :](
-        nb.float64, nb.float64, nb.float64, nb.float64
+        nb.float64, nb.float64, nb.float64, nb.float64, nb.float64, nb.float64
     ),
     fastmath=True,
     parallel=True,
 )
-def quark_exch_term_tensor(K: float, Kp: float, g: float, mq: float):
+def quark_exchange_mixed_legs_term_tensor(
+    s: float, K: float, Kp: float, g: float, mq: float, mg: float
+):
     boson_lim = int(K)
     fermion_lim = K - ((K - 0.5) % 1)
     fermion_longitudinal_q = np.array(
@@ -157,6 +159,18 @@ def quark_exch_term_tensor(K: float, Kp: float, g: float, mq: float):
                                                 and np.abs(q4[1]) <= Kp
                                                 and np.abs(q4[2]) <= Kp
                                             ):  # make sure k4 < K,Kp
+                                                q1minus = (
+                                                    mq**2 + q1[1:3].dot(q1[1:3])
+                                                ) / q1[0]
+                                                q2minus = (
+                                                    mg**2 + q2[1:3].dot(q2[1:3])
+                                                ) / q2[0]
+                                                q3minus = (
+                                                    mg**2 + q3[1:3].dot(q3[1:3])
+                                                ) / q3[0]
+                                                q4minus = (
+                                                    mq**2 + q4[1:3].dot(q4[1:3])
+                                                ) / q4[0]
 
                                                 psi1 = heaviside(-q1[0]) * udag(
                                                     p=-q1, m=mq, h=helicity1
@@ -221,6 +235,16 @@ def quark_exch_term_tensor(K: float, Kp: float, g: float, mq: float):
                                                         * np.abs(q2[0])
                                                         * np.abs(q3[0])
                                                         * np.abs(q4[0])
+                                                    )
+                                                    * np.exp(
+                                                        -s
+                                                        * (
+                                                            q1minus
+                                                            + q2minus
+                                                            + q3minus
+                                                            + q4minus
+                                                        )
+                                                        ** 2
                                                     )
                                                 )
 

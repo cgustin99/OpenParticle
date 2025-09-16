@@ -49,12 +49,12 @@ fixed_qnums = np.vstack(
     ## output types
     nb.complex128[:, :, :, :, :, :, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64),
+    (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
     ## other options
     fastmath=True,
     parallel=True,
 )
-def gluon_4pt_vertex_term_tensor(K: float, Kp: float, g: float):
+def gluon_4pt_vertex_term_tensor(s: float, K: float, Kp: float, g: float, mg: float):
     """
     Indices 0, 3, 6 correspond respectively to q1+, q2+, q3+.
     """
@@ -143,11 +143,24 @@ def gluon_4pt_vertex_term_tensor(K: float, Kp: float, g: float):
                                             q4 = -1 * (
                                                 q3 + q2 + q1
                                             )  # q4 is assigned by delta
+
                                             if (
                                                 0 < np.abs(q4[0]) <= K
                                                 and np.abs(q4[1]) <= Kp
                                                 and np.abs(q4[2]) <= Kp
                                             ):  # make sure k4 < K,Kp
+                                                q1minus = (
+                                                    mg**2 + q1[1:3].dot(q1[1:3])
+                                                ) / q1[0]
+                                                q2minus = (
+                                                    mg**2 + q2[1:3].dot(q2[1:3])
+                                                ) / q2[0]
+                                                q3minus = (
+                                                    mg**2 + q3[1:3].dot(q3[1:3])
+                                                ) / q3[0]
+                                                q4minus = (
+                                                    mg**2 + q4[1:3].dot(q4[1:3])
+                                                ) / q4[0]
                                                 Aq1 = (
                                                     heaviside(q1[0])
                                                     * pol_vec(
@@ -216,6 +229,16 @@ def gluon_4pt_vertex_term_tensor(K: float, Kp: float, g: float):
                                                         * np.abs(q2[0])
                                                         * np.abs(q3[0])
                                                         * np.abs(q4[0])
+                                                    )
+                                                    * np.exp(
+                                                        -s
+                                                        * (
+                                                            q1minus
+                                                            + q2minus
+                                                            + q3minus
+                                                            + q4minus
+                                                        )
+                                                        ** 2
                                                     )
                                                 )
                                                 if coeff != 0:

@@ -58,7 +58,9 @@ fixed_qnums = np.vstack(
     fastmath=True,
     parallel=True,
 )
-def gluon_legs_term_tensor(K: float, Kp: float, t: float, g: float, mg: float = 1):
+def effective_gluon_legs_term_tensor(
+    K: float, Kp: float, s: float, g: float, mg: float = 1
+):
 
     boson_lim = int(K)
     boson_longitudinal_q = np.array(
@@ -348,7 +350,7 @@ def gluon_legs_term_tensor(K: float, Kp: float, t: float, g: float, mg: float = 
                                                         )  # From fields
                                                     )
                                                     * rgpep_factor_second_order(
-                                                        Q, Qp, t
+                                                        Q, Qp, s
                                                     )
                                                 )
                                                 if coeff != 0:

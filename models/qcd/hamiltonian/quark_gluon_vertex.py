@@ -43,12 +43,14 @@ fixed_qnums = np.vstack(
     ## output types
     nb.complex128[:, :, :, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.float64),
+    (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
     ## other options
     fastmath=True,
     parallel=True,
 )
-def quark_gluon_vertex_term_tensor(K: float, Kp: float, g: float, mq: float):
+def quark_gluon_vertex_term_tensor(
+    s: float, K: float, Kp: float, g: float, mq: float, mg: float
+):
     """
     Indices 0, 3 correspond respectively to q1+, q2+.
     """
@@ -107,6 +109,11 @@ def quark_gluon_vertex_term_tensor(K: float, Kp: float, g: float, mq: float):
                                     dtype=np.complex128,
                                 )
                                 q3 = -1 * (q2 + q1)  # q3 is assigned by delta
+
+                                q1minus = (mq**2 + q1[1:3].dot(q1[1:3])) / q1[0]
+                                q2minus = (mq**2 + q2[1:3].dot(q2[1:3])) / q2[0]
+                                q3minus = (mg**2 + q3[1:3].dot(q3[1:3])) / q3[0]
+
                                 if (
                                     0 < np.abs(q3[0]) <= K
                                     and np.abs(q3[1]) <= Kp
@@ -144,6 +151,9 @@ def quark_gluon_vertex_term_tensor(K: float, Kp: float, g: float, mq: float):
                                         g
                                         * T[gluon_color][color1][color2]
                                         * (psi_dag.dot(gamma0.dot(A.dot(psi))))
+                                        * np.exp(
+                                            -s * (q1minus + q2minus + q3minus) ** 2
+                                        )
                                     )
                                     if coeff != 0:
                                         q1plus_index = np.where(

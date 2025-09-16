@@ -137,10 +137,10 @@ fixed_qnums_qgqg = np.vstack(
     fastmath=True,
     parallel=True,
 )
-def gluon_exch_term_tensor(
+def effective_quark_legs_term_tensor(
     K: float,
     Kp: float,
-    t: float,
+    s: float,
     g: float,
     mq: float,
     mg: float,
@@ -315,7 +315,7 @@ def gluon_exch_term_tensor(
                                                         * np.abs(q2prime[0])
                                                     )
                                                     * rgpep_factor_second_order(
-                                                        Q, Qp, t
+                                                        Q, Qp, s
                                                     )
                                                 )
                                                 if coeff != 0:
@@ -376,10 +376,10 @@ def gluon_exch_term_tensor(
     fastmath=True,
     parallel=True,
 )
-def quark_exch_terms_tensor(
+def effective_quark_exchange_mixed_legs_term_tensor(
     K: float,
     Kp: float,
-    t: float,
+    s: float,
     g: float,
     mq: float,
     mg: float,
@@ -589,7 +589,7 @@ def quark_exch_terms_tensor(
                                                         * np.abs(q3prime[0])
                                                     )
                                                     * rgpep_factor_second_order(
-                                                        Q, Qp, t
+                                                        Q, Qp, s
                                                     )
                                                 )
 

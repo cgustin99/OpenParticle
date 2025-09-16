@@ -119,12 +119,12 @@ fixed_qnums_qqgg = np.vstack(
     ## output types
     nb.complex128[:, :, :, :, :, :, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.float64),
+    (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
     ## other options
     fastmath=True,
     parallel=True,
 )
-def gluon_legs_term_tensor(K: float, Kp: float, g: float, mg: float = 1):
+def gluon_legs_term_tensor(s: float, K: float, Kp: float, g: float, mg: float = 1):
     """
     Indices 0, 3, 6 correspond respectively to q1+, q2+, q3+.
     """
@@ -213,11 +213,24 @@ def gluon_legs_term_tensor(K: float, Kp: float, g: float, mg: float = 1):
                                             q4 = -1 * (
                                                 q3 + q2 + q1
                                             )  # q4 is assigned by delta
+
                                             if (
                                                 0 < np.abs(q4[0]) <= K
                                                 and np.abs(q4[1]) <= Kp
                                                 and np.abs(q4[2]) <= Kp
                                             ):  # make sure k4 < K,Kp
+                                                q1minus = (
+                                                    mg**2 + q1[1:3].dot(q1[1:3])
+                                                ) / q1[0]
+                                                q2minus = (
+                                                    mg**2 + q2[1:3].dot(q2[1:3])
+                                                ) / q2[0]
+                                                q3minus = (
+                                                    mg**2 + q3[1:3].dot(q3[1:3])
+                                                ) / q3[0]
+                                                q4minus = (
+                                                    mg**2 + q4[1:3].dot(q4[1:3])
+                                                ) / q4[0]
                                                 Aq1 = (
                                                     heaviside(q1[0])
                                                     * pol_vec(p=q1, pol=polarization1)[
@@ -276,6 +289,16 @@ def gluon_legs_term_tensor(K: float, Kp: float, g: float, mg: float = 1):
                                                             * np.abs(q4[0])
                                                         )
                                                     )
+                                                    * np.exp(
+                                                        -s
+                                                        * (
+                                                            q1minus
+                                                            + q2minus
+                                                            + q3minus
+                                                            + q4minus
+                                                        )
+                                                        ** 2
+                                                    )
                                                 )
                                                 if coeff != 0:
 
@@ -329,12 +352,13 @@ def gluon_legs_term_tensor(K: float, Kp: float, g: float, mg: float = 1):
     ## output types
     nb.complex128[:, :, :, :, :, :, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
+    (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
     ## other options
     fastmath=True,
     parallel=True,
 )
 def quark_legs_term_tensor(
+    s: float,
     K: float,
     Kp: float,
     g: float,
@@ -425,6 +449,18 @@ def quark_legs_term_tensor(
                                                 and np.abs(q4[1]) <= Kp
                                                 and np.abs(q4[2]) <= Kp
                                             ):  # make sure k4 < K,Kp
+                                                q1minus = (
+                                                    mq**2 + q1[1:3].dot(q1[1:3])
+                                                ) / q1[0]
+                                                q2minus = (
+                                                    mq**2 + q2[1:3].dot(q2[1:3])
+                                                ) / q2[0]
+                                                q3minus = (
+                                                    mq**2 + q3[1:3].dot(q3[1:3])
+                                                ) / q3[0]
+                                                q4minus = (
+                                                    mq**2 + q4[1:3].dot(q4[1:3])
+                                                ) / q4[0]
 
                                                 psi_1 = heaviside(-q1[0]) * udag(
                                                     p=-q1, m=mq, h=helicity1
@@ -466,6 +502,16 @@ def quark_legs_term_tensor(
                                                             * np.abs(q3[0])
                                                             * np.abs(q4[0])
                                                         )
+                                                    )
+                                                    * np.exp(
+                                                        -s
+                                                        * (
+                                                            q1minus
+                                                            + q2minus
+                                                            + q3minus
+                                                            + q4minus
+                                                        )
+                                                        ** 2
                                                     )
                                                 )
                                                 if coeff != 0:
@@ -519,12 +565,13 @@ def quark_legs_term_tensor(
     ## output types
     nb.complex128[:, :, :, :, :, :, :, :, :, :]
     ##input types
-    (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
+    (nb.float64, nb.float64, nb.float64, nb.float64, nb.float64, nb.float64),
     ## other options
     fastmath=True,
     parallel=True,
 )
-def mixed_legs_term_tensor(
+def gluon_exchange_mixed_legs_term_tensor(
+    s: float,
     K: float,
     Kp: float,
     g: float,
@@ -620,11 +667,26 @@ def mixed_legs_term_tensor(
                                             q4 = -1 * (
                                                 q3 + q2 + q1
                                             )  # q4 is assigned by delta
+
+                                            
+
                                             if (
                                                 0 < np.abs(q4[0]) <= K
                                                 and np.abs(q4[1]) <= Kp
                                                 and np.abs(q4[2]) <= Kp
                                             ):  # make sure k4 < K,Kp
+                                                q1minus = (
+                                                    mq**2 + q1[1:3].dot(q1[1:3])
+                                                ) / q1[0]
+                                                q2minus = (
+                                                    mq**2 + q2[1:3].dot(q2[1:3])
+                                                ) / q2[0]
+                                                q3minus = (
+                                                    mq**2 + q3[1:3].dot(q3[1:3])
+                                                ) / q3[0]
+                                                q4minus = (
+                                                    mq**2 + q4[1:3].dot(q4[1:3])
+                                                ) / q4[0]
                                                 psi_1 = heaviside(-q1[0]) * udag(
                                                     p=-q1, m=mq, h=helicity1
                                                 ) + heaviside(q1[0]) * vdag(
@@ -659,6 +721,16 @@ def mixed_legs_term_tensor(
                                                     * q4[0]
                                                     * 1
                                                     / (((q3[0] + q4[0])) ** 2 + mg**2)
+                                                    * np.exp(
+                                                        -s
+                                                        * (
+                                                            q1minus
+                                                            + q2minus
+                                                            + q3minus
+                                                            + q4minus
+                                                        )
+                                                        ** 2
+                                                    )
                                                 )
 
                                                 if coeff != 0:

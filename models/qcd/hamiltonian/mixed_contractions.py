@@ -57,10 +57,10 @@ fixed_qnums = np.vstack(
     fastmath=True,
     parallel=True,
 )
-def gluon_exch_term_tensor(
+def effective_gluon_exchange_mixed_legs_term_tensor(
     K: float,
     Kp: float,
-    t: float,
+    s: float,
     g: float,
     mq: float,
     mg: float,
@@ -318,7 +318,7 @@ def gluon_exch_term_tensor(
                                                         )  # From fields
                                                     )
                                                     * rgpep_factor_second_order(
-                                                        Q, Qp, t
+                                                        Q, Qp, s
                                                     )
                                                 )
                                                 if coeff != 0:
