@@ -19,6 +19,7 @@ gamma1 = np.block([[-1j * sigma2, zeros], [zeros, 1j * sigma2]]).astype(np.compl
 gamma2 = np.block([[-1j * sigma1, zeros], [zeros, 1j * sigma1]]).astype(np.complex128)
 
 gamma_plus = gamma0 + gamma3
+gamma_minus = gamma0 - gamma3
 
 
 @nb.njit
