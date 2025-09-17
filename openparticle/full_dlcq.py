@@ -7,6 +7,13 @@ warnings.filterwarnings("ignore")
 
 Nc = 3
 
+g_upper_indices = np.array(
+    [[0, 0.5, 0, 0], [0.5, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1]], dtype=np.float64
+)  # g^{\mu \nu}
+g_lower_indices = np.array(
+    [[0, 2, 0, 0], [2, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1]], dtype=np.float64
+)  # g_{\mu \nu}
+
 
 sigma1 = np.array([[0, 1], [1, 0]], dtype=np.complex128)
 sigma2 = np.array([[0, -1j], [1j, 0]], dtype=np.complex128)
@@ -23,6 +30,7 @@ gamma_plus = gamma0 + gamma3
 gamma_minus = gamma0 - gamma3
 
 gamma = np.array([gamma_plus, gamma_minus, gamma1, gamma2])
+gamma_lower = g_lower_indices * gamma
 
 
 @nb.njit
