@@ -30,7 +30,9 @@ gamma_plus = gamma0 + gamma3
 gamma_minus = gamma0 - gamma3
 
 gamma = np.array([gamma_plus, gamma_minus, gamma1, gamma2])
-gamma_lower = g_lower_indices * gamma
+gamma_lower = np.array(
+    [0.5 * gamma_minus, 0.5 * gamma_plus, gamma1, gamma2]
+)  # gamma_mu
 
 
 @nb.njit
