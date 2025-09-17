@@ -31,7 +31,7 @@ gamma_minus = gamma0 - gamma3
 
 gamma = np.array([gamma_plus, gamma_minus, gamma1, gamma2])
 gamma_lower = np.array(
-    [0.5 * gamma_minus, 0.5 * gamma_plus, gamma1, gamma2]
+    [0.5 * gamma_minus, 0.5 * gamma_plus, -1 * gamma1, -1 * gamma2]
 )  # gamma_mu
 
 
