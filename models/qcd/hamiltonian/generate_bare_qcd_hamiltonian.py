@@ -84,7 +84,7 @@ idxs_t2 = np.block([[nonzero_idxs2[i]] for i in range(len(nonzero_idxs2))]).T
 del T2
 
 start_T3 = time.time()
-T3 = quark_gluon_vertex_term_tensor(K=K, Kp=Kp, g=g, mq=mq)
+T3 = quark_gluon_vertex_term_tensor(s=0, K=K, Kp=Kp, g=g, mq=mq, mg=mg)
 end_T3 = time.time()
 print("T3 time:", end_T3 - start_T3)
 nonzero_idxs3 = T3.nonzero()
@@ -93,7 +93,7 @@ idxs_t3 = np.block([[nonzero_idxs3[i]] for i in range(len(nonzero_idxs3))]).T
 del T3
 
 start_T4 = time.time()
-T4 = gluon_3pt_vertex_term_tensor(K=K, Kp=Kp, g=g)
+T4 = gluon_3pt_vertex_term_tensor(s=0, K=K, Kp=Kp, g=g, mg=mg)
 end_T4 = time.time()
 print("T4 time:", end_T4 - start_T4)
 nonzero_idxs4 = T4.nonzero()
@@ -102,7 +102,7 @@ idxs_t4 = np.block([[nonzero_idxs4[i]] for i in range(len(nonzero_idxs4))]).T
 del T4
 
 start_T5 = time.time()
-T5 = gluon_4pt_vertex_term_tensor(K=K, Kp=Kp, g=g)
+T5 = gluon_4pt_vertex_term_tensor(s=0, K=K, Kp=Kp, g=g, mg=mg)
 end_T5 = time.time()
 print("T5 time:", end_T5 - start_T5)
 nonzero_idxs5 = T5.nonzero()
@@ -120,7 +120,7 @@ idxs_t6 = np.block([[nonzero_idxs6[i]] for i in range(len(nonzero_idxs6))]).T
 del T6
 
 start_T7 = time.time()
-T7 = quark_legs_term_tensor(s=0, K=K, Kp=Kp, g=g, mg=mg)
+T7 = quark_legs_term_tensor(s=0, K=K, Kp=Kp, g=g, mq=mq, mg=mg)
 end_T7 = time.time()
 print("T7 time:", end_T7 - start_T7)
 nonzero_idxs7 = T7.nonzero()
@@ -138,7 +138,7 @@ idxs_t8 = np.block([[nonzero_idxs8[i]] for i in range(len(nonzero_idxs8))]).T
 del T8
 
 start_T9 = time.time()
-T9 = quark_exchange_mixed_legs_term_tensor(s=0, K=K, Kp=Kp, g=g, mq=mg)
+T9 = quark_exchange_mixed_legs_term_tensor(s=0, K=K, Kp=Kp, g=g, mg=mg, mq=mg)
 end_T9 = time.time()
 print("T9 time:", end_T9 - start_T9)
 nonzero_idxs9 = T9.nonzero()
@@ -349,21 +349,33 @@ for i in range(len(nonzero_values3)):
     po_string = (
         (
             heaviside(-q1[0])
-            * ("b" + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1, h=h1)) + "^ ")
+            * (
+                "b"
+                + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1 + 1, h=h1))
+                + "^ "
+            )
             + heaviside(q1[0])
-            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1, h=h1)) + " ")
+            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1 + 1, h=h1)) + " ")
         )
         + (
             heaviside(q2[0])
-            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c2, h=h2)) + " ")
+            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c2 + 1, h=h2)) + " ")
             + heaviside(-q2[0])
-            * ("d" + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c2, h=h2)) + "^ ")
+            * (
+                "d"
+                + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c2 + 1, h=h2))
+                + "^ "
+            )
         )
         + (
             heaviside(q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=a, pol=p)) + " ")
+            * ("a" + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=a + 1, pol=p)) + " ")
             + heaviside(-q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=a, pol=p)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=a + 1, pol=p))
+                + "^ "
+            )
         )
     )
     qcd_hamiltonian_dictionary[po_string] = (
@@ -425,21 +437,45 @@ for i in range(len(nonzero_values4)):
     po_string = (
         (
             heaviside(q1[0])
-            * ("a" + str(gluon_quantum_numbers(k=q1, K=K, Kp=Kp, a=a, pol=p1)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q1, K=K, Kp=Kp, a=a + 1, pol=p1))
+                + " "
+            )
             + heaviside(-q1[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q1, K=K, Kp=Kp, a=a, pol=p1)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q1, K=K, Kp=Kp, a=a + 1, pol=p1))
+                + "^ "
+            )
         )
         + (
             heaviside(q2[0])
-            * ("a" + str(gluon_quantum_numbers(k=q2, K=K, Kp=Kp, a=b, pol=p2)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q2, K=K, Kp=Kp, a=b + 1, pol=p2))
+                + " "
+            )
             + heaviside(-q2[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q2, K=K, Kp=Kp, a=b, pol=p2)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q2, K=K, Kp=Kp, a=b + 1, pol=p2))
+                + "^ "
+            )
         )
         + (
             heaviside(q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=c, pol=p3)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=c + 1, pol=p3))
+                + " "
+            )
             + heaviside(-q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=c, pol=p3)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=c + 1, pol=p3))
+                + "^ "
+            )
         )
     )
     qcd_hamiltonian_dictionary[po_string] = (
@@ -577,27 +613,59 @@ for i in range(len(nonzero_values6)):
     po_string = (
         (
             heaviside(q1[0])
-            * ("a" + str(gluon_quantum_numbers(k=q1, K=K, Kp=Kp, a=b, pol=p1)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q1, K=K, Kp=Kp, a=b + 1, pol=p1))
+                + " "
+            )
             + heaviside(-q1[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q1, K=K, Kp=Kp, a=b, pol=p1)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q1, K=K, Kp=Kp, a=b + 1, pol=p1))
+                + "^ "
+            )
         )
         + (
             heaviside(q2[0])
-            * ("a" + str(gluon_quantum_numbers(k=q2, K=K, Kp=Kp, a=c, pol=p2)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q2, K=K, Kp=Kp, a=c + 1, pol=p2))
+                + " "
+            )
             + heaviside(-q2[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q2, K=K, Kp=Kp, a=c, pol=p2)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q2, K=K, Kp=Kp, a=c + 1, pol=p2))
+                + "^ "
+            )
         )
         + (
             heaviside(q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=d, pol=p3)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=d + 1, pol=p3))
+                + " "
+            )
             + heaviside(-q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=d, pol=p3)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=d + 1, pol=p3))
+                + "^ "
+            )
         )
         + (
             heaviside(q4[0])
-            * ("a" + str(gluon_quantum_numbers(k=q4, K=K, Kp=Kp, a=e, pol=p4)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q4, K=K, Kp=Kp, a=e + 1, pol=p4))
+                + " "
+            )
             + heaviside(-q4[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q4, K=K, Kp=Kp, a=e, pol=p4)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q4, K=K, Kp=Kp, a=e + 1, pol=p4))
+                + "^ "
+            )
         )
     )
     qcd_hamiltonian_dictionary[po_string] = (
@@ -686,27 +754,43 @@ for i in range(len(nonzero_values7)):
     po_string = (
         (
             heaviside(-q1[0])
-            * ("b" + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1, h=h1)) + "^ ")
+            * (
+                "b"
+                + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1 + 1, h=h1))
+                + "^ "
+            )
             + heaviside(q1[0])
-            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1, h=h1)) + " ")
+            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1 + 1, h=h1)) + " ")
         )
         + (
             heaviside(q2[0])
-            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c2, h=h2)) + " ")
+            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c2 + 1, h=h2)) + " ")
             + heaviside(-q2[0])
-            * ("d" + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c2, h=h2)) + "^ ")
+            * (
+                "d"
+                + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c2 + 1, h=h2))
+                + "^ "
+            )
         )
         + (
             heaviside(-q3[0])
-            * ("b" + str(quark_quantum_numbers(k=-q3, K=K, Kp=Kp, c=c3, h=h3)) + "^ ")
+            * (
+                "b"
+                + str(quark_quantum_numbers(k=-q3, K=K, Kp=Kp, c=c3 + 1, h=h3))
+                + "^ "
+            )
             + heaviside(q3[0])
-            * ("d" + str(quark_quantum_numbers(k=q3, K=K, Kp=Kp, c=c3, h=h3)) + " ")
+            * ("d" + str(quark_quantum_numbers(k=q3, K=K, Kp=Kp, c=c3 + 1, h=h3)) + " ")
         )
         + (
             heaviside(q4[0])
-            * ("b" + str(quark_quantum_numbers(k=q4, K=K, Kp=Kp, c=c4, h=h4)) + " ")
+            * ("b" + str(quark_quantum_numbers(k=q4, K=K, Kp=Kp, c=c4 + 1, h=h4)) + " ")
             + heaviside(-q4[0])
-            * ("d" + str(quark_quantum_numbers(k=-q4, K=K, Kp=Kp, c=c4, h=h4)) + "^ ")
+            * (
+                "d"
+                + str(quark_quantum_numbers(k=-q4, K=K, Kp=Kp, c=c4 + 1, h=h4))
+                + "^ "
+            )
         )
     )
     qcd_hamiltonian_dictionary[po_string] = (
@@ -778,27 +862,51 @@ for i in range(len(nonzero_values8)):
     po_string = (
         (
             heaviside(-q1[0])
-            * ("b" + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1, h=h1)) + "^ ")
+            * (
+                "b"
+                + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1 + 1, h=h1))
+                + "^ "
+            )
             + heaviside(q1[0])
-            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1, h=h1)) + " ")
+            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1 + 1, h=h1)) + " ")
         )
         + (
             heaviside(q2[0])
-            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c2, h=h2)) + " ")
+            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c2 + 1, h=h2)) + " ")
             + heaviside(-q2[0])
-            * ("d" + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c2, h=h2)) + "^ ")
+            * (
+                "d"
+                + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c2 + 1, h=h2))
+                + "^ "
+            )
         )
         + (
             heaviside(q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=b, pol=p3)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=b + 1, pol=p3))
+                + " "
+            )
             + heaviside(-q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=b, pol=p3)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=b + 1, pol=p3))
+                + "^ "
+            )
         )
         + (
             heaviside(q4[0])
-            * ("a" + str(gluon_quantum_numbers(k=q4, K=K, Kp=Kp, a=c, pol=p4)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q4, K=K, Kp=Kp, a=c + 1, pol=p4))
+                + " "
+            )
             + heaviside(-q4[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q4, K=K, Kp=Kp, a=c, pol=p4)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q4, K=K, Kp=Kp, a=c + 1, pol=p4))
+                + "^ "
+            )
         )
     )
     qcd_hamiltonian_dictionary[po_string] = (
@@ -899,27 +1007,51 @@ for i in range(len(nonzero_values9)):
     po_string = (
         (
             heaviside(-q1[0])
-            * ("b" + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1, h=h1)) + "^ ")
+            * (
+                "b"
+                + str(quark_quantum_numbers(k=-q1, K=K, Kp=Kp, c=c1 + 1, h=h1))
+                + "^ "
+            )
             + heaviside(q1[0])
-            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1, h=h1)) + " ")
+            * ("d" + str(quark_quantum_numbers(k=q1, K=K, Kp=Kp, c=c1 + 1, h=h1)) + " ")
         )
         + (
             heaviside(q2[0])
-            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c4, h=h4)) + " ")
+            * ("b" + str(quark_quantum_numbers(k=q2, K=K, Kp=Kp, c=c4 + 1, h=h4)) + " ")
             + heaviside(-q2[0])
-            * ("d" + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c4, h=h4)) + "^ ")
+            * (
+                "d"
+                + str(quark_quantum_numbers(k=-q2, K=K, Kp=Kp, c=c4 + 1, h=h4))
+                + "^ "
+            )
         )
         + (
             heaviside(q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=a, pol=p2)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q3, K=K, Kp=Kp, a=a + 1, pol=p2))
+                + " "
+            )
             + heaviside(-q3[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=a, pol=p2)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q3, K=K, Kp=Kp, a=a + 1, pol=p2))
+                + "^ "
+            )
         )
         + (
             heaviside(q4[0])
-            * ("a" + str(gluon_quantum_numbers(k=q4, K=K, Kp=Kp, a=b, pol=p3)) + " ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=q4, K=K, Kp=Kp, a=b + 1, pol=p3))
+                + " "
+            )
             + heaviside(-q4[0])
-            * ("a" + str(gluon_quantum_numbers(k=-q4, K=K, Kp=Kp, a=b, pol=p3)) + "^ ")
+            * (
+                "a"
+                + str(gluon_quantum_numbers(k=-q4, K=K, Kp=Kp, a=b + 1, pol=p3))
+                + "^ "
+            )
         )
     )
     qcd_hamiltonian_dictionary[po_string] = (
@@ -936,7 +1068,6 @@ minutes = int((runtime // 60) % 60)
 hours = int(runtime // 3600)
 
 qcd_hamiltonian_dictionary_w_parameters = {
-    "hamiltonian": qcd_hamiltonian_dictionary,
     "parameters": {"K": K, "Kp": Kp, "mq": mq, "mg": mg, "g": g},
     "runtime": str(hours)
     + "hours, "
@@ -944,6 +1075,8 @@ qcd_hamiltonian_dictionary_w_parameters = {
     + "minutes, "
     + str(seconds)
     + "seconds.",
+    "N terms": len(qcd_hamiltonian_dictionary),
+    "hamiltonian": qcd_hamiltonian_dictionary,
 }
 
 print(f"Time to calculate full Hamiltonian: {hours} hrs. {minutes} min. {seconds} sec.")
