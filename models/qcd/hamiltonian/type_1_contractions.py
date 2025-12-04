@@ -128,6 +128,7 @@ fixed_qnums_qgqg = np.vstack(
 )
 
 
+# Requires counterterm
 @nb.njit(
     ## output types
     nb.complex128[:, :, :, :, :, :, :, :, :, :]
@@ -227,7 +228,7 @@ def effective_quark_legs_term_tensor(
                                             q2prime = -1 * (q1prime - q3)
 
                                             if (
-                                                0 < np.abs(q3[0]) <= K
+                                                0 <= np.abs(q3[0]) <= K
                                                 and np.abs(q3[1]) <= Kp
                                                 and np.abs(q3[2]) <= Kp
                                                 and 0 < np.abs(q2prime[0]) <= K
@@ -259,20 +260,6 @@ def effective_quark_legs_term_tensor(
                                                 ) + heaviside(-q2prime[0]) * v(
                                                     p=-q2prime, m=mq, h=helicity2prime
                                                 )
-                                                coeff = 0
-                                                for mu in [0, 1, 2, 3]:
-                                                    for nu in [0, 1, 2, 3]:
-                                                        coeff += psi_1.dot(
-                                                            gamma0.dot(
-                                                                gamma[mu].dot(psi_2)
-                                                            )
-                                                            * d(q3, mg, mu, nu, "lower")
-                                                            * psi_1prime.dot(
-                                                                gamma[nu].dot(
-                                                                    psi_2prime
-                                                                )
-                                                            )
-                                                        )
                                                 q3prime = -q3  # delta(q3 + q3prime)
                                                 q1minus = (
                                                     mq**2 + q1[1:3].dot(q1[1:3])
@@ -302,22 +289,137 @@ def effective_quark_legs_term_tensor(
                                                     + q2primeminus
                                                     + q3primeminus
                                                 )
-                                                coeff *= (
-                                                    g**2
-                                                    * T[a, c1, c2]
-                                                    * T[a, c3, c4]
-                                                    * 1
-                                                    / (
-                                                        np.abs(q1[0])
-                                                        * np.abs(q2[0])
-                                                        * np.abs(q3[0])
-                                                        * np.abs(q1prime[0])
-                                                        * np.abs(q2prime[0])
+
+                                                coeff = 0
+                                                if q3[0] != 0:
+                                                    for mu in [0, 1, 2, 3]:
+                                                        for nu in [0, 1, 2, 3]:
+                                                            coeff += (
+                                                                -(g**2)
+                                                                / 2
+                                                                * T[a, c1, c2]
+                                                                * T[a, c3, c4]
+                                                                * (
+                                                                    (
+                                                                        rgpep_factor_first_order(
+                                                                            Q, s
+                                                                        )
+                                                                        * rgpep_factor_first_order(
+                                                                            Qp, s
+                                                                        )
+                                                                        - rgpep_factor_first_order(
+                                                                            Q + Qp, s
+                                                                        )
+                                                                    )
+                                                                    * 1
+                                                                    / 2
+                                                                    * (1 / Q - 1 / Qp)
+                                                                    * g_lower_indices[
+                                                                        mu, nu
+                                                                    ]
+                                                                    * psi_1.dot(
+                                                                        gamma0.dot(
+                                                                            gamma[
+                                                                                mu
+                                                                            ].dot(psi_2)
+                                                                        )
+                                                                    )
+                                                                    * psi_1prime.dot(
+                                                                        gamma0.dot(
+                                                                            gamma[
+                                                                                nu
+                                                                            ].dot(
+                                                                                psi_2prime
+                                                                            )
+                                                                        )
+                                                                    )
+                                                                )
+                                                            )
+                                                    coeff += (
+                                                        -(g**2)
+                                                        / 2
+                                                        * T[a, c1, c2]
+                                                        * T[a, c3, c4]
+                                                        * (
+                                                            rgpep_factor_first_order(
+                                                                Q, s
+                                                            )
+                                                            * rgpep_factor_first_order(
+                                                                Qp, s
+                                                            )
+                                                            * 1
+                                                            / 2
+                                                            * (1 / Q - 1 / Qp)
+                                                            * (
+                                                                (q1 + q2).dot(q1 + q2)
+                                                                + (
+                                                                    q1prime + q2prime
+                                                                ).dot(q1prime + q2prime)
+                                                            )
+                                                            / (2 * (q3[0] ** 2))
+                                                        )
+                                                        * psi_1.dot(gamma[0].dot(psi_2))
+                                                        * psi_1prime.dot(
+                                                            gamma[0].dot(psi_2prime)
+                                                        )
                                                     )
-                                                    * rgpep_factor_second_order(
-                                                        Q, Qp, s
+
+                                                    coeff += (
+                                                        g**2
+                                                        / 2
+                                                        * T[a, c1, c2]
+                                                        * T[a, c3, c4]
+                                                        * (
+                                                            rgpep_factor_first_order(
+                                                                Q + Qp, s
+                                                            )
+                                                            * 1
+                                                            / 2
+                                                            * (1 / Q - 1 / Qp)
+                                                            * (
+                                                                (q1 + q2).dot(q1 + q2)
+                                                                + (
+                                                                    q1prime + q2prime
+                                                                ).dot(q1prime + q2prime)
+                                                            )
+                                                            / (
+                                                                2
+                                                                * (
+                                                                    q3[0] ** 2
+                                                                    - 1 / (4 * K**2)
+                                                                )
+                                                            )
+                                                        )
                                                     )
-                                                )
+                                                elif q3[0] == 0:
+                                                    coeff += (
+                                                        g**2
+                                                        / 2
+                                                        * T[a, c1, c2]
+                                                        * T[a, c3, c4]
+                                                        * (
+                                                            rgpep_factor_first_order(
+                                                                Q + Qp, s
+                                                            )
+                                                            * 1
+                                                            / 2
+                                                            * (1 / Q - 1 / Qp)
+                                                            * (
+                                                                (q1 + q2).dot(q1 + q2)
+                                                                + (
+                                                                    q1prime + q2prime
+                                                                ).dot(q1prime + q2prime)
+                                                            )
+                                                            / (
+                                                                2
+                                                                * (
+                                                                    q3[0] ** 2
+                                                                    - 1 / (4 * K**2)
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+
                                                 if coeff != 0:
 
                                                     q1plus_index = np.where(
