@@ -25,6 +25,14 @@ def test_coeoff_times_particleoperator(coeff):
     assert next(iter(particleop.op_dict.values())) == coeff
 
 
+@pytest.mark.parametrize("coeff", np.random.uniform(-100, 100, size=10))
+def test_particleoperator_times_coeff(coeff):
+    input_str = "b0^ b2 a3"
+    particleop = ParticleOperator(input_str) * coeff
+
+    assert next(iter(particleop.op_dict.values())) == coeff
+
+
 def test_add_two_different_particleoperators():
     op1 = ParticleOperator("b0")
     op2 = ParticleOperator("b2")
