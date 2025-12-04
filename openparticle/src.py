@@ -682,7 +682,7 @@ class ParticleOperator:
                         # Add .strip() to remove trailing spaces when multipying with identity (treated as ' ')
                         product_dict[op1 + op2] = coeffs1 * coeffs2
             return ParticleOperator(product_dict)
-        elif isinstance(other, complex):
+        elif isinstance(other, complex) or isinstance(other, int) or isinstance(other, float):
             return self.__rmul__(other)
 
     def __pow__(self, other) -> "ParticleOperator":
