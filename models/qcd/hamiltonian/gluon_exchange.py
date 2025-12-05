@@ -115,6 +115,7 @@ fixed_qnums_qqgg = np.vstack(
 )
 
 
+# Requires counterterm
 @nb.njit(
     ## output types
     nb.complex128[:, :, :, :, :, :, :, :, :, :]
@@ -124,7 +125,7 @@ fixed_qnums_qqgg = np.vstack(
     fastmath=True,
     parallel=True,
 )
-def gluon_legs_term_tensor(s: float, K: float, Kp: float, g: float, mg: float = 1):
+def gluon_legs_term_tensor(K: float, Kp: float, s: float, g: float, mg: float = 1):
     """
     Indices 0, 3, 6 correspond respectively to q1+, q2+, q3+.
     """
@@ -272,6 +273,17 @@ def gluon_legs_term_tensor(s: float, K: float, Kp: float, g: float, mg: float = 
                                                     ).conj()[2:4]
                                                 )
 
+                                                exchange_q = q1 + q2
+                                                exchange_qminus = (
+                                                    mg**2
+                                                    + exchange_q[1:3].dot(
+                                                        exchange_q[1:3]
+                                                    )
+                                                ) / exchange_q[0]
+
+                                                Q = q1minus + q2minus + exchange_qminus
+                                                Qp = q3minus + q4minus - exchange_qminus
+
                                                 coeff = Aq1.dot(Aq2) * Aq3.dot(Aq4)
                                                 coeff *= (
                                                     g**2
@@ -279,7 +291,14 @@ def gluon_legs_term_tensor(s: float, K: float, Kp: float, g: float, mg: float = 
                                                     * f(a, d, e)
                                                     * q2[0]
                                                     * q4[0]
-                                                    / ((q3[0] + q4[0]) ** 2 + mg**2)
+                                                    / (
+                                                        exchange_q[0] ** 2
+                                                        - 1 / (4 * K**2)
+                                                    )
+                                                    * (
+                                                        1
+                                                        + (mg**2) / 2 * (1 / Q - 1 / Qp)
+                                                    )
                                                     * 1
                                                     / (
                                                         (
@@ -348,6 +367,7 @@ def gluon_legs_term_tensor(s: float, K: float, Kp: float, g: float, mg: float = 
     return gluon_legs_tensor
 
 
+# Requires counterterm
 @nb.njit(
     ## output types
     nb.complex128[:, :, :, :, :, :, :, :, :, :]
@@ -358,9 +378,9 @@ def gluon_legs_term_tensor(s: float, K: float, Kp: float, g: float, mg: float = 
     parallel=True,
 )
 def quark_legs_term_tensor(
-    s: float,
     K: float,
     Kp: float,
+    s: float,
     g: float,
     mq: float,
     mg: float,
@@ -482,6 +502,16 @@ def quark_legs_term_tensor(
                                                 ) + heaviside(-q4[0]) * v(
                                                     p=-q4, m=mq, h=helicity4
                                                 )
+                                                exchange_q = q1 + q2
+                                                exchange_qminus = (
+                                                    mg**2
+                                                    + exchange_q[1:3].dot(
+                                                        exchange_q[1:3]
+                                                    )
+                                                ) / exchange_q[0]
+
+                                                Q = q1minus + q2minus + exchange_qminus
+                                                Qp = q3minus + q4minus - exchange_qminus
 
                                                 coeff = psi_1.dot(
                                                     gamma0.dot(gamma_plus.dot(psi_2))
@@ -493,8 +523,14 @@ def quark_legs_term_tensor(
                                                     * T[a][c1][c2]
                                                     * T[a][c3][c4]
                                                     * 1
-                                                    / (((q3[0] + q4[0])) ** 2 + mg**2)
-                                                    * 1
+                                                    / (
+                                                        exchange_q[0] ** 2
+                                                        - 1 / (4 * K**2)
+                                                    )
+                                                    * (
+                                                        1
+                                                        + (mq**2) / 2 * (1 / Q - 1 / Qp)
+                                                    )
                                                     / (
                                                         (
                                                             np.abs(q1[0])
@@ -561,6 +597,7 @@ def quark_legs_term_tensor(
     return quark_legs_tensor
 
 
+# Requires counterterm
 @nb.njit(
     ## output types
     nb.complex128[:, :, :, :, :, :, :, :, :, :]
@@ -571,9 +608,9 @@ def quark_legs_term_tensor(
     parallel=True,
 )
 def gluon_exchange_mixed_legs_term_tensor(
-    s: float,
     K: float,
     Kp: float,
+    s: float,
     g: float,
     mq: float,
     mg: float,
@@ -668,8 +705,6 @@ def gluon_exchange_mixed_legs_term_tensor(
                                                 q3 + q2 + q1
                                             )  # q4 is assigned by delta
 
-                                            
-
                                             if (
                                                 0 < np.abs(q4[0]) <= K
                                                 and np.abs(q4[1]) <= Kp
@@ -709,6 +744,17 @@ def gluon_exchange_mixed_legs_term_tensor(
                                                     p=-q4, pol=polarization4
                                                 )
 
+                                                exchange_q = q1 + q2
+                                                exchange_qminus = (
+                                                    mg**2
+                                                    + exchange_q[1:3].dot(
+                                                        exchange_q[1:3]
+                                                    )
+                                                ) / exchange_q[0]
+
+                                                Q = q1minus + q2minus + exchange_qminus
+                                                Qp = q3minus + q4minus - exchange_qminus
+
                                                 coeff = psi_1.dot(
                                                     gamma0.dot(gamma_plus.dot(psi_2))
                                                 ) * (A3[2:4].dot(A4[2:4]))
@@ -720,7 +766,19 @@ def gluon_exchange_mixed_legs_term_tensor(
                                                     * T[a][c1][c2]
                                                     * q4[0]
                                                     * 1
-                                                    / (((q3[0] + q4[0])) ** 2 + mg**2)
+                                                    / (
+                                                        exchange_q[0] ** 2
+                                                        - 1 / (4 * K**2)
+                                                    )
+                                                    * (
+                                                        1
+                                                        + (
+                                                            (q1 + q2).dot(q1 + q2)
+                                                            + (q3 + q4).dot(q3 + q4)
+                                                        )
+                                                        / 4
+                                                        * (1 / Q - 1 / Qp)
+                                                    )
                                                     * np.exp(
                                                         -s
                                                         * (

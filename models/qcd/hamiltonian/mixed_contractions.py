@@ -198,6 +198,40 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                         pol=polarization1,
                                                     ).conj()
                                                 )
+                                                psi_1p = heaviside(-q1prime[0]) * udag(
+                                                    p=-q1prime, m=mq, h=helicity1
+                                                ) + heaviside(q1prime[0]) * vdag(
+                                                    p=q1prime, m=mq, h=helicity1
+                                                )
+                                                psi_2p = heaviside(q2prime[0]) * u(
+                                                    p=q2prime, m=mq, h=helicity2
+                                                ) + heaviside(-q2prime[0]) * v(
+                                                    p=-q2prime, m=mq, h=helicity2
+                                                )
+                                                A_1 = (
+                                                    heaviside(q1[0])
+                                                    * pol_vec(
+                                                        p=q1,
+                                                        pol=polarization1,
+                                                    )
+                                                    + heaviside(-q1[0])
+                                                    * pol_vec(
+                                                        p=-q1,
+                                                        pol=polarization1,
+                                                    ).conj()
+                                                )
+                                                A_2 = (
+                                                    heaviside(q2[0])
+                                                    * pol_vec(
+                                                        p=q2,
+                                                        pol=polarization1,
+                                                    )
+                                                    + heaviside(-q2[0])
+                                                    * pol_vec(
+                                                        p=-q2,
+                                                        pol=polarization1,
+                                                    ).conj()
+                                                )
                                                 q1minus = (
                                                     mq**2 + q1[1:3].dot(q1[1:3])
                                                 ) / q1[0]
@@ -241,7 +275,7 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                 3,
                                                             ]:
                                                                 if sigma == 1:
-                                                                    qfactor_sigma = (
+                                                                    qprimefactor_sigma = (
                                                                         1
                                                                         / 2
                                                                         * (
@@ -249,16 +283,27 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                             - q1prime
                                                                         )[0]
                                                                     )
-                                                                else:
                                                                     qfactor_sigma = (
+                                                                        1
+                                                                        / 2
+                                                                        * (q2 - q1)[0]
+                                                                    )
+                                                                else:
+                                                                    qprimefactor_sigma = (
                                                                         -1
                                                                         * (
                                                                             q2prime
                                                                             - q1prime
                                                                         )[sigma]
                                                                     )
+                                                                    qfactor_sigma = (
+                                                                        -1
+                                                                        * (q2 - q1)[
+                                                                            sigma
+                                                                        ]
+                                                                    )
                                                                 if delta == 1:
-                                                                    qfactor_delta = (
+                                                                    qprimefactor_delta = (
                                                                         1
                                                                         / 2
                                                                         * (
@@ -266,16 +311,27 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                             - q2prime
                                                                         )[0]
                                                                     )
-                                                                else:
                                                                     qfactor_delta = (
+                                                                        1
+                                                                        / 2
+                                                                        * (q3 - q2)[0]
+                                                                    )
+                                                                else:
+                                                                    qprimefactor_delta = (
                                                                         -1
                                                                         * (
                                                                             q3prime
                                                                             - q2prime
                                                                         )[delta]
                                                                     )
+                                                                    qfactor_delta = (
+                                                                        -1
+                                                                        * (q3 - q2)[
+                                                                            delta
+                                                                        ]
+                                                                    )
                                                                 if omega == 1:
-                                                                    qfactor_omega = (
+                                                                    qprimefactor_omega = (
                                                                         1
                                                                         / 2
                                                                         * (
@@ -283,15 +339,49 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                             - q3prime
                                                                         )[0]
                                                                     )
-                                                                else:
                                                                     qfactor_omega = (
+                                                                        1
+                                                                        / 2
+                                                                        * (q1 - q3)[0]
+                                                                    )
+                                                                else:
+                                                                    qprimefactor_omega = (
                                                                         -1
                                                                         * (
                                                                             q1prime
                                                                             - q3prime
                                                                         )[omega]
                                                                     )
+                                                                    qfactor_omega = (
+                                                                        -1
+                                                                        * (q1 - q3)[
+                                                                            omega
+                                                                        ]
+                                                                    )
                                                                 Fprime = (
+                                                                    1j
+                                                                    * f(
+                                                                        a,
+                                                                        b,
+                                                                        c,
+                                                                    )
+                                                                    * qprimefactor_sigma
+                                                                    * g_lower_indices[
+                                                                        delta,
+                                                                        omega,
+                                                                    ]
+                                                                    * qprimefactor_delta
+                                                                    * g_lower_indices[
+                                                                        omega,
+                                                                        sigma,
+                                                                    ]
+                                                                    * qprimefactor_omega
+                                                                    * g_lower_indices[
+                                                                        sigma,
+                                                                        delta,
+                                                                    ]
+                                                                )
+                                                                F = (
                                                                     1j
                                                                     * f(
                                                                         a,
@@ -363,27 +453,51 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                                     mu,
                                                                                     nu,
                                                                                 ]
-                                                                                * psi_1.dot(
-                                                                                    gamma0.dot(
-                                                                                        gamma[
-                                                                                            mu
-                                                                                        ].dot(
-                                                                                            psi_2
+                                                                                * (
+                                                                                    psi_1.dot(
+                                                                                        gamma0.dot(
+                                                                                            gamma[
+                                                                                                mu
+                                                                                            ].dot(
+                                                                                                psi_2
+                                                                                            )
                                                                                         )
                                                                                     )
-                                                                                )
-                                                                                * (
-                                                                                    g_upper_indices[
+                                                                                    * (
+                                                                                        g_upper_indices[
+                                                                                            nu,
+                                                                                            sigma,
+                                                                                        ]
+                                                                                        * Fprime
+                                                                                        * A_1p[
+                                                                                            delta
+                                                                                        ]
+                                                                                        * A_2p[
+                                                                                            omega
+                                                                                        ]
+                                                                                    )
+                                                                                    + g_upper_indices[
                                                                                         nu,
                                                                                         sigma,
                                                                                     ]
-                                                                                    * Fprime
-                                                                                    * A_1p[
+                                                                                    * F
+                                                                                    * A_1[
                                                                                         delta
                                                                                     ]
-                                                                                    * A_2p[
+                                                                                    * A_2[
                                                                                         omega
                                                                                     ]
+                                                                                    * (
+                                                                                        psi_1p.dot(
+                                                                                            gamma0.dot(
+                                                                                                gamma[
+                                                                                                    mu
+                                                                                                ].dot(
+                                                                                                    psi_2p
+                                                                                                )
+                                                                                            )
+                                                                                        )
+                                                                                    )
                                                                                 )
                                                                             )
                                                                         )
@@ -445,27 +559,51 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                                     mu,
                                                                                     nu,
                                                                                 ]
-                                                                                * psi_1.dot(
-                                                                                    gamma0.dot(
-                                                                                        gamma[
-                                                                                            mu
-                                                                                        ].dot(
-                                                                                            psi_2
+                                                                                * (
+                                                                                    psi_1.dot(
+                                                                                        gamma0.dot(
+                                                                                            gamma[
+                                                                                                mu
+                                                                                            ].dot(
+                                                                                                psi_2
+                                                                                            )
                                                                                         )
                                                                                     )
-                                                                                )
-                                                                                * (
-                                                                                    g_upper_indices[
+                                                                                    * (
+                                                                                        g_upper_indices[
+                                                                                            nu,
+                                                                                            sigma,
+                                                                                        ]
+                                                                                        * Fprime
+                                                                                        * A_1p[
+                                                                                            delta
+                                                                                        ]
+                                                                                        * A_2p[
+                                                                                            omega
+                                                                                        ]
+                                                                                    )
+                                                                                    + g_upper_indices[
                                                                                         nu,
                                                                                         sigma,
                                                                                     ]
-                                                                                    * Fprime
-                                                                                    * A_1p[
+                                                                                    * F
+                                                                                    * A_1[
                                                                                         delta
                                                                                     ]
-                                                                                    * A_2p[
+                                                                                    * A_2[
                                                                                         omega
                                                                                     ]
+                                                                                    * (
+                                                                                        psi_1p.dot(
+                                                                                            gamma0.dot(
+                                                                                                gamma[
+                                                                                                    mu
+                                                                                                ].dot(
+                                                                                                    psi_2p
+                                                                                                )
+                                                                                            )
+                                                                                        )
+                                                                                    )
                                                                                 )
                                                                             )
                                                                         )
@@ -530,27 +668,51 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                                     mu,
                                                                                     nu,
                                                                                 ]
-                                                                                * psi_1.dot(
-                                                                                    gamma0.dot(
-                                                                                        gamma[
-                                                                                            mu
-                                                                                        ].dot(
-                                                                                            psi_2
+                                                                                * (
+                                                                                    psi_1.dot(
+                                                                                        gamma0.dot(
+                                                                                            gamma[
+                                                                                                mu
+                                                                                            ].dot(
+                                                                                                psi_2
+                                                                                            )
                                                                                         )
                                                                                     )
-                                                                                )
-                                                                                * (
-                                                                                    g_upper_indices[
+                                                                                    * (
+                                                                                        g_upper_indices[
+                                                                                            nu,
+                                                                                            sigma,
+                                                                                        ]
+                                                                                        * Fprime
+                                                                                        * A_1p[
+                                                                                            delta
+                                                                                        ]
+                                                                                        * A_2p[
+                                                                                            omega
+                                                                                        ]
+                                                                                    )
+                                                                                    + g_upper_indices[
                                                                                         nu,
                                                                                         sigma,
                                                                                     ]
-                                                                                    * Fprime
-                                                                                    * A_1p[
+                                                                                    * F
+                                                                                    * A_1[
                                                                                         delta
                                                                                     ]
-                                                                                    * A_2p[
+                                                                                    * A_2[
                                                                                         omega
                                                                                     ]
+                                                                                    * (
+                                                                                        psi_1p.dot(
+                                                                                            gamma0.dot(
+                                                                                                gamma[
+                                                                                                    mu
+                                                                                                ].dot(
+                                                                                                    psi_2p
+                                                                                                )
+                                                                                            )
+                                                                                        )
+                                                                                    )
                                                                                 )
                                                                             )
                                                                         )
@@ -567,7 +729,7 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                 3,
                                                             ]:
                                                                 if sigma == 1:
-                                                                    qfactor_sigma = (
+                                                                    qprimefactor_sigma = (
                                                                         1
                                                                         / 2
                                                                         * (
@@ -576,7 +738,7 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                         )[0]
                                                                     )
                                                                 else:
-                                                                    qfactor_sigma = (
+                                                                    qprimefactor_sigma = (
                                                                         -1
                                                                         * (
                                                                             q2prime
@@ -584,7 +746,7 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                         )[sigma]
                                                                     )
                                                                 if delta == 1:
-                                                                    qfactor_delta = (
+                                                                    qprimefactor_delta = (
                                                                         1
                                                                         / 2
                                                                         * (
@@ -593,7 +755,7 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                         )[0]
                                                                     )
                                                                 else:
-                                                                    qfactor_delta = (
+                                                                    qprimefactor_delta = (
                                                                         -1
                                                                         * (
                                                                             q3prime
@@ -601,7 +763,7 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                         )[delta]
                                                                     )
                                                                 if omega == 1:
-                                                                    qfactor_omega = (
+                                                                    qprimefactor_omega = (
                                                                         1
                                                                         / 2
                                                                         * (
@@ -610,7 +772,7 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                         )[0]
                                                                     )
                                                                 else:
-                                                                    qfactor_omega = (
+                                                                    qprimefactor_omega = (
                                                                         -1
                                                                         * (
                                                                             q1prime
@@ -624,17 +786,17 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                         b,
                                                                         c,
                                                                     )
-                                                                    * qfactor_sigma
+                                                                    * qprimefactor_sigma
                                                                     * g_lower_indices[
                                                                         delta,
                                                                         omega,
                                                                     ]
-                                                                    * qfactor_delta
+                                                                    * qprimefactor_delta
                                                                     * g_lower_indices[
                                                                         omega,
                                                                         sigma,
                                                                     ]
-                                                                    * qfactor_omega
+                                                                    * qprimefactor_omega
                                                                     * g_lower_indices[
                                                                         sigma,
                                                                         delta,
@@ -708,27 +870,51 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                                                     mu,
                                                                                     nu,
                                                                                 ]
-                                                                                * psi_1.dot(
-                                                                                    gamma0.dot(
-                                                                                        gamma[
-                                                                                            mu
-                                                                                        ].dot(
-                                                                                            psi_2
+                                                                                * (
+                                                                                    psi_1.dot(
+                                                                                        gamma0.dot(
+                                                                                            gamma[
+                                                                                                mu
+                                                                                            ].dot(
+                                                                                                psi_2
+                                                                                            )
                                                                                         )
                                                                                     )
-                                                                                )
-                                                                                * (
-                                                                                    g_upper_indices[
+                                                                                    * (
+                                                                                        g_upper_indices[
+                                                                                            nu,
+                                                                                            sigma,
+                                                                                        ]
+                                                                                        * Fprime
+                                                                                        * A_1p[
+                                                                                            delta
+                                                                                        ]
+                                                                                        * A_2p[
+                                                                                            omega
+                                                                                        ]
+                                                                                    )
+                                                                                    + g_upper_indices[
                                                                                         nu,
                                                                                         sigma,
                                                                                     ]
-                                                                                    * Fprime
-                                                                                    * A_1p[
+                                                                                    * F
+                                                                                    * A_1[
                                                                                         delta
                                                                                     ]
-                                                                                    * A_2p[
+                                                                                    * A_2[
                                                                                         omega
                                                                                     ]
+                                                                                    * (
+                                                                                        psi_1p.dot(
+                                                                                            gamma0.dot(
+                                                                                                gamma[
+                                                                                                    mu
+                                                                                                ].dot(
+                                                                                                    psi_2p
+                                                                                                )
+                                                                                            )
+                                                                                        )
+                                                                                    )
                                                                                 )
                                                                             )
                                                                         )
