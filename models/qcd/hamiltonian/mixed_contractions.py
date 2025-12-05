@@ -48,6 +48,7 @@ fixed_qnums = np.vstack(
 )
 
 
+# Requires counterterm
 @nb.njit(
     ## output types
     nb.complex128[:, :, :, :, :, :, :, :, :, :]
@@ -152,7 +153,7 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                             )  # delta(q1' + q2' + q3')
 
                                             if (
-                                                0 < np.abs(q3[0]) <= K
+                                                0 <= np.abs(q3[0]) <= K
                                                 and np.abs(q3[1]) <= Kp
                                                 and np.abs(q3[2]) <= Kp
                                                 and 0 < np.abs(q2prime[0]) <= K
@@ -197,80 +198,6 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                         pol=polarization1,
                                                     ).conj()
                                                 )
-
-                                                coeff = 0
-                                                for mu in [0, 1, 2, 3]:
-                                                    for gamma in [1, 2, 3]:
-                                                        if (
-                                                            gamma == 1
-                                                        ):  # (q2' - q1')_minus = 0.5 * (q2' - q1')^plus
-                                                            q_factor_gamma = (
-                                                                0.5
-                                                                * (q2prime - q1prime)[
-                                                                    gamma
-                                                                ]
-                                                            )
-                                                        else:
-                                                            q_factor_gamma = (
-                                                                q2prime - q1prime
-                                                            )[
-                                                                gamma
-                                                            ]  # (q2' - q1')_perp = (q2' - q1')^perp
-                                                        for alpha in [1, 2, 3]:
-                                                            if alpha == 1:
-                                                                q_factor_alpha = (
-                                                                    0.5
-                                                                    * (
-                                                                        q3prime
-                                                                        - q2prime
-                                                                    )[0]
-                                                                )
-                                                            else:
-                                                                q_factor_alpha = (
-                                                                    q3prime - q2prime
-                                                                )[alpha]
-                                                            for beta in [1, 2, 3]:
-                                                                if beta == 1:
-                                                                    q_factor_beta = (
-                                                                        0.5
-                                                                        * (
-                                                                            q1prime
-                                                                            - q2prime
-                                                                        )[0]
-                                                                    )
-                                                                else:
-                                                                    q_factor_beta = (
-                                                                        q1prime
-                                                                        - q2prime
-                                                                    )[beta]
-                                                                coeff += d(
-                                                                    q3,
-                                                                    mg,
-                                                                    mu,
-                                                                    gamma,
-                                                                    "upper",
-                                                                ) * (
-                                                                    q_factor_gamma
-                                                                    * g_lower_indices[
-                                                                        alpha, beta
-                                                                    ]
-                                                                    + q_factor_alpha
-                                                                    * g_lower_indices[
-                                                                        beta, gamma
-                                                                    ]
-                                                                    + q_factor_beta
-                                                                    * g_lower_indices[
-                                                                        gamma, alpha
-                                                                    ]
-                                                                )
-                                                    coeff += psi_1.dot(
-                                                        gamma0.dot(
-                                                            gamma_lower[mu].dot(psi_2)
-                                                        )
-                                                        * A_1p[alpha]
-                                                        * A_2p[beta]
-                                                    )
-
                                                 q1minus = (
                                                     mq**2 + q1[1:3].dot(q1[1:3])
                                                 ) / q1[0]
@@ -299,11 +226,515 @@ def effective_gluon_exchange_mixed_legs_term_tensor(
                                                     + q2primeminus
                                                     + q3primeminus
                                                 )
+
+                                                coeff = 0
+                                                if q3[0] != 0:
+                                                    for sigma in [1, 2, 3]:
+                                                        for delta in [
+                                                            1,
+                                                            2,
+                                                            3,
+                                                        ]:
+                                                            for omega in [
+                                                                1,
+                                                                2,
+                                                                3,
+                                                            ]:
+                                                                if sigma == 1:
+                                                                    qfactor_sigma = (
+                                                                        1
+                                                                        / 2
+                                                                        * (
+                                                                            q2prime
+                                                                            - q1prime
+                                                                        )[0]
+                                                                    )
+                                                                else:
+                                                                    qfactor_sigma = (
+                                                                        -1
+                                                                        * (
+                                                                            q2prime
+                                                                            - q1prime
+                                                                        )[sigma]
+                                                                    )
+                                                                if delta == 1:
+                                                                    qfactor_delta = (
+                                                                        1
+                                                                        / 2
+                                                                        * (
+                                                                            q3prime
+                                                                            - q2prime
+                                                                        )[0]
+                                                                    )
+                                                                else:
+                                                                    qfactor_delta = (
+                                                                        -1
+                                                                        * (
+                                                                            q3prime
+                                                                            - q2prime
+                                                                        )[delta]
+                                                                    )
+                                                                if omega == 1:
+                                                                    qfactor_omega = (
+                                                                        1
+                                                                        / 2
+                                                                        * (
+                                                                            q1prime
+                                                                            - q3prime
+                                                                        )[0]
+                                                                    )
+                                                                else:
+                                                                    qfactor_omega = (
+                                                                        -1
+                                                                        * (
+                                                                            q1prime
+                                                                            - q3prime
+                                                                        )[omega]
+                                                                    )
+                                                                Fprime = (
+                                                                    1j
+                                                                    * f(
+                                                                        a,
+                                                                        b,
+                                                                        c,
+                                                                    )
+                                                                    * qfactor_sigma
+                                                                    * g_lower_indices[
+                                                                        delta,
+                                                                        omega,
+                                                                    ]
+                                                                    * qfactor_delta
+                                                                    * g_lower_indices[
+                                                                        omega,
+                                                                        sigma,
+                                                                    ]
+                                                                    * qfactor_omega
+                                                                    * g_lower_indices[
+                                                                        sigma,
+                                                                        delta,
+                                                                    ]
+                                                                )
+                                                                for mu in [
+                                                                    0,
+                                                                    1,
+                                                                    2,
+                                                                    3,
+                                                                ]:
+                                                                    for nu in [
+                                                                        0,
+                                                                        1,
+                                                                        2,
+                                                                        3,
+                                                                    ]:
+
+                                                                        coeff += (
+                                                                            -(g**2)
+                                                                            / 2
+                                                                            * T[
+                                                                                a,
+                                                                                c1,
+                                                                                c2,
+                                                                            ]
+                                                                            * (
+                                                                                (
+                                                                                    rgpep_factor_first_order(
+                                                                                        Q,
+                                                                                        s,
+                                                                                    )
+                                                                                    * rgpep_factor_first_order(
+                                                                                        Qp,
+                                                                                        s,
+                                                                                    )
+                                                                                    - rgpep_factor_first_order(
+                                                                                        Q
+                                                                                        + Qp,
+                                                                                        s,
+                                                                                    )
+                                                                                )
+                                                                                * 1
+                                                                                / 2
+                                                                                * (
+                                                                                    1
+                                                                                    / Q
+                                                                                    - 1
+                                                                                    / Qp
+                                                                                )
+                                                                                * g_lower_indices[
+                                                                                    mu,
+                                                                                    nu,
+                                                                                ]
+                                                                                * psi_1.dot(
+                                                                                    gamma0.dot(
+                                                                                        gamma[
+                                                                                            mu
+                                                                                        ].dot(
+                                                                                            psi_2
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                * (
+                                                                                    g_upper_indices[
+                                                                                        nu,
+                                                                                        sigma,
+                                                                                    ]
+                                                                                    * Fprime
+                                                                                    * A_1p[
+                                                                                        delta
+                                                                                    ]
+                                                                                    * A_2p[
+                                                                                        omega
+                                                                                    ]
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                        coeff += (
+                                                                            -(g**2)
+                                                                            / 2
+                                                                            * T[
+                                                                                a,
+                                                                                c1,
+                                                                                c2,
+                                                                            ]
+                                                                            * (
+                                                                                (
+                                                                                    rgpep_factor_first_order(
+                                                                                        Q,
+                                                                                        s,
+                                                                                    )
+                                                                                    * rgpep_factor_first_order(
+                                                                                        Qp,
+                                                                                        s,
+                                                                                    )
+                                                                                )
+                                                                                * 1
+                                                                                / 2
+                                                                                * (
+                                                                                    1
+                                                                                    / Q
+                                                                                    - 1
+                                                                                    / Qp
+                                                                                )
+                                                                                * (
+                                                                                    (
+                                                                                        (
+                                                                                            q1
+                                                                                            + q2
+                                                                                        ).dot(
+                                                                                            q1
+                                                                                            + q2
+                                                                                        )
+                                                                                        + (
+                                                                                            q1prime
+                                                                                            + q2prime
+                                                                                        ).dot(
+                                                                                            q1prime
+                                                                                            + q2prime
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                / (
+                                                                                    2
+                                                                                    * (
+                                                                                        q3[
+                                                                                            0
+                                                                                        ]
+                                                                                        ** 2
+                                                                                    )
+                                                                                )
+                                                                                * g_lower_indices[
+                                                                                    mu,
+                                                                                    nu,
+                                                                                ]
+                                                                                * psi_1.dot(
+                                                                                    gamma0.dot(
+                                                                                        gamma[
+                                                                                            mu
+                                                                                        ].dot(
+                                                                                            psi_2
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                * (
+                                                                                    g_upper_indices[
+                                                                                        nu,
+                                                                                        sigma,
+                                                                                    ]
+                                                                                    * Fprime
+                                                                                    * A_1p[
+                                                                                        delta
+                                                                                    ]
+                                                                                    * A_2p[
+                                                                                        omega
+                                                                                    ]
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                        coeff += (
+                                                                            -(g**2)
+                                                                            / 2
+                                                                            * T[
+                                                                                a,
+                                                                                c1,
+                                                                                c2,
+                                                                            ]
+                                                                            * (
+                                                                                (
+                                                                                    rgpep_factor_first_order(
+                                                                                        Q
+                                                                                        + Qp,
+                                                                                        s,
+                                                                                    )
+                                                                                )
+                                                                                * 1
+                                                                                / 2
+                                                                                * (
+                                                                                    1
+                                                                                    / Q
+                                                                                    - 1
+                                                                                    / Qp
+                                                                                )
+                                                                                * (
+                                                                                    (
+                                                                                        (
+                                                                                            q1
+                                                                                            + q2
+                                                                                        ).dot(
+                                                                                            q1
+                                                                                            + q2
+                                                                                        )
+                                                                                        + (
+                                                                                            q1prime
+                                                                                            + q2prime
+                                                                                        ).dot(
+                                                                                            q1prime
+                                                                                            + q2prime
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                / (
+                                                                                    2
+                                                                                    * (
+                                                                                        q3[
+                                                                                            0
+                                                                                        ]
+                                                                                        ** 2
+                                                                                        - 1
+                                                                                        / (
+                                                                                            4
+                                                                                            * K
+                                                                                            ** 2
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                * g_lower_indices[
+                                                                                    mu,
+                                                                                    nu,
+                                                                                ]
+                                                                                * psi_1.dot(
+                                                                                    gamma0.dot(
+                                                                                        gamma[
+                                                                                            mu
+                                                                                        ].dot(
+                                                                                            psi_2
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                * (
+                                                                                    g_upper_indices[
+                                                                                        nu,
+                                                                                        sigma,
+                                                                                    ]
+                                                                                    * Fprime
+                                                                                    * A_1p[
+                                                                                        delta
+                                                                                    ]
+                                                                                    * A_2p[
+                                                                                        omega
+                                                                                    ]
+                                                                                )
+                                                                            )
+                                                                        )
+                                                elif q3[0] == 0:
+                                                    for sigma in [1, 2, 3]:
+                                                        for delta in [
+                                                            1,
+                                                            2,
+                                                            3,
+                                                        ]:
+                                                            for omega in [
+                                                                1,
+                                                                2,
+                                                                3,
+                                                            ]:
+                                                                if sigma == 1:
+                                                                    qfactor_sigma = (
+                                                                        1
+                                                                        / 2
+                                                                        * (
+                                                                            q2prime
+                                                                            - q1prime
+                                                                        )[0]
+                                                                    )
+                                                                else:
+                                                                    qfactor_sigma = (
+                                                                        -1
+                                                                        * (
+                                                                            q2prime
+                                                                            - q1prime
+                                                                        )[sigma]
+                                                                    )
+                                                                if delta == 1:
+                                                                    qfactor_delta = (
+                                                                        1
+                                                                        / 2
+                                                                        * (
+                                                                            q3prime
+                                                                            - q2prime
+                                                                        )[0]
+                                                                    )
+                                                                else:
+                                                                    qfactor_delta = (
+                                                                        -1
+                                                                        * (
+                                                                            q3prime
+                                                                            - q2prime
+                                                                        )[delta]
+                                                                    )
+                                                                if omega == 1:
+                                                                    qfactor_omega = (
+                                                                        1
+                                                                        / 2
+                                                                        * (
+                                                                            q1prime
+                                                                            - q3prime
+                                                                        )[0]
+                                                                    )
+                                                                else:
+                                                                    qfactor_omega = (
+                                                                        -1
+                                                                        * (
+                                                                            q1prime
+                                                                            - q3prime
+                                                                        )[omega]
+                                                                    )
+                                                                Fprime = (
+                                                                    1j
+                                                                    * f(
+                                                                        a,
+                                                                        b,
+                                                                        c,
+                                                                    )
+                                                                    * qfactor_sigma
+                                                                    * g_lower_indices[
+                                                                        delta,
+                                                                        omega,
+                                                                    ]
+                                                                    * qfactor_delta
+                                                                    * g_lower_indices[
+                                                                        omega,
+                                                                        sigma,
+                                                                    ]
+                                                                    * qfactor_omega
+                                                                    * g_lower_indices[
+                                                                        sigma,
+                                                                        delta,
+                                                                    ]
+                                                                )
+                                                                for mu in [
+                                                                    0,
+                                                                    1,
+                                                                    2,
+                                                                    3,
+                                                                ]:
+                                                                    for nu in [
+                                                                        0,
+                                                                        1,
+                                                                        2,
+                                                                        3,
+                                                                    ]:
+                                                                        coeff += (
+                                                                            -(g**2)
+                                                                            / 2
+                                                                            * (
+                                                                                (
+                                                                                    rgpep_factor_first_order(
+                                                                                        Q
+                                                                                        + Qp,
+                                                                                        s,
+                                                                                    )
+                                                                                )
+                                                                                * 1
+                                                                                / 2
+                                                                                * (
+                                                                                    1
+                                                                                    / Q
+                                                                                    - 1
+                                                                                    / Qp
+                                                                                )
+                                                                                * (
+                                                                                    (
+                                                                                        (
+                                                                                            q1
+                                                                                            + q2
+                                                                                        ).dot(
+                                                                                            q1
+                                                                                            + q2
+                                                                                        )
+                                                                                        + (
+                                                                                            q1prime
+                                                                                            + q2prime
+                                                                                        ).dot(
+                                                                                            q1prime
+                                                                                            + q2prime
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                / (
+                                                                                    2
+                                                                                    * (
+                                                                                        q3[
+                                                                                            0
+                                                                                        ]
+                                                                                        ** 2
+                                                                                        - 1
+                                                                                        / (
+                                                                                            4
+                                                                                            * K
+                                                                                            ** 2
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                * g_lower_indices[
+                                                                                    mu,
+                                                                                    nu,
+                                                                                ]
+                                                                                * psi_1.dot(
+                                                                                    gamma0.dot(
+                                                                                        gamma[
+                                                                                            mu
+                                                                                        ].dot(
+                                                                                            psi_2
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                * (
+                                                                                    g_upper_indices[
+                                                                                        nu,
+                                                                                        sigma,
+                                                                                    ]
+                                                                                    * Fprime
+                                                                                    * A_1p[
+                                                                                        delta
+                                                                                    ]
+                                                                                    * A_2p[
+                                                                                        omega
+                                                                                    ]
+                                                                                )
+                                                                            )
+                                                                        )
+
                                                 coeff *= (
-                                                    g**2
-                                                    * T[a, c1, c2]
-                                                    * f(a, b, c)
-                                                    * 1
+                                                    1
                                                     / (
                                                         np.abs(q1[0])  # From fields
                                                         * np.abs(q2[0])  # From fields

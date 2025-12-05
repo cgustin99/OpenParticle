@@ -419,7 +419,12 @@ def effective_quark_legs_term_tensor(
                                                             )
                                                         )
                                                     )
-
+                                                coeff /= (
+                                                    np.abs(q1[0])
+                                                    * np.abs(q2[0])
+                                                    * np.abs(q1prime[0])
+                                                    * np.abs(q2prime[0])
+                                                )
                                                 if coeff != 0:
 
                                                     q1plus_index = np.where(
