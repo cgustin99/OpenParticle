@@ -337,6 +337,16 @@ def test_is_hermitian3():
     assert op.is_hermitian
 
 
+def test_is_hermitian4():
+    operator = ParticleOperator("a1^ a1 b1^ b1")
+    assert operator.is_hermitian
+
+
+def test_is_hermitian5():
+    operator = ParticleOperator("b1^ b1 a1^ a1")
+    assert operator.is_hermitian
+
+
 def test_group_1():
     op = ParticleOperator("a1^ a2^") + ParticleOperator("a2^ a1^")
     assert op.group()[0] == 2 * ParticleOperator("a2^ a1^")
